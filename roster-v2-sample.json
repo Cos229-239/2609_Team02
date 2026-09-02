@@ -1,0 +1,46 @@
+{
+  "version": "v2",
+  "cycle": "2604",
+  "teams": [
+    {
+      "label": "Team 01",
+      "students": [
+        {
+          "name": "Patrick K",
+          "github_id": "",
+          "github_email": "",
+          "trello_email": "",
+          "discord_id": ""
+        },
+        {
+          "name": "Ian S",
+          "github_id": "",
+          "github_email": "",
+          "trello_email": "",
+          "discord_id": ""
+        }
+      ]
+    },
+    {
+      "label": "Team 02",
+      "students": [
+        {
+          "name": "Cam M",
+          "github_id": "",
+          "github_email": "",
+          "trello_email": "",
+          "discord_id": ""
+        }
+      ]
+    }
+  ],
+  "unassigned": [
+    {
+      "name": "New Student",
+      "github_id": "",
+      "github_email": "",
+      "trello_email": "",
+      "discord_id": ""
+    }
+  ]
+}

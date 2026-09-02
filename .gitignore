@@ -1,0 +1,238 @@
+###############################################################################
+#
+# .gitignore
+#
+# AUTHOR: Patrick J. Kelly
+# DATE: May 2026
+#
+# PURPOSE:
+# This file tells Git what NOT to upload to GitHub.
+#
+# CORE RULE:
+# If YOU did not type it yourself, it probably does not belong in Git.
+#
+# IMPORTANT ABOUT ORDER (READ THIS):
+# - Git reads this file TOP → BOTTOM
+# - If a file is ignored early, it STAYS ignored
+# - UNLESS a later rule uses "!" to override it
+#
+# → ALL EXCEPTIONS MUST BE AT THE BOTTOM OF THIS FILE
+#
+# If something is not committing when it should:
+# - It is being ignored above
+# - You must explicitly UN-IGNORE it at the bottom
+#
+###############################################################################
+
+
+###############################################################################
+# ENVIRONMENT FILES (STRICT)
+#
+# These often contain:
+# - API keys
+# - passwords
+# - local machine config
+#
+# RULE:
+# NEVER commit real environment files
+#
+# NOTE:
+# We intentionally DO NOT use ".env.*"
+# because it incorrectly ignores files like:
+#   .xcode.env
+###############################################################################
+
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+
+###############################################################################
+# OS / EDITOR JUNK
+#
+# Shared by: macOS, Windows, VS Code, Visual Studio, JetBrains
+###############################################################################
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+.vs/
+.vscode/
+.idea/
+*.iml
+
+
+###############################################################################
+# LOGS / TEMP / BACKUPS
+#
+# Shared by: OS, editors, package managers, build tools
+###############################################################################
+
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+
+###############################################################################
+# DEPENDENCIES / PACKAGE MANAGERS
+#
+# Shared by: Node, Ruby, iOS
+###############################################################################
+
+node_modules/
+ios/Pods/
+
+.bundle/
+vendor/bundle/
+
+
+###############################################################################
+# BUILD OUTPUT / GENERATED FILES
+#
+# Shared by: JS frameworks, Android, iOS, TypeScript
+###############################################################################
+
+dist/
+build/
+out/
+
+.next/
+coverage/
+.expo/
+.expo-shared/
+.turbo/
+.cache/
+.parcel-cache/
+.sass-cache/
+*.tsbuildinfo
+
+.gradle/
+.externalNativeBuild/
+.cxx/
+DerivedData/
+
+
+###############################################################################
+# PYTHON GENERATED FILES
+###############################################################################
+
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+.venv/
+venv/
+ENV/
+env/
+
+pip-wheel-metadata/
+.pytest_cache/
+.mypy_cache/
+
+
+###############################################################################
+# ANDROID / JAVA LOCAL FILES
+###############################################################################
+
+local.properties
+
+*.apk
+*.aab
+
+
+###############################################################################
+# IOS / XCODE LOCAL USER FILES
+###############################################################################
+
+ios/.xcode.env.local
+xcuserdata/
+*.xcuserstate
+*.pbxuser
+*.mode1v3
+*.xcscmblueprint
+*.xcworkspace
+
+
+###############################################################################
+# FIREBASE CONFIG / SECRETS
+###############################################################################
+
+google-services.json
+serviceAccountKey.json
+firebase-adminsdk*.json
+firebase-debug.log
+firestore-debug.log
+
+
+###############################################################################
+# OS / COMPILED ARTIFACTS
+###############################################################################
+
+*.dSYM
+*.exe
+*.dll
+
+
+###############################################################################
+# ARCHIVES / COMPRESSED FILES
+###############################################################################
+
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+
+###############################################################################
+# GITHUB / CI OUTPUT
+###############################################################################
+
+.github/workflows/*.log
+
+
+###############################################################################
+# EXCEPTIONS (UN-IGNORE RULES)
+#
+# VERY IMPORTANT:
+# - These rules OVERRIDE earlier ignore rules
+# - They MUST be at the BOTTOM of the file
+#
+# Syntax:
+#   !filename
+#
+# Means:
+#   "Even if this was ignored above, KEEP IT"
+#
+###############################################################################
+
+# Gradle wrapper (REQUIRED for Android builds)
+!gradlew
+!gradlew.bat
+!gradle/
+!gradle/wrapper/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# Project documentation
+!README.md
+!docs/**
+
+# GitHub Actions workflows (definitions only)
+!.github/workflows/*.yml
+
+# React Native / Xcode env file (REQUIRED for iOS builds)
+!.xcode.env
+!ios/.xcode.env

@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Template Admin Prototype</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #121b2d;
+      --panel-2: #1a2740;
+      --text: #ecf2ff;
+      --muted: #98a7c7;
+      --accent: #56a8ff;
+      --accent-2: #7dd3fc;
+      --border: rgba(255,255,255,0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top right, rgba(86,168,255,0.12), transparent 28%),
+        linear-gradient(180deg, #0a111d, var(--bg));
+      color: var(--text);
+      min-height: 100vh;
+    }
+    main { max-width: 1080px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+    .hero, .panel {
+      background: rgba(18,27,45,0.88);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: 0 18px 45px rgba(0,0,0,0.28);
+      backdrop-filter: blur(8px);
+    }
+    .hero { padding: 1.4rem 1.5rem; margin-bottom: 1rem; }
+    .hero h1 { margin: 0 0 0.35rem; font-size: 2rem; }
+    .hero p { margin: 0; color: var(--muted); max-width: 60rem; }
+    .top-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 1rem;
+    }
+    .button-row { display: flex; flex-wrap: wrap; gap: 0.65rem; }
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 0.7rem 1rem;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #06101e; }
+    .btn-secondary { background: #22314e; color: var(--text); border: 1px solid var(--border); }
+    .status-chip {
+      font-size: 0.8rem;
+      color: var(--muted);
+      padding: 0.5rem 0.8rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 2fr 1.05fr;
+      gap: 1rem;
+      align-items: start;
+    }
+    @media (max-width: 920px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .panel { padding: 1rem; }
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.9rem;
+    }
+    .section-title h2, .section-title h3 { margin: 0; font-size: 0.92rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+    .team-list { display: grid; gap: 0.85rem; }
+    .team-card {
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius: 16px;
+      padding: 0.9rem;
+    }
+    .team-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .team-header strong { font-size: 1rem; }
+    .team-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .tiny-btn {
+      padding: 0.45rem 0.65rem;
+      border-radius: 999px;
+      background: #22314e;
+      color: var(--text);
+      border: 1px solid var(--border);
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+    .student-list { display: grid; gap: 0.75rem; }
+    .student-card {
+      padding: 0.8rem;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(11,18,32,0.6);
+    }
+    .student-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      align-items: center;
+      margin-bottom: 0.65rem;
+    }
+    .student-head strong { font-size: 0.98rem; }
+    .student-actions { display: flex; gap: 0.45rem; flex-wrap: wrap; }
+    .fields {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.65rem;
+    }
+    @media (max-width: 640px) {
+      .fields { grid-template-columns: 1fr; }
+    }
+    label {
+      display: grid;
+      gap: 0.28rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    input {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #0d1728;
+      color: var(--text);
+      padding: 0.72rem 0.8rem;
+      font: inherit;
+    }
+    .export-box {
+      width: 100%;
+      min-height: 520px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: #08101d;
+      color: #d8e5ff;
+      font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+      padding: 0.9rem;
+      resize: vertical;
+    }
+    .note {
+      margin-top: 0.9rem;
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.7rem;
+      margin-bottom: 1rem;
+    }
+    .meta-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 0.85rem;
+      background: rgba(255,255,255,0.02);
+    }
+    .meta-card .lbl { display: block; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.2rem; }
+    .meta-card .val { font-size: 1.1rem; font-weight: 800; }
+    .footer-tag {
+      margin-top: 1rem;
+      text-align: right;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <h1>Roster Editor V2 Prototype</h1>
+      <p>This is a standalone test page for class setup. It edits a roster-like JSON model in the browser, supports team changes over time, and exports a `V2` roster shape we can later wire into SupaTewl and the reporting pipeline.</p>
+      <div class="top-actions">
+        <div class="button-row">
+          <button class="btn-primary" id="load-sample">Load sample 2604</button>
+          <button class="btn-secondary" id="add-team">Add team</button>
+          <button class="btn-secondary" id="add-unassigned">Add unassigned student</button>
+          <button class="btn-secondary" id="download-json">Download V2 roster JSON</button>
+        </div>
+        <div class="status-chip" id="save-state">Prototype only · not wired to repo writes</div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="panel">
+        <div class="section-title">
+          <h2>Class Layout</h2>
+        </div>
+        <div class="meta-grid">
+          <div class="meta-card">
+            <span class="lbl">Cycle</span>
+            <span class="val" id="meta-cycle">2604</span>
+          </div>
+          <div class="meta-card">
+            <span class="lbl">Students</span>
+            <span class="val" id="meta-count">0</span>
+          </div>
+        </div>
+        <div class="team-list" id="team-root"></div>
+        <p class="note">Use this to test whether roster edits feel better on a page than in shell prompts. The export on the right is the candidate `V2` roster file we can later feed into class setup and reporting.</p>
+        <div class="footer-tag">v0.1.0 · Roster Editor Prototype</div>
+      </section>
+
+      <aside class="panel">
+        <div class="section-title">
+          <h3>V2 Roster JSON</h3>
+          <button class="tiny-btn" id="refresh-export">Refresh</button>
+        </div>
+        <textarea class="export-box" id="export-box" spellcheck="false"></textarea>
+        <p class="note">Suggested next step later: this file could become the editable source of truth for roster/team/account data, and SupaTewl could read or transform it into the existing reporting inputs.</p>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    const SAMPLE_PATH = './roster-v2-sample.json';
+    const state = {
+      cycle: '2604',
+      teams: [],
+      unassigned: []
+    };
+
+    function studentTemplate(seed) {
+      return {
+        id: seed.id || crypto.randomUUID(),
+        name: seed.name || '',
+        github_id: seed.github_id || '',
+        github_email: seed.github_email || '',
+        trello_email: seed.trello_email || '',
+        discord_id: seed.discord_id || ''
+      };
+    }
+
+    function teamTemplate(label, students) {
+      return {
+        label,
+        students: (students || []).map(studentTemplate)
+      };
+    }
+
+    function render() {
+      document.getElementById('meta-cycle').textContent = state.cycle || '----';
+      const count = state.teams.reduce((sum, team) => sum + team.students.length, 0) + state.unassigned.length;
+      document.getElementById('meta-count').textContent = String(count);
+      const root = document.getElementById('team-root');
+      root.innerHTML = '';
+
+      state.teams.forEach((team, teamIndex) => {
+        root.appendChild(renderTeam(team, teamIndex));
+      });
+
+      root.appendChild(renderUnassigned());
+      updateExport();
+    }
+
+    function renderTeam(team, teamIndex) {
+      const wrap = document.createElement('section');
+      wrap.className = 'team-card';
+      wrap.innerHTML = `
+        <div class="team-header">
+          <strong>${escapeHtml(team.label)}</strong>
+          <div class="team-actions">
+            <button class="tiny-btn" data-action="rename-team" data-team="${teamIndex}">Rename</button>
+            <button class="tiny-btn" data-action="add-student" data-team="${teamIndex}">Add student</button>
+          </div>
+        </div>
+        <div class="student-list"></div>
+      `;
+      const list = wrap.querySelector('.student-list');
+      team.students.forEach((student, studentIndex) => {
+        list.appendChild(renderStudentCard(student, teamIndex, studentIndex, false));
+      });
+      if (!team.students.length) {
+        const empty = document.createElement('p');
+        empty.className = 'note';
+        empty.textContent = 'No students in this team yet.';
+        list.appendChild(empty);
+      }
+      return wrap;
+    }
+
+    function renderUnassigned() {
+      const wrap = document.createElement('section');
+      wrap.className = 'team-card';
+      wrap.innerHTML = `
+        <div class="team-header">
+          <strong>Unassigned</strong>
+          <div class="team-actions">
+            <button class="tiny-btn" data-action="add-student-unassigned">Add student</button>
+          </div>
+        </div>
+        <div class="student-list"></div>
+      `;
+      const list = wrap.querySelector('.student-list');
+      state.unassigned.forEach((student, studentIndex) => {
+        list.appendChild(renderStudentCard(student, -1, studentIndex, true));
+      });
+      if (!state.unassigned.length) {
+        const empty = document.createElement('p');
+        empty.className = 'note';
+        empty.textContent = 'Students can live here until you decide the team.';
+        list.appendChild(empty);
+      }
+      return wrap;
+    }
+
+    function renderStudentCard(student, teamIndex, studentIndex, unassigned) {
+      const card = document.createElement('article');
+      card.className = 'student-card';
+      const moveOptions = state.teams.map((team, idx) => `<option value="${idx}" ${idx === teamIndex ? 'selected' : ''}>${escapeHtml(team.label)}</option>`).join('');
+      card.innerHTML = `
+        <div class="student-head">
+          <strong>${escapeHtml(student.name || 'New student')}</strong>
+          <div class="student-actions">
+            <button class="tiny-btn" data-action="save-student" data-team="${teamIndex}" data-student="${studentIndex}" data-unassigned="${unassigned}">Update</button>
+            <button class="tiny-btn" data-action="reset-student" data-team="${teamIndex}" data-student="${studentIndex}" data-unassigned="${unassigned}">Cancel</button>
+          </div>
+        </div>
+        <div class="fields">
+          <label>Name
+            <input data-field="name" value="${escapeAttr(student.name)}">
+          </label>
+          <label>GitHub ID
+            <input data-field="github_id" value="${escapeAttr(student.github_id)}">
+          </label>
+          <label>GitHub email
+            <input data-field="github_email" value="${escapeAttr(student.github_email)}">
+          </label>
+          <label>Trello email
+            <input data-field="trello_email" value="${escapeAttr(student.trello_email)}">
+          </label>
+          <label>Discord ID
+            <input data-field="discord_id" value="${escapeAttr(student.discord_id)}">
+          </label>
+          <label>Team
+            <select data-field="team-target">
+              <option value="unassigned" ${unassigned ? 'selected' : ''}>Unassigned</option>
+              ${moveOptions}
+            </select>
+          </label>
+        </div>
+      `;
+      if (!card.querySelector('select')) {
+        const select = document.createElement('select');
+        select.setAttribute('data-field', 'team-target');
+      }
+      return card;
+    }
+
+    function getStudentCollection(teamIndex, unassigned) {
+      return unassigned ? state.unassigned : state.teams[teamIndex].students;
+    }
+
+    function readCardData(card) {
+      const get = (name) => card.querySelector(`[data-field="${name}"]`).value.trim();
+      return {
+        name: get('name'),
+        github_id: get('github_id'),
+        github_email: get('github_email'),
+        trello_email: get('trello_email'),
+        discord_id: get('discord_id'),
+        teamTarget: card.querySelector('[data-field="team-target"]').value
+      };
+    }
+
+    function updateExport() {
+      const payload = {
+        version: 'v2',
+        cycle: state.cycle,
+        updated_at: new Date().toISOString(),
+        teams: state.teams.map(team => ({
+          label: team.label,
+          students: team.students.map(({ id, ...student }) => student)
+        })),
+        unassigned: state.unassigned.map(({ id, ...student }) => student)
+      };
+      document.getElementById('export-box').value = JSON.stringify(payload, null, 2);
+    }
+
+    function escapeHtml(text) {
+      return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    function escapeAttr(text) {
+      return escapeHtml(text).replace(/"/g, '&quot;');
+    }
+
+    async function loadSample() {
+      const res = await fetch(SAMPLE_PATH, { cache: 'no-store' });
+      const sample = await res.json();
+      state.cycle = sample.cycle || '2604';
+      state.teams = (sample.teams || []).map(team => teamTemplate(team.label, team.students));
+      state.unassigned = (sample.unassigned || []).map(studentTemplate);
+      render();
+    }
+
+    document.addEventListener('click', (event) => {
+      const button = event.target.closest('button');
+      if (!button) return;
+      const action = button.dataset.action;
+      if (button.id === 'load-sample') {
+        loadSample().catch(() => {
+          document.getElementById('save-state').textContent = 'Could not load sample JSON';
+        });
+        return;
+      }
+      if (button.id === 'add-team') {
+        const next = String(state.teams.length + 1).padStart(2, '0');
+        state.teams.push(teamTemplate(`Team ${next}`, []));
+        render();
+        return;
+      }
+      if (button.id === 'add-unassigned' || action === 'add-student-unassigned') {
+        state.unassigned.push(studentTemplate({ name: 'New Student' }));
+        render();
+        return;
+      }
+      if (button.id === 'refresh-export') {
+        updateExport();
+        return;
+      }
+      if (button.id === 'download-json') {
+        const blob = new Blob([document.getElementById('export-box').value], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${state.cycle || 'cycle'}-roster-v2.json`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        return;
+      }
+      if (action === 'rename-team') {
+        const team = state.teams[Number(button.dataset.team)];
+        const next = prompt('Rename team', team.label);
+        if (next) {
+          team.label = next.trim();
+          render();
+        }
+        return;
+      }
+      if (action === 'add-student') {
+        state.teams[Number(button.dataset.team)].students.push(studentTemplate({ name: 'New Student' }));
+        render();
+        return;
+      }
+      if (action === 'save-student') {
+        const teamIndex = Number(button.dataset.team);
+        const studentIndex = Number(button.dataset.student);
+        const isUnassigned = button.dataset.unassigned === 'true';
+        const collection = getStudentCollection(teamIndex, isUnassigned);
+        const original = collection[studentIndex];
+        const card = button.closest('.student-card');
+        const next = readCardData(card);
+        const updated = { ...original, ...next };
+        delete updated.teamTarget;
+        collection[studentIndex] = updated;
+
+        const moveTarget = next.teamTarget;
+        if (moveTarget === 'unassigned' && !isUnassigned) {
+          const [moved] = state.teams[teamIndex].students.splice(studentIndex, 1);
+          state.unassigned.push(moved);
+        } else if (moveTarget !== 'unassigned' && (isUnassigned || Number(moveTarget) !== teamIndex)) {
+          const targetIndex = Number(moveTarget);
+          const source = isUnassigned ? state.unassigned : state.teams[teamIndex].students;
+          const [moved] = source.splice(studentIndex, 1);
+          state.teams[targetIndex].students.push(moved);
+        }
+        document.getElementById('save-state').textContent = 'Updated locally in browser state';
+        render();
+        return;
+      }
+      if (action === 'reset-student') {
+        render();
+      }
+    });
+
+    loadSample().catch(() => {
+      state.teams = [teamTemplate('Team 01', []), teamTemplate('Team 02', [])];
+      render();
+    });
+  </script>
+</body>
+</html>

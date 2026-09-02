@@ -1,0 +1,109 @@
+# Forking: What It Is, Why It Exists, and When to Use It
+
+## What Is Forking?
+
+**Forking** is when you create your *own copy* of someone else’s GitHub repository **under your own GitHub account**.
+
+- The original repo stays exactly as it is
+- Your fork is a completely separate repository
+- You can push, break, experiment, or abandon your fork without affecting the original
+
+A fork is **not** a branch.
+A fork is **not** a clone.
+A fork is a *new repository* that started life as a copy of another one.
+
+---
+
+## Why Forking Exists
+
+Forking exists to solve one core problem:
+
+> “I want to work with this code, but I do NOT have permission to push to it.”
+
+Common reasons:
+- Open-source contribution
+- Learning from an example project
+- Experimenting without risk
+- Proposing changes back to the original author
+
+Forking gives you **ownership** of your copy.
+
+---
+
+## Forking vs Branching (Important)
+
+| Concept  | What It Is                       | Who Owns It  |
+|------    |-----------                       |------------  |
+| Branch   | A variation inside the same repo | Shared |
+| Fork     | A completely new repo | You |
+| Clone    | A local copy of a repo | Local only |
+
+In **this class**:
+- You use **branches** for teamwork
+- You **do NOT use forks** for team projects
+- You fork at the very end of COS229 to back up the entire project and preserve it 
+
+---
+
+## Why We Do NOT Use Forking for Team Projects
+
+Forking is the **wrong tool** for collaborative class work because:
+
+- Everyone ends up in separate repos
+- Merging becomes confusing and error-prone
+- There is no single source of truth
+- Instructors cannot easily review progress
+
+For team projects:
+- You are **invited** to a shared repo
+- Everyone works on branches
+- Changes flow upward (personal → dev → main)
+
+No forks required.
+
+---
+
+## When Forking *Is* Appropriate
+
+Forking *is* appropriate when:
+
+- You are backing something up
+- You are exploring an example repo
+- You are learning a new framework
+- You want to experiment freely
+- You are contributing to open source
+- You do not have push access
+
+Examples:
+- “Let me try modifying this Compose sample”
+- “I want to learn how this Firebase setup works”
+- “I want to submit a pull request to an open-source project”
+
+---
+
+## How to Fork a Repository (GitHub)
+
+1. Go to the repository on GitHub
+2. Click **Fork** (top-right)
+3. Choose your GitHub account
+4. GitHub creates a new repo under your name
+
+You now own that repo.
+
+From there:
+- Clone **your fork**
+- Make changes
+- Optionally submit a **Pull Request** back to the original
+
+---
+
+## Key Takeaways
+
+- Forking = new repo, new ownership
+- Branching = shared repo, shared workflow
+- Forking is for **permission boundaries**
+- Branching is for **team collaboration**
+- This class uses **branches, not forks**
+
+If you are unsure whether to fork or branch:
+**Ask first. Forking is rarely, if ever, the correct choice in this course.**

@@ -1,0 +1,188 @@
+GIT 05 — Using Your Personal Branch
+Your personal branch was created earlier and will be used for the entire project.
+
+
+Purpose
+
+Now that the Build Master has created and uploaded the initial project, your job is to safely work on your own copy without breaking the team.
+This is done by working on your personal branch, which already exists and will be used for the entire project.
+
+A personal branch is:
+	•	where you write code
+	•	where you experiment
+	•	where mistakes are allowed
+
+You do not work directly on main or dev.
+
+⸻
+
+Prerequisites (Already Done — GIT 01 & GIT 02)
+
+Before starting this step, the following should already be true:
+	•	You have accepted the GitHub repo invite
+	•	You have cloned the repo using GitHub Desktop (and pushed your read me change to create a branch)
+	•	The Build Master has pushed a working project
+
+If any of these are false, stop and fix them first.
+
+⸻
+
+Persistent Personal Branch Policy (This Course)
+
+In this course, you will use one personal branch for the entire project.
+	•	You do not create feature branches
+	•	You do not recreate your personal branch weekly
+	•	Your branch (named after you) is your permanent workspace
+
+All work happens on your personal branch.
+Merges into dev happen later, intentionally.
+
+⸻
+
+Step 1 — Open the Repo and Sync dev
+This is the moment where you pull the actual project into your local machine for the first time.
+
+Before working on your branch, make sure your local copy is up to date.
+	1.	Open GitHub Desktop
+	2.	Make sure the correct team repository is selected
+	3.	In the Current Branch dropdown, select dev
+	4.	Click Fetch origin
+	5.	If updates are available, click Pull
+
+Checkpoint:
+	•	You are on the dev branch
+	•	GitHub Desktop reports the branch is up to date
+	•	You can see the full project created by the Build Master
+
+
+Do not continue unless all three are true.
+
+
+Step 1.5 — Verify the Project Runs
+
+Before switching branches or making any changes, confirm the project works on your machine.
+	1.	Open the project in Android Studio
+	2.	Allow Gradle to finish syncing
+	3.	Run the app using the emulator or a physical device
+	4.	Confirm the app launches without errors
+
+Checkpoint:
+	•	The app builds successfully
+	•	No red Gradle errors are present
+	•	You can see the app running
+
+If the project does not run:
+	•	Do not create or switch branches
+	•	Do not commit anything
+	•	Post in your team Discord channel and tag the Build Master
+
+Fixing setup issues comes before all other work.
+
+
+⸻
+
+Step 2 — Switch to (or Create) Your Personal Branch
+
+In most cases, your personal branch already exists.
+
+If your personal branch already exists:
+	1.	Open the Current Branch dropdown
+	2.	Select your branch (named after you, all lowercase)
+	3.	Confirm it switches successfully
+
+You are now working on your personal branch.
+
+If you do NOT see a personal branch with your name:
+
+STOP.
+
+Do not create a new branch here.
+
+Return to **GIT_01 — Git Setup & Branch Creation** and complete that step fully.
+Once your personal branch exists and is visible on GitHub, return here and continue.
+
+
+Step 2.5 — Bring the Project into Your Personal Branch
+
+Now that you have confirmed the project works on dev, you need to bring it into your personal branch so you can begin working.
+	1.	In GitHub Desktop, switch to your personal branch
+	2.	If prompted with a message about changes from dev, choose
+		“Bring my changes into this branch”
+	3.	If no prompt appears, use:
+	•	Branch → Merge into current branch
+	•	Select dev
+	4.	Complete the merge
+
+Checkpoint:
+	•	Your personal branch now contains the full project
+	•	No files disappear when switching branches
+	•	GitHub Desktop shows no errors
+
+At this point, your personal branch is fully synced and ready for work.
+
+⸻
+
+Step 3 — Push Your Personal Branch to GitHub
+
+After merging dev into your personal branch, your branch has changed locally.
+You must now upload those changes to GitHub (the remote version of personal - think of it as a backup copy).
+	1.	In GitHub Desktop, confirm you are on your personal branch
+	2.	Click Push origin
+
+If you instead see Publish branch, click it — this means your branch has not yet been created on GitHub.
+
+Checkpoint:
+	•	Open the repository on GitHub in a browser
+	•	Switch to your personal branch using the branch dropdown
+	•	You should see the full project files there
+
+DONE!
+
+If the files are missing or the branch does not appear, stop and ask for help.
+⸻
+
+
+
+General Rules:
+
+Confirm You Are Working Safely
+
+Before doing any real work, verify:
+	•	You are on your personal branch
+	•	main and dev remain untouched
+	•	Any changes you make stay isolated
+
+This is your safe workspace for the rest of the project.
+
+Important:
+	•	You never work directly on main
+	•	You never experiment on dev
+	•	You always commit to your personal branch
+	•	Merging into dev happens later and only when instructed
+
+Breaking these rules can affect the entire team.
+
+⸻
+
+Why This Matters
+
+Personal branches:
+	•	protect the project
+	•	prevent conflicts
+	•	preserve accountability
+	•	provide a complete work history
+
+This is not extra work.
+This is how real teams operate.
+
+⸻
+
+What’s Next
+
+Once your personal branch is confirmed and published:
+	•	Begin working only on your branch
+	•	Follow assignment instructions for commits
+	•	Later, you will merge from your branch into dev
+
+Do not merge anything for a while (only push to your personal branch) unless explicitly instructed or you know what you are doing. 
+Merging UP (to dev or main) is a group effort, and you need a "Build Buddy" for that. 

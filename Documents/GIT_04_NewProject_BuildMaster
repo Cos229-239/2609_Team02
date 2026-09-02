@@ -1,0 +1,106 @@
+Build Master Instructions
+
+Congratulations (for better or worse), you are responsible for creating the initial Android project and publishing the baseline repository that the rest of your team will build from.
+As the build master, should you choose to accept this role, you will be merging work from Dev to Main (later in the month). 
+
+
+
+⚠️ REQUIRED BEFORE CONTINUING
+
+This step assumes you are already comfortable running command-line (CLI) commands
+to create and manage projects.
+
+If you are unsure **why** we use the terminal (even inside VS Code), **where** commands
+run, or **which tool actually creates a project**, you must read this first:
+
+**CLI vs IDE: How Projects Are Created**
+
+If you already understand this model, continue below.
+
+
+
+
+For now, we will just upload the project. 
+This is a one-time setup task. Do it carefully.
+
+We will be using Android Studio for the walkthrough, but it's the same for any project/IDE. 
+
+⸻
+
+Your Responsibility (Read This First)
+
+You are not setting up Git rules.
+You don't need to worry about the IGNORE file. 
+
+You are creating a clean, working Android project and pushing it so everyone else can begin.
+Everyone’s work depends on this step (GIT_04_NewProject).
+
+⸻
+
+Step-by-Step Instructions
+
+Clone the Team Repository (if you haven't)
+	•	Use GitHub Desktop
+	•	Clone the assigned team repository
+	•	Choose a clear local location (e.g., Projects/TeamName)
+
+Do not create any Android (or IDE-based) project yet.
+
+⸻
+
+Create the Android Project inside your local team Repo Folder 
+	•	Open Android Studio
+	•	Choose New Project
+	•	When asked for the project location:
+	•	Select the cloned GitHub repo folder
+	•	Do not create it somewhere else and move it later
+
+NOTE: 
+	•	The Android project must live inside the repo folder, or GitHub Desktop will not see it.
+	•	You are making a project in Kotlin using Jetpack Compose
+	•	Kotlin only, no XML
+
+⸻
+
+Let Android Studio Finish Setup
+	•	Allow Gradle to sync
+	•	Run the app once
+	•	Confirm it builds and launches
+
+Notes:
+	•	At this stage, you are not expected to understand Jetpack Compose — only to confirm the project runs.
+	•	Fix obvious setup issues before committing.
+
+⸻
+
+Commit the Project Using GitHub Desktop
+	•	Open GitHub Desktop
+	•	You should see many new files listed
+	•	Commit with a clear message, for example:
+      "Initial Android project scaffold"
+
+Do not commit from inside Android Studio.
+
+⸻
+
+Push the Project to GitHub
+	•	Push the commit to the shared repo
+	•	Use the correct branch as instructed (personal AND dev this time)
+	•	Confirm the push succeeds
+
+⸻
+
+Notify the Team
+
+Once the push is complete:
+	•	Post in your team Discord channel
+	•	Let everyone know the repo is ready to clone and branch from
+
+⸻
+
+Important Rules
+	•	Only one person creates the Android project
+	•	Do not remove or modify .gitignore
+	•	Do not restructure folders unless instructed
+	•	Do not use GitHub login inside Android Studio
+	•	Git actions are handled through GitHub Desktop

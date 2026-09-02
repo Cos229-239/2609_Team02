@@ -1,0 +1,67 @@
+First Git Task: Claim Your Branch
+
+Before doing any real project work, you will complete a simple verification task to confirm your Git setup is correct.
+
+This task ensures you can:
+	•	edit a file
+	•	commit changes
+	•	push to GitHub
+	•	work in your personal branch
+
+⸻
+
+What to Do
+	1.	Make sure you are on your personal branch
+      (it should have your name on it - if not, read git-setup)
+	2.	Open the project’s README.md (at the root level under "code") file
+	3.	Add your name to the section labeled something like:
+      ## Team Members
+        - Patrick J Kelly
+
+	4.	Save the file
+
+⸻
+
+Commit and Push
+	1.	Return to GitHub Desktop
+	2.	Confirm the README change is detected
+	3.	Enter a commit message like:
+      Add Patrick J Kelly to README
+	4.	Click Commit to your branch (blue button on bottom left)
+	5.	Click Push origin
+  
+DONE!
+
+⸻
+
+Important Rules
+	•	This change stays in your personal branch
+	•	Do not merge this into dev (yet)
+	•	Do not push directly to main
+	•	Do not edit other people’s names
+
+This task is about proving your setup, not changing the shared project.
+
+⸻
+
+What This Proves
+
+By completing this task, you demonstrate that:
+	•	your repo is cloned correctly
+	•	your branch is set up correctly
+	•	you can safely push changes
+	•	GitHub Desktop is working
+
+This prevents much bigger problems later.
+
+⸻
+
+Why We Do This First
+
+This is a low-stakes, low-risk test.
+
+If something goes wrong here:
+	•	nothing important is broken
+	•	it’s easy to fix
+	•	the instructor can help quickly
+
