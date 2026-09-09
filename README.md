@@ -20,7 +20,7 @@ Clone the repository:
 
 ```bash
 git clone <repository-url>
-cd famotive
+cd <repository>
 ```
 
 Install dependencies:
@@ -148,6 +148,10 @@ Then open a pull request into `dev`.
 - **Flutter**
 - **Dart**
 - **Firebase** — Authentication and backend services
+
+## What am I looking at?
+
+There is an onboarding guide located in [Documents/Flutter.md](Documents/Flutter.md)
 
 ## Team
 
