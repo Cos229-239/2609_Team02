@@ -58,6 +58,9 @@ Famotive/
 │   │   └── theme.dart
 │   │
 │   ├── core/
+│   │   ├── config/
+│   │   │   └── app_config.dart
+│   │   │
 │   │   ├── constants/
 │   │   │   └── app_constants.dart
 │   │   │
@@ -82,39 +85,54 @@ Famotive/
 │   │   │   │   ├── login_screen.dart
 │   │   │   │   └── register_screen.dart
 │   │   │   └── widgets/
+│   │   │       └── auth_text_field.dart
 │   │   │
 │   │   ├── household/
 │   │   │   ├── screens/
-│   │   │   ├── widgets/
-│   │   │   └── services/
+│   │   │   │   ├── family_screen.dart
+│   │   │   │   └── household_home_screen.dart
+│   │   │   ├── services/
+│   │   │   │   └── household_service.dart
+│   │   │   └── widgets/
+│   │   │       └── family_member_card.dart
 │   │   │
 │   │   ├── tasks/
 │   │   │   ├── screens/
 │   │   │   │   ├── task_list_screen.dart
 │   │   │   │   ├── task_detail_screen.dart
-│   │   │   │   └── create_task_screen.dart
-│   │   │   ├── widgets/
-│   │   │   └── services/
+│   │   │   │   ├── create_task_screen.dart
+│   │   │   │   └── task_completion_screen.dart
+│   │   │   ├── services/
+│   │   │   │   └── task_service.dart
+│   │   │   └── widgets/
+│   │   │       └── task_tile.dart
 │   │   │
 │   │   ├── rewards/
 │   │   │   ├── screens/
-│   │   │   ├── widgets/
-│   │   │   └── services/
+│   │   │   │   ├── progress_screen.dart
+│   │   │   │   └── reward_choose_screen.dart
+│   │   │   ├── services/
+│   │   │   │   └── reward_service.dart
+│   │   │   └── widgets/
+│   │   │       └── reward_tile.dart
 │   │   │
 │   │   └── profile/
 │   │       ├── screens/
+│   │       │   └── profile_screen.dart
 │   │       └── widgets/
+│   │           └── profile_menu_tile.dart
 │   │
 │   └── shared/
-│       ├── widgets/
+│       ├── layouts/
+│       │   └── main_tab_shell.dart
+│       │
+│       └── widgets/
 │       │   ├── app_button.dart
 │       │   ├── app_card.dart
 │       │   └── loading_indicator.dart
-│       │
-│       └── layouts/
-│           └── app_scaffold.dart
 │
 ├── test/
+│   ├── app_smoke_test.dart
 │   ├── core/
 │   └── features/
 │
@@ -156,3 +174,58 @@ There is an onboarding guide located in [Documents/Flutter.md](Documents/Flutter
 ## Team
 
 Famotive is a team project developed as part of a Full Sail University course.
+
+<table>
+<tr>
+<td width="160" align="center">
+
+<img src="https://github.com/skidgfx.png" width="120" height="120" style="border-radius: 50%;">
+
+</td>
+<td>
+
+# Nathan Pillman
+### `SOFTWARE ENGINEER // SYSTEMS`
+
+> **CALLSIGN:** @SKIDGFX  
+> **STATUS:** `ONLINE`  
+> **SPECIALIZATION:** FULL-STACK / C++ / DART  
+
+</td>
+</tr>
+<tr>
+<td width="160" align="center">
+
+<img src="https://github.com/babyrhedd.png" width="120" height="120" style="border-radius: 50%;">
+
+</td>
+<td>
+
+# Ashley Campbell
+### `SOFTWARE ENGINEER // UI`
+
+> **CALLSIGN:** @babyrhedd  
+> **STATUS:** `ONLINE`  
+> **SPECIALIZATION:** FRONT-END / C++  
+
+</td>
+</tr>
+<tr>
+<td width="160" align="center">
+
+<img src="https://github.com/TKLoum.png" width="120" height="120" style="border-radius: 50%;">
+
+</td>
+<td>
+
+# Tiffany Loum
+### `SOFTWARE ENGINEER // QA`
+
+> **CALLSIGN:** @TKLoum.  
+> **STATUS:** `ONLINE`  
+> **SPECIALIZATION:**  
+
+</td>
+</tr>
+</table>
+
