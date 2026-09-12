@@ -12,21 +12,6 @@ class Validators {
     return null;
   }
 
-  /// Accepts either an email address or a phone number, matching the
-  /// "Email or Phone" field shown on the login wireframe.
-  static String? emailOrPhone(String? value) {
-    final error = required(value, fieldName: 'Email or phone');
-    if (error != null) return error;
-
-    final trimmed = value!.trim();
-    final isPhone = RegExp(r'^[0-9+()\-\s]{7,}$').hasMatch(trimmed);
-    final isEmail = _emailPattern.hasMatch(trimmed);
-    if (!isPhone && !isEmail) {
-      return 'Enter a valid email or phone number';
-    }
-    return null;
-  }
-
   static String? email(String? value) {
     final error = required(value, fieldName: 'Email');
     if (error != null) return error;
