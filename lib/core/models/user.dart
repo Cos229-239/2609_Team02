@@ -1,0 +1,51 @@
+/// The role a household member has inside a family. Drives which
+/// screens/actions are available (e.g. only parents can assign tasks).
+enum UserRole { parent, child }
+
+class AppUser {
+  const AppUser({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.role,
+    this.avatarEmoji = '🙂',
+    this.age,
+    this.xp = 0,
+    this.householdId,
+  });
+
+  final String id;
+  final String name;
+  final String email;
+  final UserRole role;
+
+  /// Placeholder avatar (an emoji) until real avatar images/uploads exist.
+  final String avatarEmoji;
+  final int? age;
+  final int xp;
+  final String? householdId;
+
+  bool get isParent => role == UserRole.parent;
+  bool get isChild => role == UserRole.child;
+
+  AppUser copyWith({
+    String? name,
+    String? email,
+    UserRole? role,
+    String? avatarEmoji,
+    int? age,
+    int? xp,
+    String? householdId,
+  }) {
+    return AppUser(
+      id: id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      role: role ?? this.role,
+      avatarEmoji: avatarEmoji ?? this.avatarEmoji,
+      age: age ?? this.age,
+      xp: xp ?? this.xp,
+      householdId: householdId ?? this.householdId,
+    );
+  }
+}
