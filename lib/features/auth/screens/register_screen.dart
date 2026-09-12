@@ -66,9 +66,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const Text(
+                  'Create your Famotive account',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Enter your information below to create your account and get started.',
+                  style: TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height:24),
+          
+
+                
                 AuthTextField(
                   controller: _nameController,
-                  label: 'Full Name',
+                  label: 'First and Last Name',
                   icon: Icons.badge_outlined,
                   validator: (v) => Validators.required(v, fieldName: 'Name'),
                 ),
@@ -91,14 +104,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 12),
                 AuthTextField(
                   controller: _confirmPasswordController,
-                  label: 'Confirm Password',
+                  label: 'Confirm Your Password',
                   icon: Icons.lock_outline,
                   obscureText: true,
                   textInputAction: TextInputAction.done,
                   validator: Validators.confirmPassword(() => _passwordController.text),
                 ),
                 const SizedBox(height: 16),
-                Text("I'm signing up as a...", style: Theme.of(context).textTheme.titleMedium),
+                Text("I am signing up as a:", style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
                 SegmentedButton<UserRole>(
                   segments: const [
@@ -110,7 +123,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 24),
                 AppButton(
-                  label: 'Create Account',
+                  label: 'Create Your Account',
                   isLoading: _isSubmitting,
                   onPressed: _handleRegister,
                 ),
