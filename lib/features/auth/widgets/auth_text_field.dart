@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Text field styling shared by the login and register forms (icon
 /// prefix, optional obscure-text toggle for passwords).
@@ -12,6 +13,7 @@ class AuthTextField extends StatefulWidget {
     this.keyboardType,
     this.validator,
     this.textInputAction = TextInputAction.next,
+    this.inputFormatters,
   });
 
   final TextEditingController controller;
@@ -21,7 +23,7 @@ class AuthTextField extends StatefulWidget {
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
   final TextInputAction textInputAction;
-
+  final List<TextInputFormatter>? inputFormatters;
   @override
   State<AuthTextField> createState() => _AuthTextFieldState();
 }
@@ -37,6 +39,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
       keyboardType: widget.keyboardType,
       validator: widget.validator,
       textInputAction: widget.textInputAction,
+      inputFormatters: widget.inputFormatters,
       decoration: InputDecoration(
         hintText: widget.label,
         prefixIcon: widget.icon == null ? null : Icon(widget.icon),
