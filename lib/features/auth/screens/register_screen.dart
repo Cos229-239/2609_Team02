@@ -26,6 +26,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _inviteCodeController = TextEditingController();
   UserRole _role = UserRole.parent;
   bool _isSubmitting = false;
 
@@ -35,6 +36,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _inviteCodeController.dispose();
     super.dispose();
   }
 
@@ -48,9 +50,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
             email: _emailController.text.trim(),
             password: _passwordController.text,
             role: _role,
+            inviteCode: _role == UserRole.child ? _inviteCodeController.text.trim() : null,
           );
       if (!mounted) return;
       Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.home, (route) => false);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -129,6 +137,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   selected: {_role},
                   onSelectionChanged: (selection) => setState(() => _role = selection.first),
                 ),
+                if (_role == UserRole.child) ...[
+                  const SizedBox(height: 12),
+                  AuthTextField(
+                    controller: _inviteCodeController,
+                    label: 'Family Invite Code',
+                    icon: Icons.groups_outlined,
+                    textInputAction: TextInputAction.done,
+                    validator: (v) => Validators.required(v, fieldName: 'Invite code'),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Ask a parent in your household for their invite code.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+                  ),
+                ],
                 const SizedBox(height: 24),
                 AppButton(
                   label: 'Create Account',

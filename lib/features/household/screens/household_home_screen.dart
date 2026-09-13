@@ -23,6 +23,11 @@ class HouseholdHomeScreen extends StatelessWidget {
     final auth = context.watch<AuthService>();
     final db = context.watch<DatabaseService>();
     final parentName = auth.currentUser?.name ?? 'there';
+    final household = db.household;
+
+    if (household == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -30,7 +35,7 @@ class HouseholdHomeScreen extends StatelessWidget {
         Text('Welcome back, $parentName! 👋', style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 4),
         Text(
-          db.household.name,
+          household.name,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
         ),
         const SizedBox(height: 20),

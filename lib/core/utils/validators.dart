@@ -12,6 +12,7 @@ class Validators {
     return null;
   }
 
+<<<<<<< HEAD
   /// Accepts either an email address or a phone number, matching the
   /// "Email or Phone" field shown on the login wireframe.
   static String? emailOrPhone(String? value) {
@@ -27,6 +28,8 @@ class Validators {
     return null;
   }
 
+=======
+>>>>>>> origin/dev
   static String? email(String? value) {
     final error = required(value, fieldName: 'Email');
     if (error != null) return error;
