@@ -78,11 +78,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               children: [
                 AuthTextField(
                   controller: _nameController,
-<<<<<<< Updated upstream
                   label: 'Full Name',
-=======
-                  label: 'First and Last Name *',
->>>>>>> Stashed changes
                   icon: Icons.badge_outlined,
                   validator: (v) => Validators.required(v, fieldName: 'Name'),
                 ),
@@ -116,11 +112,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 12),
                 AuthTextField(
                   controller: _confirmPasswordController,
-<<<<<<< Updated upstream
                   label: 'Confirm Password',
-=======
-                  label: 'Confirm Your Password *',
->>>>>>> Stashed changes
                   icon: Icons.lock_outline,
                   obscureText: true,
                   textInputAction: TextInputAction.done,
