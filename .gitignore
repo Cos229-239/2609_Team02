@@ -215,6 +215,7 @@ build/
 # Generated files
 *.g.dart
 *.freezed.dart
+.flutter-plugins-dependencies
 
 # Android
 android/.gradle/

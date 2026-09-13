@@ -10,7 +10,7 @@ class HouseholdService {
 
   final DatabaseService _db;
 
-  Household get currentHousehold => _db.household;
+  Household? get currentHousehold => _db.household;
 
   int get memberCount => _db.familyMembers.length;
 

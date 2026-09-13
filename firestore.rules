@@ -1,0 +1,65 @@
+rules_version = '2';
+
+// Data model:
+//   users/{uid}                       — profile: name, email, role, xp, householdId, ...
+//   households/{householdId}          — name, inviteCode, memberIds
+//   households/{householdId}/tasks/{taskId}
+//   households/{householdId}/rewards/{rewardId}
+//
+// Note: `households` documents (including their inviteCode) are readable by
+// any signed-in user so a new account can look itself up by invite code
+// before it has joined a household. Treat invite codes as "share with your
+// family", not as a secret against other signed-in app users.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function selfProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isParentInSameHousehold(userId) {
+      return isSignedIn() &&
+        selfProfile().role == 'parent' &&
+        selfProfile().householdId == resource.data.householdId;
+    }
+
+    match /users/{userId} {
+      // Anyone signed in can read their own profile; reading someone
+      // else's is only allowed for members of the same household (so the
+      // household/family screens can list everyone's name, avatar, xp).
+      allow read: if isSignedIn() &&
+        (request.auth.uid == userId || selfProfile().householdId == resource.data.householdId);
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() &&
+        (request.auth.uid == userId || isParentInSameHousehold(userId));
+      allow delete: if false;
+    }
+
+    match /households/{householdId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      // Existing members can update freely (e.g. rename); a user who isn't
+      // a member yet may only update by adding themself to `memberIds`
+      // (used when joining via invite code, before their own user doc
+      // exists) — no other field may change in that case.
+      allow update: if isSignedIn() &&
+        ( resource.data.memberIds.hasAny([request.auth.uid]) ||
+          ( request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds']) &&
+            request.resource.data.memberIds.hasAny([request.auth.uid]) ) );
+      allow delete: if false;
+
+      match /tasks/{taskId} {
+        allow read, write: if isSignedIn() &&
+          get(/databases/$(database)/documents/households/$(householdId)).data.memberIds.hasAny([request.auth.uid]);
+      }
+
+      match /rewards/{rewardId} {
+        allow read, write: if isSignedIn() &&
+          get(/databases/$(database)/documents/households/$(householdId)).data.memberIds.hasAny([request.auth.uid]);
+      }
+    }
+  }
+}

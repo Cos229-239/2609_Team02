@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/household.dart';
@@ -5,116 +8,82 @@ import '../models/reward.dart';
 import '../models/task.dart';
 import '../models/user.dart';
 
-/// In-memory stand-in for persistent storage (Firestore/local DB)
-/// Seeded with demo data that mirrors the lo-fidelity
-/// wireframes so every screen has something real to show and the sample
-/// flow (assign → complete → approve → earn) actually mutates state.
+/// Firestore-backed household data: family members, tasks and rewards.
 ///
-/// Replace the bodies of these methods with real persistence calls later;
-/// the shape of the API (methods + ChangeNotifier so widgets rebuild) is
-/// meant to stay stable.
+/// Bound to whichever household the signed-in user belongs to (see
+/// [bindHousehold]) and kept in sync via live Firestore listeners, so
+/// widgets that `watch` this service rebuild automatically as data
+/// changes — including changes made by other family members' devices.
 class DatabaseService extends ChangeNotifier {
-  DatabaseService() {
-    _seedDemoData();
+  DatabaseService({FirebaseFirestore? firestore}) : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  final FirebaseFirestore _firestore;
+
+  String? _householdId;
+
+  Household? household;
+  List<AppUser> familyMembers = [];
+  List<TaskModel> tasks = [];
+  List<Reward> availableRewards = [];
+
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _householdSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _membersSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _tasksSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _rewardsSub;
+
+  /// (Re)binds this service to the given household, replacing any prior
+  /// Firestore listeners. Pass null (e.g. after logout) to clear all data.
+  void bindHousehold(String? householdId) {
+    if (householdId == _householdId) return;
+    _householdId = householdId;
+
+    unawaited(_householdSub?.cancel());
+    unawaited(_membersSub?.cancel());
+    unawaited(_tasksSub?.cancel());
+    unawaited(_rewardsSub?.cancel());
+
+    household = null;
+    familyMembers = [];
+    tasks = [];
+    availableRewards = [];
+    notifyListeners();
+
+    if (householdId == null) return;
+
+    final householdRef = _firestore.collection('households').doc(householdId);
+
+    _householdSub = householdRef.snapshots().listen((snap) {
+      household = snap.exists ? Household.fromFirestore(snap) : null;
+      notifyListeners();
+    });
+
+    _membersSub = _firestore
+        .collection('users')
+        .where('householdId', isEqualTo: householdId)
+        .snapshots()
+        .listen((snap) {
+      familyMembers = snap.docs.map(AppUser.fromFirestore).toList();
+      notifyListeners();
+    });
+
+    _tasksSub = householdRef.collection('tasks').snapshots().listen((snap) {
+      tasks = snap.docs.map(TaskModel.fromFirestore).toList();
+      notifyListeners();
+    });
+
+    _rewardsSub = householdRef.collection('rewards').snapshots().listen((snap) {
+      availableRewards = snap.docs.map(Reward.fromFirestore).toList();
+      notifyListeners();
+    });
   }
 
-  late Household household;
-  final List<AppUser> familyMembers = [];
-  final List<TaskModel> tasks = [];
-  final List<Reward> availableRewards = [];
-
-  void _seedDemoData() {
-    household = const Household(
-      id: 'household-1',
-      name: 'The Full Sail Family',
-      memberIds: ['user-parent-1', 'user-child-alex'],
-    );
-
-    familyMembers.addAll(const [
-      AppUser(
-        id: 'user-parent-1',
-        name: 'Jamie',
-        email: 'jamie@famotive.app',
-        role: UserRole.parent,
-        avatarEmoji: '👩',
-        householdId: 'household-1',
-      ),
-      AppUser(
-        id: 'user-child-alex',
-        name: 'Alex',
-        email: 'alex@famotive.app',
-        role: UserRole.child,
-        avatarEmoji: '🧑',
-        age: 9,
-        xp: 120,
-        householdId: 'household-1',
-      ),
-    ]);
-
-    tasks.addAll(const [
-      TaskModel(
-        id: 'task-1',
-        title: 'Make Bed',
-        description: 'Keep your room tidy!',
-        icon: '🛏️',
-        assignedToUserId: 'user-child-alex',
-        rewardXp: 50,
-        status: TaskStatus.approved,
-      ),
-      TaskModel(
-        id: 'task-2',
-        title: 'Clean Room',
-        description: 'Make your room sparkle.',
-        icon: '🧹',
-        assignedToUserId: 'user-child-alex',
-        rewardXp: 50,
-        status: TaskStatus.pending,
-      ),
-      TaskModel(
-        id: 'task-3',
-        title: 'Sweep/Mop Kitchen',
-        description: 'Help keep the kitchen clean.',
-        icon: '🧽',
-        assignedToUserId: 'user-child-alex',
-        rewardXp: 50,
-        status: TaskStatus.pending,
-      ),
-    ]);
-
-    availableRewards.addAll(const [
-      Reward(
-        id: 'reward-xp',
-        title: '50 XP',
-        description: 'Earn 50 points',
-        icon: '⭐',
-        type: RewardType.points,
-        xpCost: 50,
-      ),
-      Reward(
-        id: 'reward-screentime',
-        title: '+30 Minutes Game Time',
-        description: 'Earn 100 points',
-        icon: '🎮',
-        type: RewardType.screenTime,
-        xpCost: 100,
-      ),
-      Reward(
-        id: 'reward-outing',
-        title: 'Fun Day Out',
-        description: 'Earn 200 points',
-        icon: '🌳',
-        type: RewardType.activity,
-        xpCost: 200,
-      ),
-      Reward(
-        id: 'reward-treat',
-        title: 'Extra Sweet Treat of Choice',
-        description: 'Earn 150 points',
-        icon: '🍬',
-        type: RewardType.treat,
-        xpCost: 150,
-      ),
-    ]);
+  @override
+  void dispose() {
+    _householdSub?.cancel();
+    _membersSub?.cancel();
+    _tasksSub?.cancel();
+    _rewardsSub?.cancel();
+    super.dispose();
   }
 
   // --- Queries ---------------------------------------------------------
@@ -134,38 +103,44 @@ class DatabaseService extends ChangeNotifier {
 
   // --- Mutations ---------------------------------------------------------
 
-  void addTask(TaskModel task) {
-    tasks.add(task);
-    notifyListeners();
+  CollectionReference<Map<String, dynamic>> get _tasksCollection => _firestore
+      .collection('households')
+      .doc(_householdId)
+      .collection('tasks');
+
+  Future<void> addTask(TaskModel task) async {
+    await _tasksCollection.add(task.toFirestore());
   }
 
-  void removeTask(String taskId) {
-    tasks.removeWhere((t) => t.id == taskId);
-    notifyListeners();
+  Future<void> removeTask(String taskId) async {
+    await _tasksCollection.doc(taskId).delete();
   }
 
   /// Child marks a task done — moves it to `completed`, awaiting approval.
-  TaskModel completeTask(String taskId) {
-    final index = tasks.indexWhere((t) => t.id == taskId);
-    final updated = tasks[index].copyWith(status: TaskStatus.completed);
-    tasks[index] = updated;
-    notifyListeners();
-    return updated;
+  Future<void> completeTask(String taskId) async {
+    await _tasksCollection.doc(taskId).update({
+      'status': TaskStatus.completed.name,
+    });
   }
 
   /// Parent approves a completed task — grants XP to the child.
-  void approveTask(String taskId) {
-    final index = tasks.indexWhere((t) => t.id == taskId);
-    if (index == -1) return;
-    final task = tasks[index];
-    tasks[index] = task.copyWith(status: TaskStatus.approved);
+  Future<void> approveTask(String taskId) async {
+    final taskRef = _tasksCollection.doc(taskId);
+    await _firestore.runTransaction((transaction) async {
+      // The Flutter `cloud_firestore` transaction API requires every read
+      // to happen before any write is issued, so both `get`s run up front.
+      final taskSnap = await transaction.get(taskRef);
+      if (!taskSnap.exists) return;
+      final task = TaskModel.fromFirestore(taskSnap);
 
-    final userIndex =
-        familyMembers.indexWhere((m) => m.id == task.assignedToUserId);
-    if (userIndex != -1) {
-      final user = familyMembers[userIndex];
-      familyMembers[userIndex] = user.copyWith(xp: user.xp + task.rewardXp);
-    }
-    notifyListeners();
+      final userRef = _firestore.collection('users').doc(task.assignedToUserId);
+      final userSnap = await transaction.get(userRef);
+
+      transaction.update(taskRef, {'status': TaskStatus.approved.name});
+      if (userSnap.exists) {
+        final currentXp = userSnap.data()?['xp'] as int? ?? 0;
+        transaction.update(userRef, {'xp': currentXp + task.rewardXp});
+      }
+    });
   }
 }
