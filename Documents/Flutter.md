@@ -91,7 +91,7 @@ app's equivalent of a shared `ViewModel`. Two services are registered app-wide i
 `app/app.dart`:
 
 - **`AuthService`** — who's logged in.
-- **`DatabaseService`** — the in-memory "database": household, family members, tasks, rewards.
+- **`DatabaseService`** — the household's data: family members, tasks, rewards.
 
 Both extend `ChangeNotifier`: they hold mutable state and call `notifyListeners()` whenever
 that state changes. Any widget below the `MultiProvider` in `app.dart` can then read that state
@@ -107,12 +107,11 @@ UI update automatically the moment, say, a task gets marked complete. `read` is 
 calls that don't need to trigger a rebuild (you almost always use it inside callbacks like
 `onPressed`, never inside `build()`).
 
-**Important for demoing/testing:** there's no real backend yet. `AuthService.login()` accepts
-any non-empty email/password and signs you in as a hardcoded demo parent. `DatabaseService`
-seeds itself with fake household/task/reward data in `_seedDemoData()`. `ApiService` and
-`core/config/app_config.dart` (environment + `API_BASE_URL`, set via `--dart-define`) are the
-scaffolding for when a real backend — Firebase is the plan — gets wired in. Until then, all
-"persistence" resets every time you hot-restart the app.
+**Both are backed by Firebase now** — `AuthService` by Firebase Auth, `DatabaseService` by live
+Firestore listeners. See `Authentication_and_Tasks.md` for how sign-in, households, and the
+task/reward lifecycle actually work under the hood. `ApiService` and
+`core/config/app_config.dart` (environment + `API_BASE_URL`, set via `--dart-define`) remain
+unused scaffolding for a future non-Firebase REST need.
 
 ## Navigation
 
@@ -173,6 +172,8 @@ declared in `pubspec.yaml` at the project root and installed with `flutter pub g
 the app only pulls in a handful:
 
 - `provider` — the state management described above.
+- `firebase_core`, `firebase_auth`, `cloud_firestore` — the Firebase SDKs; see
+  `Authentication_and_Tasks.md`.
 - `intl` — date formatting/parsing (due dates, streaks).
 - `cupertino_icons` — the icon set.
 - `flutter_lints` (dev-only) — the linter rules `flutter analyze` checks against.

@@ -18,13 +18,19 @@ class FamilyScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final db = context.watch<DatabaseService>();
+    final household = db.household;
+
+    if (household == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     final parents = db.familyMembers.where((m) => m.role == UserRole.parent);
     final children = db.children;
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text(db.household.name, style: Theme.of(context).textTheme.headlineSmall),
+        Text(household.name, style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 16),
         Text('Parents', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
@@ -44,16 +50,32 @@ class FamilyScreen extends StatelessWidget {
         ],
         const SizedBox(height: 16),
         OutlinedButton.icon(
-          onPressed: () {
-            // TODO: build the invite/add-family-member flow.
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Add family member coming soon.')),
-            );
-          },
+          onPressed: () => _showInviteCodeDialog(context, household.inviteCode),
           icon: const Icon(Icons.person_add_alt),
           label: const Text('Add Family Member'),
         ),
       ],
+    );
+  }
+
+  void _showInviteCodeDialog(BuildContext context, String? inviteCode) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Invite Code'),
+        content: Text(
+          inviteCode == null
+              ? 'No invite code available yet.'
+              : 'Share this code with a new family member — they\'ll enter it '
+                  'as a "Child" when creating their account:\n\n$inviteCode',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
     );
   }
 }

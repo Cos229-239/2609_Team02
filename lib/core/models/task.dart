@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 /// Lifecycle of an assigned chore/quest.
 enum TaskStatus {
   /// Assigned, not started/completed by the child yet.
@@ -38,6 +40,37 @@ class TaskModel {
   bool get isPending => status == TaskStatus.pending;
   bool get isCompleted =>
       status == TaskStatus.completed || status == TaskStatus.approved;
+
+  factory TaskModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
+    final data = doc.data() ?? const {};
+    return TaskModel(
+      id: doc.id,
+      title: data['title'] as String? ?? '',
+      assignedToUserId: data['assignedToUserId'] as String? ?? '',
+      description: data['description'] as String? ?? '',
+      icon: data['icon'] as String? ?? '🧹',
+      rewardXp: data['rewardXp'] as int? ?? 50,
+      status: TaskStatus.values.firstWhere(
+        (s) => s.name == data['status'],
+        orElse: () => TaskStatus.pending,
+      ),
+      isRecurring: data['isRecurring'] as bool? ?? false,
+      dueDate: (data['dueDate'] as Timestamp?)?.toDate(),
+    );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'title': title,
+      'assignedToUserId': assignedToUserId,
+      'description': description,
+      'icon': icon,
+      'rewardXp': rewardXp,
+      'status': status.name,
+      'isRecurring': isRecurring,
+      'dueDate': dueDate == null ? null : Timestamp.fromDate(dueDate!),
+    };
+  }
 
   TaskModel copyWith({
     String? title,

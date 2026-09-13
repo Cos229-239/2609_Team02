@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+
 import '../../../app/routes.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/utils/validators.dart';
@@ -39,6 +40,11 @@ class _LoginScreenState extends State<LoginScreen> {
           );
       if (!mounted) return;
       Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.home, (route) => false);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -94,10 +100,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 32),
                   AuthTextField(
                     controller: _identifierController,
-                    label: 'Email or Phone',
+                    label: 'Email',
                     icon: Icons.person_outline,
                     keyboardType: TextInputType.emailAddress,
-                    validator: Validators.emailOrPhone,
+                    validator: Validators.email,
                   ),
                   const SizedBox(height: 12),
                   AuthTextField(

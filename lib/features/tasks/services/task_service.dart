@@ -19,13 +19,13 @@ class TaskService {
     return null;
   }
 
-  void assignTask({
+  Future<void> assignTask({
     required String title,
     required String childId,
     int rewardXp = 50,
     String icon = '📋',
   }) {
-    _db.addTask(
+    return _db.addTask(
       TaskModel(
         id: 'task-${DateTime.now().millisecondsSinceEpoch}',
         title: title,
@@ -36,7 +36,7 @@ class TaskService {
     );
   }
 
-  TaskModel markComplete(String taskId) => _db.completeTask(taskId);
+  Future<void> markComplete(String taskId) => _db.completeTask(taskId);
 
-  void approve(String taskId) => _db.approveTask(taskId);
+  Future<void> approve(String taskId) => _db.approveTask(taskId);
 }
