@@ -50,6 +50,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             email: _emailController.text.trim(),
             password: _passwordController.text,
             role: _role,
+            phoneNumber: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
             inviteCode: _role == UserRole.child ? _inviteCodeController.text.trim() : null,
           );
       if (!mounted) return;
