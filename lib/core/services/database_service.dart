@@ -15,7 +15,8 @@ import '../models/user.dart';
 /// widgets that `watch` this service rebuild automatically as data
 /// changes — including changes made by other family members' devices.
 class DatabaseService extends ChangeNotifier {
-  DatabaseService({FirebaseFirestore? firestore}) : _firestore = firestore ?? FirebaseFirestore.instance;
+  DatabaseService({FirebaseFirestore? firestore})
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _firestore;
 
@@ -62,9 +63,9 @@ class DatabaseService extends ChangeNotifier {
         .where('householdId', isEqualTo: householdId)
         .snapshots()
         .listen((snap) {
-      familyMembers = snap.docs.map(AppUser.fromFirestore).toList();
-      notifyListeners();
-    });
+          familyMembers = snap.docs.map(AppUser.fromFirestore).toList();
+          notifyListeners();
+        });
 
     _tasksSub = householdRef.collection('tasks').snapshots().listen((snap) {
       tasks = snap.docs.map(TaskModel.fromFirestore).toList();
@@ -103,10 +104,8 @@ class DatabaseService extends ChangeNotifier {
 
   // --- Mutations ---------------------------------------------------------
 
-  CollectionReference<Map<String, dynamic>> get _tasksCollection => _firestore
-      .collection('households')
-      .doc(_householdId)
-      .collection('tasks');
+  CollectionReference<Map<String, dynamic>> get _tasksCollection =>
+      _firestore.collection('households').doc(_householdId).collection('tasks');
 
   Future<void> addTask(TaskModel task) async {
     await _tasksCollection.add(task.toFirestore());
@@ -120,6 +119,14 @@ class DatabaseService extends ChangeNotifier {
   Future<void> completeTask(String taskId) async {
     await _tasksCollection.doc(taskId).update({
       'status': TaskStatus.completed.name,
+    });
+  }
+
+  ///Returns a submitted task to pending before parent approval.
+  ///This allows a child to undo an accidental completion or a parent to reject the submitted work and return the task for completion.
+  Future<void> uncompleteTask(String taskId) async {
+    await _tasksCollection.doc(taskId).update({
+      'status': TaskStatus.pending.name,
     });
   }
 

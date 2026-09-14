@@ -135,6 +135,45 @@ void main() {
       expect(taskSnapshot.data()?['status'], TaskStatus.completed.name);
     });
 
+    test(
+      'returns a completed task to pending when completion is undone',
+      () async {
+        final firestore = FakeFirebaseFirestore();
+        final db = DatabaseService(firestore: firestore);
+        final service = TaskService(db);
+
+        const householdId = 'household-1';
+        const taskId = 'task-1';
+
+        await firestore
+            .collection('households')
+            .doc(householdId)
+            .collection('tasks')
+            .doc(taskId)
+            .set(
+              const TaskModel(
+                id: taskId,
+                title: 'Clean Room',
+                assignedToUserId: 'child-1',
+                status: TaskStatus.completed,
+              ).toFirestore(),
+            );
+
+        db.bindHousehold(householdId);
+
+        await service.uncomplete(taskId);
+
+        final taskSnapshot = await firestore
+            .collection('households')
+            .doc(householdId)
+            .collection('tasks')
+            .doc(taskId)
+            .get();
+
+        expect(taskSnapshot.data()?['status'], TaskStatus.pending.name);
+      },
+    );
+
     test('approves a completed task and awards XP to the child', () async {
       final firestore = FakeFirebaseFirestore();
       final db = DatabaseService(firestore: firestore);

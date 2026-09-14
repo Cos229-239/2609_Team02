@@ -5,6 +5,11 @@ import '../../../core/services/database_service.dart';
 /// out keeps the generic data store simple while giving task workflows
 /// (assign, complete, approve) a dedicated place to grow — e.g. adding
 /// recurrence scheduling later.
+///
+/// Tiff: Udating task workflow to include (assigning tasks, marking them
+/// complete, returning submitted tasks to pending, and approving completed
+/// tasks for rewards.)
+
 class TaskService {
   TaskService(this._db);
 
@@ -37,6 +42,10 @@ class TaskService {
   }
 
   Future<void> markComplete(String taskId) => _db.completeTask(taskId);
+
+  Future<void> uncomplete(String taskId) => _db.uncompleteTask(taskId);
+
+  ///Returns a submitted task to pending before parent approval, i.e. child marks chore as complete by mistake or the parent rejects the work and sends it back for completion.
 
   Future<void> approve(String taskId) => _db.approveTask(taskId);
 }
