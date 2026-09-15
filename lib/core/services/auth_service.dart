@@ -77,6 +77,7 @@ class AuthService extends ChangeNotifier {
     required String email,
     required String password,
     UserRole role = UserRole.parent,
+    String? phoneNumber,
     String? inviteCode,
   }) async {
     UserCredential cred;
@@ -100,6 +101,7 @@ class AuthService extends ChangeNotifier {
         name: name,
         email: email.trim(),
         role: role,
+        phoneNumber: phoneNumber,
         avatarEmoji: role == UserRole.parent ? '👩' : '🧒',
         householdId: householdId,
       );

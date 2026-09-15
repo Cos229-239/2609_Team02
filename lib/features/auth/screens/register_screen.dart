@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/routes.dart';
@@ -22,6 +23,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _inviteCodeController = TextEditingController();
@@ -48,6 +50,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             email: _emailController.text.trim(),
             password: _passwordController.text,
             role: _role,
+            phoneNumber: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
             inviteCode: _role == UserRole.child ? _inviteCodeController.text.trim() : null,
           );
       if (!mounted) return;
@@ -83,15 +86,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 12),
                 AuthTextField(
                   controller: _emailController,
-                  label: 'Email',
+                  label: 'Email *',
                   icon: Icons.mail_outline,
                   keyboardType: TextInputType.emailAddress,
                   validator: Validators.email,
                 ),
                 const SizedBox(height: 12),
                 AuthTextField(
+                  controller: _phoneController,
+                  label: 'Phone Number (optional)',
+                  icon: Icons.phone_outlined,
+                  keyboardType: TextInputType.phone,
+                  validator: Validators.phone,
+                  inputFormatters: [
+                  PhoneNumberFormatter(),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                AuthTextField(
                   controller: _passwordController,
-                  label: 'Password',
+                  label: 'Password *',
                   icon: Icons.lock_outline,
                   obscureText: true,
                   validator: Validators.password,
@@ -144,4 +158,67 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
+}
+class PhoneNumberFormatter extends TextInputFormatter {
+
+  @override
+
+  TextEditingValue formatEditUpdate(
+
+    TextEditingValue oldValue,
+
+    TextEditingValue newValue,
+
+  ) {
+
+    String digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+
+    if (digits.length > 10) {
+
+      digits = digits.substring(0, 10);
+
+    }
+
+    String formatted = '';
+
+    if (digits.isNotEmpty) {
+
+      if (digits.length <= 3) {
+
+        formatted = '($digits';
+
+      } else if (digits.length <= 6) {
+
+        formatted =
+
+            '(${digits.substring(0, 3)}) ${digits.substring(3)}';
+
+      } else {
+
+        formatted =
+
+            '(${digits.substring(0, 3)}) '
+
+            '${digits.substring(3, 6)}-'
+
+            '${digits.substring(6)}';
+
+      }
+
+    }
+
+    return TextEditingValue(
+
+      text: formatted,
+
+      selection: TextSelection.collapsed(
+
+        offset: formatted.length,
+
+      ),
+
+    );
+
+  }
+
 }

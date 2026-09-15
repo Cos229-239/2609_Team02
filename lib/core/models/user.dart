@@ -11,6 +11,7 @@ class AppUser {
     required this.email,
     required this.role,
     this.avatarEmoji = '🙂',
+    this.phoneNumber,
     this.age,
     this.xp = 0,
     this.householdId,
@@ -23,6 +24,7 @@ class AppUser {
 
   /// Placeholder avatar (an emoji) until real avatar images/uploads exist.
   final String avatarEmoji;
+  final String? phoneNumber;
   final int? age;
   final int xp;
   final String? householdId;
@@ -40,6 +42,7 @@ class AppUser {
         (r) => r.name == data['role'],
         orElse: () => UserRole.child,
       ),
+      phoneNumber: data['phoneNumber'] as String?,
       avatarEmoji: data['avatarEmoji'] as String? ?? '🙂',
       age: data['age'] as int?,
       xp: data['xp'] as int? ?? 0,
@@ -53,6 +56,7 @@ class AppUser {
       'email': email,
       'role': role.name,
       'avatarEmoji': avatarEmoji,
+      'phoneNumber': phoneNumber,
       'age': age,
       'xp': xp,
       'householdId': householdId,
@@ -64,6 +68,7 @@ class AppUser {
     String? email,
     UserRole? role,
     String? avatarEmoji,
+    String? phoneNumber,
     int? age,
     int? xp,
     String? householdId,
@@ -75,6 +80,7 @@ class AppUser {
       role: role ?? this.role,
       avatarEmoji: avatarEmoji ?? this.avatarEmoji,
       age: age ?? this.age,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
       xp: xp ?? this.xp,
       householdId: householdId ?? this.householdId,
     );
