@@ -2,19 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/theme.dart';
-import '../../../core/models/reward.dart';
 import '../../../core/models/task.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/database_service.dart';
 import '../../../shared/widgets/app_card.dart';
 
-enum _ChildTasksView { tasks, rewards }
+enum _ChildTasksView { tasks, history }
 
 /// "Tasks" tab for a signed-in child — replaces the parent's "Family" tab.
 /// A child can see the tasks already claimed/assigned to them, mark them
-/// complete, and claim new tasks from the household's shared pool. They
-/// cannot create tasks, assign tasks to anyone else, or manage the family
-/// — those actions live only on the parent's screens.
+/// complete, claim new tasks from the household's shared pool, and look
+/// back at a history of everything they've completed. They cannot create
+/// tasks, assign tasks to anyone else, or manage the family — those
+/// actions live only on the parent's screens. The reward catalog and
+/// family leaderboard live on the separate Rewards tab.
 ///
 /// This only returns the tab's content; [MainTabShell] supplies the
 /// shared app bar, bottom nav bar and [SafeArea].
@@ -40,6 +41,7 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
 
     final myTasks = db.tasksForUser(child.id);
     final availableTasks = db.availableTasks;
+    final history = myTasks.where((t) => t.isCompleted).toList(growable: false);
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -102,21 +104,27 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
             ],
         ] else ...[
           _SectionHeader(
-            icon: Icons.emoji_events,
-            title: 'My Rewards',
-            count: db.availableRewards.length,
-            badgeColor: Colors.amber.shade700,
+            icon: Icons.history,
+            title: 'Task History',
+            count: history.length,
+            badgeColor: Colors.grey.shade600,
           ),
           const SizedBox(height: 8),
           Text(
-            'Earn XP by completing tasks to unlock these!',
+            'Everything you\'ve completed so far.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
           ),
           const SizedBox(height: 8),
-          for (final reward in db.availableRewards) ...[
-            _RewardRow(reward: reward, childXp: child.xp),
-            const SizedBox(height: 8),
-          ],
+          if (history.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text('Nothing completed yet — finish a task to see it here!'),
+            )
+          else
+            for (final task in history) ...[
+              _HistoryRow(task: task),
+              const SizedBox(height: 8),
+            ],
         ],
       ],
     );
@@ -149,10 +157,10 @@ class _ViewToggle extends StatelessWidget {
           ),
           Expanded(
             child: _ToggleButton(
-              icon: Icons.emoji_events,
-              label: 'Rewards',
-              selected: view == _ChildTasksView.rewards,
-              onTap: () => onChanged(_ChildTasksView.rewards),
+              icon: Icons.history,
+              label: 'History',
+              selected: view == _ChildTasksView.history,
+              onTap: () => onChanged(_ChildTasksView.history),
             ),
           ),
         ],
@@ -329,41 +337,56 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
-class _RewardRow extends StatelessWidget {
-  const _RewardRow({required this.reward, required this.childXp});
+class _HistoryRow extends StatelessWidget {
+  const _HistoryRow({required this.task});
 
-  final Reward reward;
-  final int childXp;
+  final TaskModel task;
 
   @override
   Widget build(BuildContext context) {
-    final progress = (childXp / (reward.xpCost == 0 ? 1 : reward.xpCost)).clamp(0.0, 1.0).toDouble();
-    final unlocked = reward.xpCost > 0 && childXp >= reward.xpCost;
+    final theme = Theme.of(context);
+    final approved = task.status == TaskStatus.approved;
 
     return AppCard(
+      color: AppColors.growthGreen.withValues(alpha: 0.05),
       child: Row(
         children: [
-          Text(reward.icon, style: const TextStyle(fontSize: 26)),
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: theme.colorScheme.secondary.withValues(alpha: 0.15),
+            child: Text(task.icon, style: const TextStyle(fontSize: 18)),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(reward.title, style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 4),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(value: progress, minHeight: 6),
-                ),
-                const SizedBox(height: 2),
+                Text(task.title, style: theme.textTheme.titleMedium),
                 Text(
-                  '$childXp / ${reward.xpCost} XP',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+                  task.isRecurring ? 'Daily Task' : 'One-time Task',
+                  style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
                 ),
               ],
             ),
           ),
-          if (unlocked) const Icon(Icons.lock_open, color: AppColors.growthGreen) else const Icon(Icons.lock_outline, color: Colors.grey),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _StatusPill(
+                label: approved ? 'Approved' : 'Awaiting Approval',
+                color: approved ? AppColors.growthGreen : Colors.orange,
+                icon: approved ? Icons.check_circle : Icons.hourglass_bottom,
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(Icons.star, size: 14, color: Colors.amber),
+                  const SizedBox(width: 2),
+                  Text('+${task.rewardXp} XP', style: theme.textTheme.bodyMedium),
+                ],
+              ),
+            ],
+          ),
         ],
       ),
     );

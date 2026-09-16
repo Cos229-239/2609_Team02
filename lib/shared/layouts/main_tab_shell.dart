@@ -7,6 +7,7 @@ import '../../features/household/screens/household_home_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/rewards/screens/progress_screen.dart';
 import '../../features/tasks/screens/child_home_screen.dart';
+import '../../features/tasks/screens/child_rewards_screen.dart';
 import '../../features/tasks/screens/child_tasks_screen.dart';
 
 /// The 4 top-level destinations shown in the bottom navigation bar on
@@ -45,11 +46,13 @@ class _MainTabShellState extends State<MainTabShell> {
   late AppTab _currentTab = widget.initialTab;
 
   // Kept alive inside the IndexedStack below so switching tabs never
-  // disposes/rebuilds a tab's widget tree (or the nav bar). The 2nd slot
-  // swaps between the parent's "Family" management screen and the child's
-  // "Tasks" (claim/complete) screen, and the 1st slot swaps between the
-  // parent and child home dashboards, based on the signed-in user's role
-  // — a child never sees the household-management or task-creation UI.
+  // disposes/rebuilds a tab's widget tree (or the nav bar). Based on the
+  // signed-in user's role: the 1st slot swaps between the parent and
+  // child home dashboards, the 2nd between the parent's "Family"
+  // management screen and the child's "Tasks" (claim/complete/history)
+  // screen, and the 3rd between the family-wide "Progress" screen and
+  // the child's "Rewards" screen (leaderboard + reward catalog) — a
+  // child never sees the household-management or task-creation UI.
   static const _parentTabBodies = <Widget>[
     HouseholdHomeScreen(),
     FamilyScreen(),
@@ -60,7 +63,7 @@ class _MainTabShellState extends State<MainTabShell> {
   static const _childTabBodies = <Widget>[
     ChildHomeScreen(),
     ChildTasksScreen(),
-    ProgressScreen(),
+    ChildRewardsScreen(),
     ProfileScreen(),
   ];
 
