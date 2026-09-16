@@ -40,7 +40,7 @@ class HouseholdHomeScreen extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         AppButton(
-          label: 'Assign Tasks',
+          label: 'Create Task',
           icon: Icons.add_task,
           onPressed: () => Navigator.of(context).pushNamed(AppRoutes.taskCreate),
         ),

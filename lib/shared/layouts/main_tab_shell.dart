@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../core/services/auth_service.dart';
 import '../../features/household/screens/family_screen.dart';
 import '../../features/household/screens/household_home_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/rewards/screens/progress_screen.dart';
+import '../../features/tasks/screens/child_home_screen.dart';
+import '../../features/tasks/screens/child_rewards_screen.dart';
+import '../../features/tasks/screens/child_tasks_screen.dart';
 
 /// The 4 top-level destinations shown in the bottom navigation bar on
 /// every "signed in" screen, matching the lo-fidelity wireframes.
@@ -40,12 +45,25 @@ class MainTabShell extends StatefulWidget {
 class _MainTabShellState extends State<MainTabShell> {
   late AppTab _currentTab = widget.initialTab;
 
-  // Built once and kept alive inside the IndexedStack below so switching
-  // tabs never disposes/rebuilds a tab's widget tree (or the nav bar).
-  static const _tabBodies = <Widget>[
+  // Kept alive inside the IndexedStack below so switching tabs never
+  // disposes/rebuilds a tab's widget tree (or the nav bar). Based on the
+  // signed-in user's role: the 1st slot swaps between the parent and
+  // child home dashboards, the 2nd between the parent's "Family"
+  // management screen and the child's "Tasks" (claim/complete/history)
+  // screen, and the 3rd between the family-wide "Progress" screen and
+  // the child's "Rewards" screen (leaderboard + reward catalog) — a
+  // child never sees the household-management or task-creation UI.
+  static const _parentTabBodies = <Widget>[
     HouseholdHomeScreen(),
     FamilyScreen(),
     ProgressScreen(),
+    ProfileScreen(),
+  ];
+
+  static const _childTabBodies = <Widget>[
+    ChildHomeScreen(),
+    ChildTasksScreen(),
+    ChildRewardsScreen(),
     ProfileScreen(),
   ];
 
@@ -56,20 +74,41 @@ class _MainTabShellState extends State<MainTabShell> {
 
   @override
   Widget build(BuildContext context) {
+    final isChild = context.watch<AuthService>().currentUser?.isChild ?? false;
+    final tabBodies = isChild ? _childTabBodies : _parentTabBodies;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Famotive'), centerTitle: true),
+      // This shell is always the root of a signed-in session (see
+      // FamotiveApp.onGenerateInitialRoutes) and its 4 tabs are switched
+      // via IndexedStack, not the Navigator — so there's never a
+      // legitimate 'back' destination from here. Force the leading back
+      // arrow off rather than relying on canPop(), so it can't reappear
+      // if this shell is ever reached with something still under it on
+      // the stack.
+      appBar: AppBar(
+        title: const Text('Famotive'),
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+      ),
       body: SafeArea(
-        child: IndexedStack(index: _currentTab.index, children: _tabBodies),
+        child: IndexedStack(index: _currentTab.index, children: tabBodies),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentTab.index,
         onDestinationSelected: (index) => _switchTab(AppTab.values[index]),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.groups_outlined), selectedIcon: Icon(Icons.groups), label: 'Family'),
-          NavigationDestination(icon: Icon(Icons.bar_chart_outlined), selectedIcon: Icon(Icons.bar_chart), label: 'Progress'),
-          NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: 'Settings'),
-        ],
+        destinations: isChild
+            ? const [
+                NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
+                NavigationDestination(icon: Icon(Icons.checklist_outlined), selectedIcon: Icon(Icons.checklist), label: 'Tasks'),
+                NavigationDestination(icon: Icon(Icons.card_giftcard_outlined), selectedIcon: Icon(Icons.card_giftcard), label: 'Rewards'),
+                NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: 'Settings'),
+              ]
+            : const [
+                NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
+                NavigationDestination(icon: Icon(Icons.groups_outlined), selectedIcon: Icon(Icons.groups), label: 'Family'),
+                NavigationDestination(icon: Icon(Icons.bar_chart_outlined), selectedIcon: Icon(Icons.bar_chart), label: 'Progress'),
+                NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: 'Settings'),
+              ],
       ),
     );
   }

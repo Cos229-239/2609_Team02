@@ -62,27 +62,4 @@ class AppUser {
       'householdId': householdId,
     };
   }
-
-  AppUser copyWith({
-    String? name,
-    String? email,
-    UserRole? role,
-    String? avatarEmoji,
-    String? phoneNumber,
-    int? age,
-    int? xp,
-    String? householdId,
-  }) {
-    return AppUser(
-      id: id,
-      name: name ?? this.name,
-      email: email ?? this.email,
-      role: role ?? this.role,
-      avatarEmoji: avatarEmoji ?? this.avatarEmoji,
-      age: age ?? this.age,
-      phoneNumber: phoneNumber ?? this.phoneNumber,
-      xp: xp ?? this.xp,
-      householdId: householdId ?? this.householdId,
-    );
-  }
 }

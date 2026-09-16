@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/reward.dart';
+import '../models/task.dart';
 import '../models/user.dart';
 
 /// Handles sign-in/sign-up/session state against Firebase Auth, with each
@@ -136,6 +137,10 @@ class AuthService extends ChangeNotifier {
     final rewardsRef = householdRef.collection('rewards');
     for (final reward in Reward.defaultCatalog) {
       batch.set(rewardsRef.doc(), reward.toFirestore());
+    }
+    final tasksRef = householdRef.collection('tasks');
+    for (final task in TaskModel.defaultAvailableCatalog(DateTime.now())) {
+      batch.set(tasksRef.doc(), task.toFirestore());
     }
     await batch.commit();
 

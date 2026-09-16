@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/routes.dart';
+import '../../../core/constants/task_icons.dart';
 import '../../../core/models/task.dart';
 import '../../../core/services/database_service.dart';
 import '../../../shared/widgets/app_button.dart';
@@ -26,7 +27,7 @@ class TaskCompletionScreen extends StatelessWidget {
         break;
       }
     }
-    final child = task == null ? null : db.userById(task.assignedToUserId);
+    final child = task?.assignedToUserId == null ? null : db.userById(task!.assignedToUserId!);
 
     return Scaffold(
       body: SafeArea(
@@ -62,7 +63,13 @@ class TaskCompletionScreen extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text('${task.icon}  ${task.title}'),
+                      Row(
+                        children: [
+                          Icon(TaskIconCatalog.resolve(task.icon).icon, size: 18),
+                          const SizedBox(width: 8),
+                          Text(task.title),
+                        ],
+                      ),
                       const Divider(height: 24),
                       Row(
                         children: [

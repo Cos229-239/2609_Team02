@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../constants/task_icons.dart';
+
 /// Lifecycle of an assigned chore/quest.
 enum TaskStatus {
   /// Assigned, not started/completed by the child yet.
@@ -16,9 +18,9 @@ class TaskModel {
   const TaskModel({
     required this.id,
     required this.title,
-    required this.assignedToUserId,
+    this.assignedToUserId,
     this.description = '',
-    this.icon = '🧹',
+    this.icon = TaskIconCatalog.defaultKey,
     this.rewardXp = 50,
     this.status = TaskStatus.pending,
     this.isRecurring = false,
@@ -29,26 +31,34 @@ class TaskModel {
   final String title;
   final String description;
 
-  /// Emoji used as a lightweight placeholder icon
+  /// Key into [TaskIconCatalog] — which icon represents this task in the
+  /// picker grid and everywhere the task is shown.
   final String icon;
-  final String assignedToUserId;
+
+  /// Who this task belongs to. Null means it's sitting in the household's
+  /// shared pool — any child in the family can claim it (see
+  /// [DatabaseService.claimTask]) instead of a parent assigning it
+  /// directly to one child.
+  final String? assignedToUserId;
   final int rewardXp;
   final TaskStatus status;
   final bool isRecurring;
   final DateTime? dueDate;
 
-  bool get isPending => status == TaskStatus.pending;
   bool get isCompleted =>
       status == TaskStatus.completed || status == TaskStatus.approved;
+
+  /// True when nobody has claimed this task yet.
+  bool get isAvailable => assignedToUserId == null;
 
   factory TaskModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? const {};
     return TaskModel(
       id: doc.id,
       title: data['title'] as String? ?? '',
-      assignedToUserId: data['assignedToUserId'] as String? ?? '',
+      assignedToUserId: data['assignedToUserId'] as String?,
       description: data['description'] as String? ?? '',
-      icon: data['icon'] as String? ?? '🧹',
+      icon: data['icon'] as String? ?? TaskIconCatalog.defaultKey,
       rewardXp: data['rewardXp'] as int? ?? 50,
       status: TaskStatus.values.firstWhere(
         (s) => s.name == data['status'],
@@ -72,25 +82,42 @@ class TaskModel {
     };
   }
 
-  TaskModel copyWith({
-    String? title,
-    String? description,
-    String? icon,
-    int? rewardXp,
-    TaskStatus? status,
-    bool? isRecurring,
-    DateTime? dueDate,
-  }) {
-    return TaskModel(
-      id: id,
-      title: title ?? this.title,
-      assignedToUserId: assignedToUserId,
-      description: description ?? this.description,
-      icon: icon ?? this.icon,
-      rewardXp: rewardXp ?? this.rewardXp,
-      status: status ?? this.status,
-      isRecurring: isRecurring ?? this.isRecurring,
-      dueDate: dueDate ?? this.dueDate,
-    );
+  /// Seeded into a household's `tasks` subcollection when it's created, so
+  /// kids have a starter pool of unclaimed chores to grab from (matching
+  /// the "Available Tasks" section of the child task list).
+  static List<TaskModel> defaultAvailableCatalog(DateTime now) {
+    return [
+      TaskModel(
+        id: 'seed-trash',
+        title: 'Take Out the Trash',
+        icon: 'trash',
+        rewardXp: 25,
+        dueDate: now.add(const Duration(days: 1)),
+        isRecurring: true,
+      ),
+      TaskModel(
+        id: 'seed-table',
+        title: 'Set the Table',
+        icon: 'table',
+        rewardXp: 20,
+        dueDate: now.add(const Duration(days: 1)),
+        isRecurring: true,
+      ),
+      TaskModel(
+        id: 'seed-dog',
+        title: 'Feed the Dog',
+        icon: 'pet',
+        rewardXp: 15,
+        dueDate: now.add(const Duration(days: 2)),
+        isRecurring: true,
+      ),
+      TaskModel(
+        id: 'seed-read',
+        title: 'Read for 20 Minutes',
+        icon: 'reading',
+        rewardXp: 20,
+        dueDate: now.add(const Duration(days: 3)),
+      ),
+    ];
   }
 }
