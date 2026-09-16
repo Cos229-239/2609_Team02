@@ -221,6 +221,54 @@ void main() {
       expect(childSnapshot.data()?['xp'], startingXp + 50);
     });
 
+    test('does not approve a task before the child marks it complete', () async {
+  final firestore = FakeFirebaseFirestore();
+  final db = DatabaseService(firestore: firestore);
+  final service = TaskService(db);
+
+  const householdId = 'household-1';
+  const taskId = 'task-1';
+  const childId = 'child-1';
+  const startingXp = 120;
+
+  await firestore.collection('users').doc(childId).set({
+    'xp': startingXp,
+  });
+
+  await firestore
+      .collection('households')
+      .doc(householdId)
+      .collection('tasks')
+      .doc(taskId)
+      .set(
+        const TaskModel(
+          id: taskId,
+          title: 'Clean Room',
+          assignedToUserId: childId,
+          rewardXp: 50,
+          status: TaskStatus.pending,
+        ).toFirestore(),
+      );
+
+  db.bindHousehold(householdId);
+
+  await service.approve(taskId);
+
+  final taskSnapshot = await firestore
+      .collection('households')
+      .doc(householdId)
+      .collection('tasks')
+      .doc(taskId)
+      .get();
+
+  final childSnapshot =
+      await firestore.collection('users').doc(childId).get();
+
+  expect(childSnapshot.data()?['xp'], startingXp);
+  expect(taskSnapshot.data()?['status'], TaskStatus.pending.name);
+ 
+});
+
     test('does not award XP more than once for the same task', () async {
       final firestore = FakeFirebaseFirestore();
       final db = DatabaseService(firestore: firestore);
