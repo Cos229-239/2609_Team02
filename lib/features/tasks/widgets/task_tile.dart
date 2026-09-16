@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/task_icons.dart';
 import '../../../core/models/task.dart';
 import '../../../shared/widgets/app_card.dart';
 
@@ -32,7 +33,7 @@ class TaskTile extends StatelessWidget {
           CircleAvatar(
             radius: 20,
             backgroundColor: theme.colorScheme.secondary.withValues(alpha: 0.12),
-            child: Text(task.icon, style: const TextStyle(fontSize: 18)),
+            child: Icon(TaskIconCatalog.resolve(task.icon).icon, color: theme.colorScheme.secondary, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(

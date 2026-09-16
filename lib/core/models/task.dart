@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../constants/task_icons.dart';
+
 /// Lifecycle of an assigned chore/quest.
 enum TaskStatus {
   /// Assigned, not started/completed by the child yet.
@@ -18,7 +20,7 @@ class TaskModel {
     required this.title,
     this.assignedToUserId,
     this.description = '',
-    this.icon = '🧹',
+    this.icon = TaskIconCatalog.defaultKey,
     this.rewardXp = 50,
     this.status = TaskStatus.pending,
     this.isRecurring = false,
@@ -29,7 +31,8 @@ class TaskModel {
   final String title;
   final String description;
 
-  /// Emoji used as a lightweight placeholder icon
+  /// Key into [TaskIconCatalog] — which icon represents this task in the
+  /// picker grid and everywhere the task is shown.
   final String icon;
 
   /// Who this task belongs to. Null means it's sitting in the household's
@@ -55,7 +58,7 @@ class TaskModel {
       title: data['title'] as String? ?? '',
       assignedToUserId: data['assignedToUserId'] as String?,
       description: data['description'] as String? ?? '',
-      icon: data['icon'] as String? ?? '🧹',
+      icon: data['icon'] as String? ?? TaskIconCatalog.defaultKey,
       rewardXp: data['rewardXp'] as int? ?? 50,
       status: TaskStatus.values.firstWhere(
         (s) => s.name == data['status'],
@@ -87,7 +90,7 @@ class TaskModel {
       TaskModel(
         id: 'seed-trash',
         title: 'Take Out the Trash',
-        icon: '🗑️',
+        icon: 'trash',
         rewardXp: 25,
         dueDate: now.add(const Duration(days: 1)),
         isRecurring: true,
@@ -95,7 +98,7 @@ class TaskModel {
       TaskModel(
         id: 'seed-table',
         title: 'Set the Table',
-        icon: '🍽️',
+        icon: 'table',
         rewardXp: 20,
         dueDate: now.add(const Duration(days: 1)),
         isRecurring: true,
@@ -103,7 +106,7 @@ class TaskModel {
       TaskModel(
         id: 'seed-dog',
         title: 'Feed the Dog',
-        icon: '🐾',
+        icon: 'pet',
         rewardXp: 15,
         dueDate: now.add(const Duration(days: 2)),
         isRecurring: true,
@@ -111,7 +114,7 @@ class TaskModel {
       TaskModel(
         id: 'seed-read',
         title: 'Read for 20 Minutes',
-        icon: '📖',
+        icon: 'reading',
         rewardXp: 20,
         dueDate: now.add(const Duration(days: 3)),
       ),

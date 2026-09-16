@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../app/theme.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/constants/task_icons.dart';
+import '../../../core/models/task.dart';
+import '../../../core/models/user.dart';
 import '../../../core/services/database_service.dart';
 import '../../../shared/widgets/app_card.dart';
 
-/// "Progress" tab — family-wide progress toward goals/levels. Placeholder
-/// visualization built from each child's XP total.
+/// "Progress" tab — the parent's overview of the whole household: each
+/// child's XP progress, plus every task in the household broken out into
+/// Overdue, Pending and Completed so a parent can see at a glance what
+/// still needs attention without hunting through each child's task list.
 ///
 /// This only returns the tab's content; `MainTabShell` supplies the
 /// shared app bar, bottom nav bar and `SafeArea`.
@@ -17,6 +23,30 @@ class ProgressScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final db = context.watch<DatabaseService>();
     final children = db.children;
+
+    final overdue = <TaskModel>[];
+    final pending = <TaskModel>[];
+    final completed = <TaskModel>[];
+    for (final task in db.tasks) {
+      if (task.isCompleted) {
+        completed.add(task);
+      } else if (_isOverdue(task.dueDate)) {
+        overdue.add(task);
+      } else {
+        pending.add(task);
+      }
+    }
+    // Soonest-due first within each group; tasks with no due date sort last.
+    int byDueDate(TaskModel a, TaskModel b) {
+      if (a.dueDate == null && b.dueDate == null) return 0;
+      if (a.dueDate == null) return 1;
+      if (b.dueDate == null) return -1;
+      return a.dueDate!.compareTo(b.dueDate!);
+    }
+
+    overdue.sort(byDueDate);
+    pending.sort(byDueDate);
+    completed.sort((a, b) => byDueDate(b, a));
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -60,7 +90,202 @@ class ProgressScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
         ],
+        const SizedBox(height: 12),
+        Text('All Tasks', style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 4),
+        Text(
+          'Every task in the household, at a glance.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+        ),
+        const SizedBox(height: 16),
+        _TaskSection(
+          icon: Icons.error_outline,
+          title: 'Overdue',
+          color: Colors.red.shade600,
+          tasks: overdue,
+          db: db,
+          emptyLabel: 'Nothing overdue — nice work!',
+        ),
+        const SizedBox(height: 20),
+        _TaskSection(
+          icon: Icons.schedule,
+          title: 'Pending',
+          color: AppColors.primaryBlue,
+          tasks: pending,
+          db: db,
+          emptyLabel: 'No pending tasks right now.',
+        ),
+        const SizedBox(height: 20),
+        _TaskSection(
+          icon: Icons.check_circle_outline,
+          title: 'Completed',
+          color: AppColors.growthGreen,
+          tasks: completed,
+          db: db,
+          emptyLabel: 'Nothing completed yet.',
+        ),
       ],
+    );
+  }
+
+  static bool _isOverdue(DateTime? dueDate) {
+    if (dueDate == null) return false;
+    final today = DateTime.now();
+    final dueDay = DateTime(dueDate.year, dueDate.month, dueDate.day);
+    final todayDay = DateTime(today.year, today.month, today.day);
+    return dueDay.isBefore(todayDay);
+  }
+}
+
+class _TaskSection extends StatelessWidget {
+  const _TaskSection({
+    required this.icon,
+    required this.title,
+    required this.color,
+    required this.tasks,
+    required this.db,
+    required this.emptyLabel,
+  });
+
+  final IconData icon;
+  final String title;
+  final Color color;
+  final List<TaskModel> tasks;
+  final DatabaseService db;
+  final String emptyLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(radius: 12, backgroundColor: color, child: Icon(icon, size: 14, color: Colors.white)),
+              const SizedBox(width: 10),
+              Expanded(child: Text(title, style: Theme.of(context).textTheme.titleMedium)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(999)),
+                child: Text('${tasks.length}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (tasks.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(emptyLabel, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600)),
+          )
+        else
+          for (final task in tasks) ...[
+            _TaskProgressRow(task: task, assignee: _assigneeFor(task)),
+            const SizedBox(height: 8),
+          ],
+      ],
+    );
+  }
+
+  AppUser? _assigneeFor(TaskModel task) {
+    if (task.assignedToUserId == null) return null;
+    return db.userById(task.assignedToUserId!);
+  }
+}
+
+class _TaskProgressRow extends StatelessWidget {
+  const _TaskProgressRow({required this.task, required this.assignee});
+
+  final TaskModel task;
+  final AppUser? assignee;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AppCard(
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: theme.colorScheme.secondary.withValues(alpha: 0.15),
+            child: Icon(TaskIconCatalog.resolve(task.icon).icon, color: theme.colorScheme.secondary, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(task.title, style: theme.textTheme.titleMedium),
+                Text(
+                  '${assignee?.name ?? 'Household (unclaimed)'} • ${_dueLabel(task.dueDate)}',
+                  style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _StatusPill(task: task),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(Icons.star, size: 14, color: Colors.amber),
+                  const SizedBox(width: 2),
+                  Text('+${task.rewardXp} XP', style: theme.textTheme.bodyMedium),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _dueLabel(DateTime? dueDate) {
+    if (dueDate == null) return 'No due date';
+    final today = DateTime.now();
+    final dueDay = DateTime(dueDate.year, dueDate.month, dueDate.day);
+    final todayDay = DateTime(today.year, today.month, today.day);
+    final difference = dueDay.difference(todayDay).inDays;
+    if (difference < 0) return difference == -1 ? 'Overdue by 1 day' : 'Overdue by ${-difference} days';
+    if (difference == 0) return 'Due Today';
+    if (difference == 1) return 'Due Tomorrow';
+    return 'Due in $difference Days';
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({required this.task});
+
+  final TaskModel task;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color, icon) = switch (task.status) {
+      TaskStatus.pending => ('To Do', Colors.grey, Icons.radio_button_unchecked),
+      TaskStatus.completed => ('Awaiting Approval', Colors.orange, Icons.hourglass_bottom),
+      TaskStatus.approved => ('Approved', AppColors.growthGreen, Icons.check_circle),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12)),
+        ],
+      ),
     );
   }
 }

@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/constants/task_icons.dart';
 import '../../../core/models/task.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/database_service.dart';
 import '../../../shared/widgets/app_card.dart';
 
 /// "Home" tab for a signed-in child. Unlike [HouseholdHomeScreen] (the
-/// parent's dashboard with "Assign Tasks" and the family roster), this is
+/// parent's dashboard with "Create Task" and the family roster), this is
 /// the kid-facing view from the mid-fi mockups: today's progress toward
 /// the next reward, plus a simple checklist of today's tasks a child can
 /// mark complete themselves. Children can't create, edit or assign tasks
@@ -233,7 +234,7 @@ class _ChildTaskRow extends StatelessWidget {
           CircleAvatar(
             radius: 20,
             backgroundColor: theme.colorScheme.secondary.withValues(alpha: 0.15),
-            child: Text(task.icon, style: const TextStyle(fontSize: 18)),
+            child: Icon(TaskIconCatalog.resolve(task.icon).icon, color: theme.colorScheme.secondary, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(

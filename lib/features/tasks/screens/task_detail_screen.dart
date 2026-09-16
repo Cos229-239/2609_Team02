@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/routes.dart';
+import '../../../core/constants/task_icons.dart';
 import '../../../core/models/task.dart';
 import '../../../core/services/database_service.dart';
 import '../../../shared/widgets/app_button.dart';
@@ -44,7 +45,14 @@ class TaskDetailScreen extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Text(task.icon, style: const TextStyle(fontSize: 32)),
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.15),
+                          child: Icon(
+                            TaskIconCatalog.resolve(task.icon).icon,
+                            color: Theme.of(context).colorScheme.secondary,
+                          ),
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(task.title, style: Theme.of(context).textTheme.headlineSmall),

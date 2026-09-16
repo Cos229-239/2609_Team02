@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/constants/task_icons.dart';
 import '../../../core/models/task.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/database_service.dart';
@@ -97,6 +98,7 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
                 task: task,
                 trailing: ElevatedButton(
                   onPressed: () => context.read<DatabaseService>().claimTask(task.id, child.id),
+                  style: ElevatedButton.styleFrom(minimumSize: const Size(0, 32)),
                   child: const Text('Claim'),
                 ),
               ),
@@ -266,7 +268,7 @@ class _TaskRow extends StatelessWidget {
           CircleAvatar(
             radius: 20,
             backgroundColor: theme.colorScheme.secondary.withValues(alpha: 0.15),
-            child: Text(task.icon, style: const TextStyle(fontSize: 18)),
+            child: Icon(TaskIconCatalog.resolve(task.icon).icon, color: theme.colorScheme.secondary, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -354,7 +356,7 @@ class _HistoryRow extends StatelessWidget {
           CircleAvatar(
             radius: 20,
             backgroundColor: theme.colorScheme.secondary.withValues(alpha: 0.15),
-            child: Text(task.icon, style: const TextStyle(fontSize: 18)),
+            child: Icon(TaskIconCatalog.resolve(task.icon).icon, color: theme.colorScheme.secondary, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
