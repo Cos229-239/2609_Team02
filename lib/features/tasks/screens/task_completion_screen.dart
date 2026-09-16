@@ -26,7 +26,7 @@ class TaskCompletionScreen extends StatelessWidget {
         break;
       }
     }
-    final child = task == null ? null : db.userById(task.assignedToUserId);
+    final child = task?.assignedToUserId == null ? null : db.userById(task!.assignedToUserId!);
 
     return Scaffold(
       body: SafeArea(

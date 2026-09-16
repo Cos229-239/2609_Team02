@@ -38,5 +38,7 @@ class TaskService {
 
   Future<void> markComplete(String taskId) => _db.completeTask(taskId);
 
+  Future<void> claim(String taskId, String childId) => _db.claimTask(taskId, childId);
+
   Future<void> approve(String taskId) => _db.approveTask(taskId);
 }

@@ -101,6 +101,11 @@ class DatabaseService extends ChangeNotifier {
   List<TaskModel> tasksForUser(String userId) =>
       tasks.where((t) => t.assignedToUserId == userId).toList(growable: false);
 
+  /// Tasks sitting in the household's shared pool, not yet claimed by any
+  /// child (see [TaskModel.isAvailable]).
+  List<TaskModel> get availableTasks =>
+      tasks.where((t) => t.isAvailable).toList(growable: false);
+
   // --- Mutations ---------------------------------------------------------
 
   CollectionReference<Map<String, dynamic>> get _tasksCollection => _firestore
@@ -123,6 +128,14 @@ class DatabaseService extends ChangeNotifier {
     });
   }
 
+  /// Child claims an unassigned task from the shared household pool,
+  /// making it theirs to complete.
+  Future<void> claimTask(String taskId, String childId) async {
+    await _tasksCollection.doc(taskId).update({
+      'assignedToUserId': childId,
+    });
+  }
+
   /// Parent approves a completed task — grants XP to the child.
   Future<void> approveTask(String taskId) async {
     final taskRef = _tasksCollection.doc(taskId);
@@ -132,8 +145,13 @@ class DatabaseService extends ChangeNotifier {
       final taskSnap = await transaction.get(taskRef);
       if (!taskSnap.exists) return;
       final task = TaskModel.fromFirestore(taskSnap);
+      final assignedTo = task.assignedToUserId;
+      if (assignedTo == null) {
+        transaction.update(taskRef, {'status': TaskStatus.approved.name});
+        return;
+      }
 
-      final userRef = _firestore.collection('users').doc(task.assignedToUserId);
+      final userRef = _firestore.collection('users').doc(assignedTo);
       final userSnap = await transaction.get(userRef);
 
       transaction.update(taskRef, {'status': TaskStatus.approved.name});
