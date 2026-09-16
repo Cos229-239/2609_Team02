@@ -78,7 +78,18 @@ class _MainTabShellState extends State<MainTabShell> {
     final tabBodies = isChild ? _childTabBodies : _parentTabBodies;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Famotive'), centerTitle: true),
+      // This shell is always the root of a signed-in session (see
+      // FamotiveApp.onGenerateInitialRoutes) and its 4 tabs are switched
+      // via IndexedStack, not the Navigator — so there's never a
+      // legitimate 'back' destination from here. Force the leading back
+      // arrow off rather than relying on canPop(), so it can't reappear
+      // if this shell is ever reached with something still under it on
+      // the stack.
+      appBar: AppBar(
+        title: const Text('Famotive'),
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+      ),
       body: SafeArea(
         child: IndexedStack(index: _currentTab.index, children: tabBodies),
       ),

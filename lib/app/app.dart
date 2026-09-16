@@ -33,6 +33,9 @@ class FamotiveApp extends StatelessWidget {
         theme: AppTheme.light,
         initialRoute: authService.isLoggedIn ? AppRoutes.home : AppRoutes.login,
         onGenerateRoute: AppRoutes.onGenerateRoute,
+        onGenerateInitialRoutes: (initialRoute) => [
+          AppRoutes.onGenerateRoute(RouteSettings(name: initialRoute)),
+        ],
       ),
     );
   }

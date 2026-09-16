@@ -42,7 +42,6 @@ class TaskModel {
   final bool isRecurring;
   final DateTime? dueDate;
 
-  bool get isPending => status == TaskStatus.pending;
   bool get isCompleted =>
       status == TaskStatus.completed || status == TaskStatus.approved;
 
@@ -78,29 +77,6 @@ class TaskModel {
       'isRecurring': isRecurring,
       'dueDate': dueDate == null ? null : Timestamp.fromDate(dueDate!),
     };
-  }
-
-  TaskModel copyWith({
-    String? title,
-    String? description,
-    String? icon,
-    int? rewardXp,
-    TaskStatus? status,
-    bool? isRecurring,
-    DateTime? dueDate,
-    String? assignedToUserId,
-  }) {
-    return TaskModel(
-      id: id,
-      title: title ?? this.title,
-      assignedToUserId: assignedToUserId ?? this.assignedToUserId,
-      description: description ?? this.description,
-      icon: icon ?? this.icon,
-      rewardXp: rewardXp ?? this.rewardXp,
-      status: status ?? this.status,
-      isRecurring: isRecurring ?? this.isRecurring,
-      dueDate: dueDate ?? this.dueDate,
-    );
   }
 
   /// Seeded into a household's `tasks` subcollection when it's created, so
