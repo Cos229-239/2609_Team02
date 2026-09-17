@@ -127,10 +127,38 @@ class DatabaseService extends ChangeNotifier {
     });
   }
 
+  Future<void> uncompleteTask(String taskId) async {
+    final taskRef = _tasksCollection.doc(taskId);
+
+    await _firestore.runTransaction((transaction) async {
+      final taskSnap = await transaction.get(taskRef);
+      if (!taskSnap.exists) return;
+
+      final task = TaskModel.fromFirestore(taskSnap);
+
+      // Only tasks awaiting approval can be marked incomplete again.
+      if (task.status != TaskStatus.completed) return;
+
+      transaction.update(taskRef, {'status': TaskStatus.pending.name});
+    });
+  }
+
   /// Child claims an unassigned task from the shared household pool,
   /// making it theirs to complete.
   Future<void> claimTask(String taskId, String childId) async {
-    await _tasksCollection.doc(taskId).update({'assignedToUserId': childId});
+    final taskRef = _tasksCollection.doc(taskId);
+
+    await _firestore.runTransaction((transaction) async {
+      final taskSnap = await transaction.get(taskRef);
+      if (!taskSnap.exists) return;
+
+      final task = TaskModel.fromFirestore(taskSnap);
+
+      // Prevent an already-claimed task from being reassigned to another child.
+      if (task.assignedToUserId != null) return;
+
+      transaction.update(taskRef, {'assignedToUserId': childId});
+    });
   }
 
   /// Parent approves a completed task — grants XP to the child.
