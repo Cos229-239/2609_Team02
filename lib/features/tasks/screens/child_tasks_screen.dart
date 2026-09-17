@@ -28,7 +28,7 @@ class ChildTasksScreen extends StatefulWidget {
 }
 
 class _ChildTasksScreenState extends State<ChildTasksScreen> {
-  _ChildTasksView _view = _ChildTasksView.tasks;
+ _ChildTasksView _view = _ChildTasksView.tasks;
 
   @override
   Widget build(BuildContext context) {
@@ -49,9 +49,9 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
       children: [
         _ViewToggle(
           view: _view,
-          onChanged: (view) => setState(() => _view = view),
+         onChanged: (view) => setState(() => _view = view),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         if (_view == _ChildTasksView.tasks) ...[
           _SectionHeader(
             icon: Icons.check_circle,
@@ -59,7 +59,7 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
             count: myTasks.length,
             badgeColor: AppColors.growthGreen,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           if (myTasks.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
@@ -73,15 +73,18 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
                     ? const _StatusPill(label: 'Completed', color: AppColors.growthGreen, icon: Icons.check)
                     : ElevatedButton(
                         onPressed: () => context.read<DatabaseService>().completeTask(task.id),
-                        style: ElevatedButton.styleFrom(minimumSize: const Size(0, 32)),
+                        style: ElevatedButton.styleFrom
+                        (minimumSize: const Size(0, 28),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
+                        ),
                         child: const Text('Complete'),
                       ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 2),
             ],
-          const SizedBox(height: 20),
+          const SizedBox(height: 10),
           _SectionHeader(
-            icon: Icons.schedule,
+            icon: Icons.access_time,
             title: 'Available Tasks',
             count: availableTasks.length,
             badgeColor: AppColors.primaryBlue,
@@ -96,27 +99,29 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
             for (final task in availableTasks) ...[
               _TaskRow(
                 task: task,
+                isAvailable: true,
                 trailing: ElevatedButton(
                   onPressed: () => context.read<DatabaseService>().claimTask(task.id, child.id),
-                  style: ElevatedButton.styleFrom(minimumSize: const Size(0, 32)),
+                  style: ElevatedButton.styleFrom(minimumSize: const Size(0, 28)),
                   child: const Text('Claim'),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 2),
             ],
         ] else ...[
           _SectionHeader(
-            icon: Icons.history,
-            title: 'Task History',
+            icon: Icons.check_circle_outline,
+            title: 'Completed',
             count: history.length,
-            badgeColor: Colors.grey.shade600,
+            badgeColor: AppColors.growthGreen,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             'Everything you\'ve completed so far.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12,
+            color: Colors.grey.shade500),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           if (history.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
@@ -125,7 +130,7 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
           else
             for (final task in history) ...[
               _HistoryRow(task: task),
-              const SizedBox(height: 8),
+              const SizedBox(height: 2),
             ],
         ],
       ],
@@ -159,8 +164,8 @@ class _ViewToggle extends StatelessWidget {
           ),
           Expanded(
             child: _ToggleButton(
-              icon: Icons.history,
-              label: 'History',
+              icon: Icons.check_circle_outline,
+              label: 'Completed',
               selected: view == _ChildTasksView.history,
               onTap: () => onChanged(_ChildTasksView.history),
             ),
@@ -230,7 +235,7 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: badgeColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
@@ -238,10 +243,10 @@ class _SectionHeader extends StatelessWidget {
       child: Row(
         children: [
           CircleAvatar(radius: 12, backgroundColor: badgeColor, child: Icon(icon, size: 14, color: Colors.white)),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(child: Text(title, style: Theme.of(context).textTheme.titleMedium)),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
             decoration: BoxDecoration(color: badgeColor, borderRadius: BorderRadius.circular(999)),
             child: Text('$count', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
           ),
@@ -252,48 +257,73 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _TaskRow extends StatelessWidget {
-  const _TaskRow({required this.task, required this.trailing});
+  const _TaskRow({required this.task, required this.trailing, this.isAvailable = false});
 
   final TaskModel task;
   final Widget trailing;
+  final bool isAvailable;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return AppCard(
-      color: task.isCompleted ? AppColors.growthGreen.withValues(alpha: 0.06) : null,
+    return Container(
+      padding: const EdgeInsets.symmetric(
+  horizontal: 12,
+  vertical: 4,
+),
+decoration: BoxDecoration(
+  color: task.isCompleted
+      ? AppColors.growthGreen.withValues(alpha: 0.06)
+      : Colors.transparent,
+),
       child: Row(
         children: [
           CircleAvatar(
-            radius: 20,
-            backgroundColor: theme.colorScheme.secondary.withValues(alpha: 0.15),
-            child: Icon(TaskIconCatalog.resolve(task.icon).icon, color: theme.colorScheme.secondary, size: 20),
+            radius: 16,
+             backgroundColor: (isAvailable
+        ? theme.colorScheme.primary
+        : AppColors.growthGreen)
+    .withValues(alpha: 0.15),
+            child: Icon(TaskIconCatalog.resolve(task.icon).icon, color: AppColors.growthGreen, size: 20),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(task.title, style: theme.textTheme.titleMedium),
+                Text(
+  task.title,
+  style: theme.textTheme.titleMedium?.copyWith(
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+  ),
+),
                 Text(
                   '${task.isRecurring ? 'Daily Task' : 'One-time Task'} • ${_dueLabel(task.dueDate)}',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontSize: 12, color: Colors.grey.shade500),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               trailing,
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.star, size: 14, color: Colors.amber),
-                  const SizedBox(width: 2),
-                  Text('+${task.rewardXp} XP', style: theme.textTheme.bodyMedium),
+                  const Icon(Icons.star, size: 12, color: Colors.amber),
+                  const SizedBox(width: 1),
+                  Text('+${task.rewardXp} XP', style: theme.textTheme.bodyMedium?.copyWith(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.amber,
+                  )
+                  ),
                 ],
               ),
             ],
@@ -325,13 +355,13 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 2),
           Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12)),
         ],
       ),
@@ -349,24 +379,30 @@ class _HistoryRow extends StatelessWidget {
     final theme = Theme.of(context);
     final approved = task.status == TaskStatus.approved;
 
-    return AppCard(
-      color: AppColors.growthGreen.withValues(alpha: 0.05),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      color: AppColors.growthGreen.withValues(alpha: 0.06),
       child: Row(
         children: [
           CircleAvatar(
-            radius: 20,
-            backgroundColor: theme.colorScheme.secondary.withValues(alpha: 0.15),
-            child: Icon(TaskIconCatalog.resolve(task.icon).icon, color: theme.colorScheme.secondary, size: 20),
+            radius: 16,
+            backgroundColor: AppColors.growthGreen.withValues(alpha: 0.15),
+            child: Icon(TaskIconCatalog.resolve(task.icon).icon, color: AppColors.growthGreen, size: 20),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(task.title, style: theme.textTheme.titleMedium),
+                Text(task.title, style: theme.textTheme.titleMedium?.copyWith(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                )),
                 Text(
                   task.isRecurring ? 'Daily Task' : 'One-time Task',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontSize: 12,
+                    color: Colors.grey.shade500),
                 ),
               ],
             ),
@@ -379,12 +415,16 @@ class _HistoryRow extends StatelessWidget {
                 color: approved ? AppColors.growthGreen : Colors.orange,
                 icon: approved ? Icons.check_circle : Icons.hourglass_bottom,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Row(
                 children: [
-                  const Icon(Icons.star, size: 14, color: Colors.amber),
-                  const SizedBox(width: 2),
-                  Text('+${task.rewardXp} XP', style: theme.textTheme.bodyMedium),
+                  const Icon(Icons.star, size: 12, color: Colors.amber),
+                  const SizedBox(width: 1),
+                  Text('+${task.rewardXp} XP', style: theme.textTheme.bodyMedium?.copyWith(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.amber,
+                  )),
                 ],
               ),
             ],
