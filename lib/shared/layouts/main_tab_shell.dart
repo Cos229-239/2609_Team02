@@ -87,16 +87,16 @@ class _MainTabShellState extends State<MainTabShell> {
       // if this shell is ever reached with something still under it on
       // the stack.
       appBar: AppBar(
-  title: const Text(
-    'Famotive',
-    style: TextStyle(
-      fontSize: 20,
-      fontWeight: FontWeight.w600,
-    ),
-  ),
-  centerTitle: true,
-  automaticallyImplyLeading: false,
-),
+        title: const Text(
+          'Famotive',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+      ),
 
       body: SafeArea(
         child: IndexedStack(index: _currentTab.index, children: tabBodies),
