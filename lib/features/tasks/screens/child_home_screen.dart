@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/task_icons.dart';
 import '../../../core/models/task.dart';
 import '../../../core/services/auth_service.dart';
@@ -94,7 +95,7 @@ class ChildHomeScreen extends StatelessWidget {
             color: AppColors.growthGreen.withValues(alpha: 0.08),
             child: Row(
               children: [
-                const Text('🦖', style: TextStyle(fontSize: 32)),
+                const Text('🦖', style: TextStyle(fontSize: AppConstants.emojiIconXl)),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -159,7 +160,7 @@ class _NextRewardCard extends StatelessWidget {
                 ),
                 Text(
                   '${(progress * 100).round()}%',
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: AppConstants.captionFontSize),
                 ),
               ],
             ),

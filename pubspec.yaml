@@ -24,6 +24,12 @@ dependencies:
   firebase_core: ^4.14.0
   cloud_firestore: ^6.9.0
   firebase_auth: ^6.6.1
+
+  # Parses the incoming https://famotive.org/__/auth/links deep link
+  # (Android App Link / iOS Universal Link) that Firebase Auth's
+  # password-reset emails open, so the reset can be completed in-app
+  # instead of in a browser. See lib/core/services/deep_link_service.dart.
+  app_links: ^7.2.1
   
 
 dev_dependencies:

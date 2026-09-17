@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Lets iOS open https://famotive.org/__/auth/links?... (the link in
+	     Firebase Auth's password-reset emails) directly in this app instead
+	     of Safari — see lib/core/services/deep_link_service.dart.
+
+	     This file alone isn't enough: it still has to be wired into the
+	     Runner target's Signing & Capabilities (Xcode normally does this
+	     for you when you add the "Associated Domains" capability there —
+	     see docs/password-reset-setup.md), and famotive.org has to be
+	     connected as this Firebase project's Hosting custom domain with
+	     this app's Apple Team ID registered, or iOS will never verify the
+	     domain and will fall back to opening Safari instead. -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:famotive.org</string>
+	</array>
+</dict>
+</plist>
