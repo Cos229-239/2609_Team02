@@ -39,10 +39,14 @@ class AppConstants {
   // once that's done, or App Links verification for this bundle ID
   // won't work.
   //
-  // Android is still the Flutter template's placeholder — update this
-  // alongside the real applicationId before shipping, or password-reset
-  // deep links will silently fail to open the app on Android.
-  static const String androidPackageName = 'com.example.famotive';
+  // Android's applicationId/namespace (android/app/build.gradle.kts) and
+  // MainActivity's package now match this. The Firebase project's Android
+  // app is still registered under the old "com.example.famotive" package
+  // (see android/app/google-services.json), so Firebase Auth/Google
+  // Sign-In on Android will break until a new Android app is added for
+  // com.famotive in the Firebase console and its google-services.json
+  // replaces the current one (or `flutterfire configure` is re-run).
+  static const String androidPackageName = 'com.famotive';
   static const String iosBundleId = 'com.famotive';
 
   // Spacing scale (multiples of 4dp)
