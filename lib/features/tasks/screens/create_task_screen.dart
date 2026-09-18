@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../app/routes.dart';
 import '../../../app/theme.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/task_icons.dart';
 import '../../../core/models/task.dart';
 import '../../../core/services/database_service.dart';
@@ -300,7 +301,7 @@ class _AssignOptionCard extends StatelessWidget {
             radius: 20,
             backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
             child: avatarEmoji != null
-                ? Text(avatarEmoji!, style: const TextStyle(fontSize: 18))
+                ? Text(avatarEmoji!, style: const TextStyle(fontSize: AppConstants.emojiIconXs))
                 : Icon(icon, color: theme.colorScheme.primary),
           ),
           const SizedBox(width: 12),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/routes.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../widgets/profile_menu_tile.dart';
@@ -28,7 +29,7 @@ class ProfileScreen extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 24,
-                  child: Text(user.avatarEmoji, style: const TextStyle(fontSize: 22)),
+                  child: Text(user.avatarEmoji, style: const TextStyle(fontSize: AppConstants.emojiIconMd)),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

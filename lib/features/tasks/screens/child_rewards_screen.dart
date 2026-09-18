@@ -101,7 +101,7 @@ class _LeaderboardRow extends StatelessWidget {
           CircleAvatar(
             radius: 18,
             backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
-            child: Text(user.avatarEmoji, style: const TextStyle(fontSize: 18)),
+            child: Text(user.avatarEmoji, style: const TextStyle(fontSize: AppConstants.emojiIconXs)),
           ),
           const SizedBox(width: 12),
           Expanded(

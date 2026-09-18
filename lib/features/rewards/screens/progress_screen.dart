@@ -65,7 +65,7 @@ class ProgressScreen extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(child.avatarEmoji, style: const TextStyle(fontSize: 22)),
+                    Text(child.avatarEmoji, style: const TextStyle(fontSize: AppConstants.emojiIconMd)),
                     const SizedBox(width: 8),
                     Text(child.name, style: Theme.of(context).textTheme.titleMedium),
                     const Spacer(),
@@ -283,7 +283,7 @@ class _StatusPill extends StatelessWidget {
         children: [
           Icon(icon, size: 14, color: color),
           const SizedBox(width: 4),
-          Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12)),
+          Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: AppConstants.captionFontSize)),
         ],
       ),
     );

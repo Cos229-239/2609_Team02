@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/task_icons.dart';
 import '../../../core/models/task.dart';
 import '../../../shared/widgets/app_card.dart';
@@ -90,7 +91,7 @@ class _StatusBadge extends StatelessWidget {
       children: [
         Icon(icon, size: 14, color: color),
         const SizedBox(width: 4),
-        Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+        Text(label, style: TextStyle(color: color, fontSize: AppConstants.captionFontSize, fontWeight: FontWeight.w600)),
       ],
     );
   }

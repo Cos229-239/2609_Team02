@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/models/reward.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../app/theme.dart';
@@ -21,7 +22,7 @@ class RewardProgressTile extends StatelessWidget {
     return AppCard(
       child: Row(
         children: [
-          Text(reward.icon, style: const TextStyle(fontSize: 26)),
+          Text(reward.icon, style: const TextStyle(fontSize: AppConstants.emojiIconLg)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

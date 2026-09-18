@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/models/user.dart';
 import '../../../shared/widgets/app_card.dart';
 
@@ -22,7 +23,7 @@ class FamilyMemberCard extends StatelessWidget {
           CircleAvatar(
             radius: 22,
             backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
-            child: Text(user.avatarEmoji, style: const TextStyle(fontSize: 22)),
+            child: Text(user.avatarEmoji, style: const TextStyle(fontSize: AppConstants.emojiIconMd)),
           ),
           const SizedBox(width: 12),
           Expanded(
