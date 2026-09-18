@@ -1,5 +1,6 @@
 import 'package:famotive/app/app.dart';
 import 'package:famotive/core/services/auth_service.dart';
+import 'package:flutter/widgets.dart' show GlobalKey, NavigatorState;
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -9,7 +10,9 @@ void main() {
   // + `fake_cloud_firestore`), which aren't set up in this project yet —
   // skipped rather than left failing/misleading until that's added.
   testWidgets('App starts on the login screen', (tester) async {
-    await tester.pumpWidget(FamotiveApp(authService: AuthService()));
+    await tester.pumpWidget(
+      FamotiveApp(authService: AuthService(), navigatorKey: GlobalKey<NavigatorState>()),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Log In'), findsOneWidget);
@@ -17,7 +20,9 @@ void main() {
   }, skip: true);
 
   testWidgets('Sign Up link navigates to the register screen', (tester) async {
-    await tester.pumpWidget(FamotiveApp(authService: AuthService()));
+    await tester.pumpWidget(
+      FamotiveApp(authService: AuthService(), navigatorKey: GlobalKey<NavigatorState>()),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Sign Up'));

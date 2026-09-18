@@ -15,7 +15,8 @@ import '../models/user.dart';
 /// widgets that `watch` this service rebuild automatically as data
 /// changes — including changes made by other family members' devices.
 class DatabaseService extends ChangeNotifier {
-  DatabaseService({FirebaseFirestore? firestore}) : _firestore = firestore ?? FirebaseFirestore.instance;
+  DatabaseService({FirebaseFirestore? firestore})
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _firestore;
 
@@ -62,9 +63,9 @@ class DatabaseService extends ChangeNotifier {
         .where('householdId', isEqualTo: householdId)
         .snapshots()
         .listen((snap) {
-      familyMembers = snap.docs.map(AppUser.fromFirestore).toList();
-      notifyListeners();
-    });
+          familyMembers = snap.docs.map(AppUser.fromFirestore).toList();
+          notifyListeners();
+        });
 
     _tasksSub = householdRef.collection('tasks').snapshots().listen((snap) {
       tasks = snap.docs.map(TaskModel.fromFirestore).toList();
@@ -108,10 +109,8 @@ class DatabaseService extends ChangeNotifier {
 
   // --- Mutations ---------------------------------------------------------
 
-  CollectionReference<Map<String, dynamic>> get _tasksCollection => _firestore
-      .collection('households')
-      .doc(_householdId)
-      .collection('tasks');
+  CollectionReference<Map<String, dynamic>> get _tasksCollection =>
+      _firestore.collection('households').doc(_householdId).collection('tasks');
 
   Future<void> addTask(TaskModel task) async {
     await _tasksCollection.add(task.toFirestore());
@@ -128,11 +127,37 @@ class DatabaseService extends ChangeNotifier {
     });
   }
 
+  Future<void> uncompleteTask(String taskId) async {
+    final taskRef = _tasksCollection.doc(taskId);
+
+    await _firestore.runTransaction((transaction) async {
+      final taskSnap = await transaction.get(taskRef);
+      if (!taskSnap.exists) return;
+
+      final task = TaskModel.fromFirestore(taskSnap);
+
+      // Only tasks awaiting approval can be marked incomplete again.
+      if (task.status != TaskStatus.completed) return;
+
+      transaction.update(taskRef, {'status': TaskStatus.pending.name});
+    });
+  }
+
   /// Child claims an unassigned task from the shared household pool,
   /// making it theirs to complete.
   Future<void> claimTask(String taskId, String childId) async {
-    await _tasksCollection.doc(taskId).update({
-      'assignedToUserId': childId,
+    final taskRef = _tasksCollection.doc(taskId);
+
+    await _firestore.runTransaction((transaction) async {
+      final taskSnap = await transaction.get(taskRef);
+      if (!taskSnap.exists) return;
+
+      final task = TaskModel.fromFirestore(taskSnap);
+
+      // Prevent an already-claimed task from being reassigned to another child.
+      if (task.assignedToUserId != null) return;
+
+      transaction.update(taskRef, {'assignedToUserId': childId});
     });
   }
 
@@ -145,6 +170,10 @@ class DatabaseService extends ChangeNotifier {
       final taskSnap = await transaction.get(taskRef);
       if (!taskSnap.exists) return;
       final task = TaskModel.fromFirestore(taskSnap);
+
+      ///Tiff: Only completed tasks awaiting parent approval can be approved.
+      if (task.status != TaskStatus.completed) return;
+
       final assignedTo = task.assignedToUserId;
       if (assignedTo == null) {
         transaction.update(taskRef, {'status': TaskStatus.approved.name});

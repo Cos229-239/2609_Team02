@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/models/reward.dart';
 import '../../../shared/widgets/app_card.dart';
 
@@ -29,7 +30,7 @@ class RewardTile extends StatelessWidget {
       color: selected ? theme.colorScheme.primary.withValues(alpha: 0.06) : null,
       child: Row(
         children: [
-          Text(reward.icon, style: const TextStyle(fontSize: 22)),
+          Text(reward.icon, style: const TextStyle(fontSize: AppConstants.emojiIconMd)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
