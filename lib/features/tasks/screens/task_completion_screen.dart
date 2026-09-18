@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/routes.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/task_icons.dart';
 import '../../../core/models/task.dart';
 import '../../../core/services/database_service.dart';
@@ -36,7 +37,7 @@ class TaskCompletionScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('🏆', style: TextStyle(fontSize: 64)),
+              const Text('🏆', style: TextStyle(fontSize: AppConstants.emojiIcon4xl)),
               const SizedBox(height: 16),
               Text(
                 'Congratulations${child != null ? ', ${child.name}' : ''}!',

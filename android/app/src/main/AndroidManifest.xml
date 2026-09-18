@@ -24,6 +24,23 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Password-reset (and other Firebase Auth email-action)
+                 deep links: https://famotive.org/__/auth/links?... is opened
+                 directly in the app instead of a browser. This requires
+                 famotive.org to be connected as this Firebase project's
+                 Hosting custom domain and this app's SHA-256 fingerprint to
+                 be registered in the Firebase console, or Android will never
+                 verify the link and will fall back to opening a browser
+                 instead. See docs/password-reset-setup.md. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="famotive.org"
+                    android:pathPrefix="/__/auth/links"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

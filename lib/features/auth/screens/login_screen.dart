@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 
 import '../../../app/routes.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/utils/validators.dart';
 import '../../../shared/widgets/app_button.dart';
@@ -75,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Center(
                     child: Column(
                       children: [
-                        const Text('👨‍👩‍👧', style: TextStyle(fontSize: 48)),
+                        const Text('👨‍👩‍👧', style: TextStyle(fontSize: AppConstants.emojiIcon3xl)),
                         const SizedBox(height: 8),
                         Text.rich(
                           TextSpan(
@@ -117,9 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {
-                        // TODO: implement forgot-password flow.
-                      },
+                      onPressed: () => Navigator.of(context).pushNamed(AppRoutes.forgotPassword),
                       child: const Text('Forgot Password?'),
                     ),
                   ),
