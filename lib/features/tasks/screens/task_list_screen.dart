@@ -54,12 +54,25 @@ class TaskListScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Column(
-                    children: [
-                      const Icon(Icons.star, color: Colors.amber),
-                      Text('${child.xp} XP', style: Theme.of(context).textTheme.titleMedium),
-                    ],
-                  ),
+                  Container(
+  padding: const EdgeInsets.symmetric(
+    horizontal: 16,
+    vertical: 10,
+  ),
+  decoration: BoxDecoration(
+    border: Border.all(color: Colors.grey.shade300),
+    borderRadius: BorderRadius.circular(12),
+  ),
+  child: Column(
+    children: [
+      const Icon(Icons.star, color: Colors.amber),
+      Text(
+        '${child.xp} XP',
+        style: Theme.of(context).textTheme.titleMedium,
+      ),
+    ],
+  ),
+),
                 ],
               ),
             ),
@@ -70,6 +83,17 @@ class TaskListScreen extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
             ),
             const SizedBox(height: 8),
+            if (tasks.isNotEmpty)
+  const Row(
+    children: [
+      Expanded(
+        child: Text('TASK'),
+      ),
+      Text('REWARD'),
+      SizedBox(width: 24),
+      Text('STATUS'),
+    ],
+  ),
             if (tasks.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
@@ -91,7 +115,7 @@ class TaskListScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             SizedBox(
-              height: 96,
+              height: 120,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: db.availableRewards.length,
@@ -101,7 +125,7 @@ class TaskListScreen extends StatelessWidget {
                   final double progress =
                       (child.xp / (reward.xpCost == 0 ? 1 : reward.xpCost)).clamp(0.0, 1.0).toDouble();
                   return SizedBox(
-                    width: 130,
+                    width: 110,
                     child: AppCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,7 +135,7 @@ class TaskListScreen extends StatelessWidget {
                           Text(
                             reward.title,
                             maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                            overflow: TextOverflow.visible,
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                           ),
                           const Spacer(),
