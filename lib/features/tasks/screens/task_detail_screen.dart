@@ -89,10 +89,13 @@ class TaskDetailScreen extends StatelessWidget {
               else if (task.status == TaskStatus.completed)
                 AppButton(
                   label: 'Approve Task',
-                  onPressed: () {
-                    context.read<DatabaseService>().approveTask(resolvedTask.id);
-                    Navigator.of(context).pop();
-                  },
+                onPressed: () async {
+                  await context.read<DatabaseService>().approveTask(resolvedTask.id);
+
+                if (context.mounted) {
+                Navigator.of(context).pop();
+                }
+                },
                 )
               else
                 const Center(child: Text('✅ Completed & approved')),
