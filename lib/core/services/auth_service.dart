@@ -291,34 +291,23 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  Future<void> confirmEmailChange(String oobCode, String newEmail) async {
+  Future<void> confirmEmailChange({
+    required String oobCode,
+    required String newEmail,
+    String? uid,
+  }) async {
     try {
       await _auth.applyActionCode(oobCode);
     } on FirebaseAuthException catch (e) {
       throw Exception(_friendlyAuthError(e));
     }
 
-    await _auth.currentUser?.reload();
-    final user = _auth.currentUser;
-    if (user == null || _currentUser == null || user.uid != _currentUser!.id) {
-      return;
+    if (uid == null || uid.isEmpty) return;
+    try {
+      await _firestore.collection('users').doc(uid).update({'email': newEmail});
+    } catch (_) {
+      // Best-effort only — see comment above.
     }
-
-    final confirmedEmail = user.email ?? newEmail;
-    await _firestore.collection('users').doc(user.uid).update({'email': confirmedEmail});
-
-    _currentUser = AppUser(
-      id: _currentUser!.id,
-      name: _currentUser!.name,
-      email: confirmedEmail,
-      role: _currentUser!.role,
-      avatarEmoji: _currentUser!.avatarEmoji,
-      phoneNumber: _currentUser!.phoneNumber,
-      age: _currentUser!.age,
-      xp: _currentUser!.xp,
-      householdId: _currentUser!.householdId,
-    );
-    notifyListeners();
   }
 
   Future<void> sendPasswordResetEmail({required String email}) async {

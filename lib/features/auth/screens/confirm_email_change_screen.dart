@@ -25,10 +25,19 @@ class _ConfirmEmailChangeScreenState extends State<ConfirmEmailChangeScreen> {
   String? _error;
   bool _isSubmitting = false;
 
+  String? _precedingUid;
+
   @override
   void initState() {
     super.initState();
-    _verifyCode();
+    _precedingUid = context.read<AuthService>().currentUser?.id;
+    _signOutThenVerify();
+  }
+
+  Future<void> _signOutThenVerify() async {
+    await context.read<AuthService>().logout();
+    if (!mounted) return;
+    await _verifyCode();
   }
 
   Future<void> _verifyCode() async {
@@ -51,7 +60,11 @@ class _ConfirmEmailChangeScreenState extends State<ConfirmEmailChangeScreen> {
   Future<void> _handleConfirm() async {
     setState(() => _isSubmitting = true);
     try {
-      await context.read<AuthService>().confirmEmailChange(widget.oobCode, _newEmail!);
+      await context.read<AuthService>().confirmEmailChange(
+            oobCode: widget.oobCode,
+            newEmail: _newEmail!,
+            uid: _precedingUid,
+          );
       if (!mounted) return;
       setState(() => _status = _ConfirmEmailStatus.done);
     } catch (e) {
@@ -64,9 +77,10 @@ class _ConfirmEmailChangeScreenState extends State<ConfirmEmailChangeScreen> {
     }
   }
 
-  /// Sends the user back into the app — to the signed-in home if this
-  /// session is (still) logged in, or to the login screen otherwise (the
-  /// link may have been opened on a different device/session).
+  /// Sends the user back into the app. [_signOutThenVerify] always signs
+  /// the session out before this screen shows anything, so this always
+  /// lands on the login screen in practice — the `isLoggedIn` check is
+  /// kept anyway as a harmless safety net rather than hardcoding it.
   void _goBack() {
     final loggedIn = context.read<AuthService>().isLoggedIn;
     Navigator.of(context).pushNamedAndRemoveUntil(
@@ -151,6 +165,12 @@ class _ConfirmEmailChangeScreenState extends State<ConfirmEmailChangeScreen> {
           style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
           textAlign: TextAlign.center,
         ),
+        const SizedBox(height: 8),
+        Text(
+          "For your security, you've already been signed out on this device.",
+          style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade400),
+          textAlign: TextAlign.center,
+        ),
         const SizedBox(height: 24),
         AppButton(
           label: 'Confirm Change',
@@ -178,6 +198,12 @@ class _ConfirmEmailChangeScreenState extends State<ConfirmEmailChangeScreen> {
         Text(
           'Your account email is now $_newEmail.',
           style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          "For your security, you've been signed out — log back in with your new email.",
+          style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade400),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
