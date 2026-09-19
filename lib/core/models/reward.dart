@@ -54,7 +54,7 @@ class Reward {
     ),
     Reward(
       id: 'reward-treat',
-      title: 'Extra Sweet Treat of Choice',
+      title: 'Sweet Treat of Choice',
       description: 'Earn 150 points',
       icon: '🍬',
       type: RewardType.treat,
