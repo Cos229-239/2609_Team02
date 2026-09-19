@@ -86,7 +86,7 @@ class ChildHomeScreen extends StatelessWidget {
               task: task,
               onComplete: () => context.read<DatabaseService>().completeTask(task.id),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
           ],
           const SizedBox(height: 8),
 
@@ -132,7 +132,7 @@ AppCard(
         '+$nextRewardXp XP',
         style: const TextStyle(
           fontWeight: FontWeight.bold,
-          color: AppColors.growthGreen,
+          color: Colors.black,
         ),
       ),
     ],
@@ -193,12 +193,12 @@ class _NextRewardCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppCard(
-      color: AppColors.growthGreen.withValues(alpha: 0.08),
+      color:Colors.white,
       child: Row(
         children: [
           SizedBox(
-            width: 64,
-            height: 64,
+            width: 80,
+            height: 80,
             child: Stack(
               alignment: Alignment.center,
               children: [
@@ -207,23 +207,31 @@ class _NextRewardCard extends StatelessWidget {
   child: Transform.rotate(
     angle: 0.8,
     child: CircularProgressIndicator(
-    value: 0.82,
+    value: 0.90,
     strokeWidth: 4,
     backgroundColor: Colors.transparent,
     valueColor: const AlwaysStoppedAnimation<Color>(
-      AppColors.growthGreen,
+    Colors.amber,
     ),
   ),
 ),
                 ),
 Positioned(
   top: -2,
-  left: 26,
+  left: 40,
+  child: Container(
+  width: 22,
+  height: 38,
+  decoration: BoxDecoration(
+    color: Colors.amber,
+    shape: BoxShape.circle,
+  ),
   child: const Icon(
     Icons.star,
-    size: 24,
-    color: AppColors.growthGreen,
+    size: 20,
+    color: Colors.white,
   ),
+),
 ),
   Stack(
     alignment: Alignment.center,
@@ -233,7 +241,7 @@ Positioned(
   left: 25,
   child: const Icon(
     Icons.star,
-    size: 14,
+    size: 18,
     color: AppColors.growthGreen,
   ),
 ),
@@ -261,7 +269,7 @@ Positioned(
                   style: Theme.of(context)
                       .textTheme
                       .bodyMedium
-                      ?.copyWith(color: AppColors.growthGreen, fontWeight: FontWeight.w600),
+                      ?.copyWith(color: Colors.black, fontWeight: FontWeight.w600),
                 ),
                 Text(
   '+$nextRewardXp XP',
@@ -299,24 +307,13 @@ const SizedBox(height: 4),
         vertical: 3,
       ),
       decoration: BoxDecoration(
-        color: AppColors.growthGreen,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: const Text(
-        'So close!',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+     
     ),
     const SizedBox(height: 6),
-    const Icon(
-      Icons.stars_rounded,
-      color: Colors.amber,
-      size: 36,
-    ),
+    
   ],
 ),
         ],
@@ -367,21 +364,25 @@ class _ChildTaskRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return AppCard(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      color: task.isCompleted ? AppColors.growthGreen.withValues(alpha: 0.06) : null,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
       child: Row(
         children: [
           CircleAvatar(
   radius: 18,
-  backgroundColor: theme.colorScheme.secondary.withValues(alpha: 0.15),
+  backgroundColor: AppColors.growthGreen.withValues(alpha: 0.15),
   child: Icon(
     task.title == 'Go outside'
         ? Icons.wb_sunny_outlined
         : task.title == 'Eat Sushi'
             ? Icons.restaurant_outlined
             : TaskIconCatalog.resolve(task.icon).icon,
-    color: theme.colorScheme.secondary,
+    color: AppColors.growthGreen,
     size: 18,
   ),
 ),
@@ -400,11 +401,35 @@ class _ChildTaskRow extends StatelessWidget {
             ),
           ),
           if (task.isCompleted)
-            const CircleAvatar(
-              radius: 12,
-              backgroundColor: AppColors.growthGreen,
-              child: Icon(Icons.check, color: Colors.white, size: 14),
-            )
+  Column(
+  crossAxisAlignment: CrossAxisAlignment.end,
+  children: [
+    Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.growthGreen.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: const Text(
+        '✓ Completed',
+        style: TextStyle(
+          color: AppColors.growthGreen,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    ),
+    const SizedBox(height: 4),
+    const Text(
+      '★ +50 XP',
+      style: TextStyle(
+        color: Colors.amber,
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+  ],
+)
           else
   InkWell(
     onTap: onComplete,

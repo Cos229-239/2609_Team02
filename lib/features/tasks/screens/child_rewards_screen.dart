@@ -37,7 +37,9 @@ class ChildRewardsScreen extends StatelessWidget {
           children: [
             Icon(Icons.emoji_events, color: Colors.amber.shade700),
             const SizedBox(width: 8),
-            Text('Family Leaderboard', style: Theme.of(context).textTheme.titleMedium),
+            Text('Family Leaderboard', style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+            )),
           ],
         ),
         const SizedBox(height: 4),
@@ -45,7 +47,7 @@ class ChildRewardsScreen extends StatelessWidget {
           'See how everyone is doing this week.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         for (var i = 0; i < leaderboard.length; i++) ...[
           _LeaderboardRow(rank: i + 1, user: leaderboard[i], isYou: leaderboard[i].id == child.id),
           const SizedBox(height: 8),
@@ -55,7 +57,9 @@ class ChildRewardsScreen extends StatelessWidget {
           children: [
             Icon(Icons.card_giftcard, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 8),
-            Text('My Rewards', style: Theme.of(context).textTheme.titleMedium),
+            Text('My Rewards', style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+            )),
           ],
         ),
         const SizedBox(height: 4),
@@ -63,7 +67,7 @@ class ChildRewardsScreen extends StatelessWidget {
           'Earn XP by completing tasks to unlock these!',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         for (final reward in db.availableRewards) ...[
           RewardProgressTile(reward: reward, childXp: child.xp),
           const SizedBox(height: 8),
@@ -85,8 +89,8 @@ class _LeaderboardRow extends StatelessWidget {
     final theme = Theme.of(context);
     final progress = (user.xp / AppConstants.levelUpXpThreshold).clamp(0.0, 1.0).toDouble();
 
-    return AppCard(
-      color: isYou ? AppColors.primaryBlue.withValues(alpha: 0.06) : null,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
       child: Row(
         children: [
           SizedBox(
@@ -97,36 +101,49 @@ class _LeaderboardRow extends StatelessWidget {
               style: theme.textTheme.titleMedium?.copyWith(color: Colors.grey.shade600),
             ),
           ),
-          const SizedBox(width: 8),
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
-            child: Text(user.avatarEmoji, style: const TextStyle(fontSize: 18)),
-          ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
+          Text(
+  user.avatarEmoji,
+  style: const TextStyle(fontSize: 28),
+),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Text(isYou ? '${user.name} (You)' : user.name, style: theme.textTheme.titleMedium),
+                    Text(isYou ? '${user.name} (You)' : user.name, style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
                   ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                  child: LinearProgressIndicator(value: progress, minHeight: 6),
+                  child: LinearProgressIndicator(
+  value: progress,
+  minHeight: 7,
+  color: AppColors.growthGreen,
+  backgroundColor: AppColors.growthGreen.withValues(alpha: 0.15),
+),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const Icon(Icons.star, color: Colors.amber, size: 16),
-              Text('${user.xp} XP', style: theme.textTheme.bodyMedium),
+              const Icon(
+  Icons.star,
+  color: AppColors.growthGreen,
+  size: 18,
+),
+const SizedBox(height: 2),
+              Text('${user.xp} XP', style: theme.textTheme.bodySmall?.copyWith(
+                color: AppColors.growthGreen,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              )),
             ],
           ),
         ],

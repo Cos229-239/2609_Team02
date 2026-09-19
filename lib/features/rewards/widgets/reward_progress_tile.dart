@@ -18,33 +18,40 @@ class RewardProgressTile extends StatelessWidget {
     final progress = (childXp / (reward.xpCost == 0 ? 1 : reward.xpCost)).clamp(0.0, 1.0).toDouble();
     final unlocked = reward.xpCost > 0 && childXp >= reward.xpCost;
 
-    return AppCard(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
       child: Row(
         children: [
-          Text(reward.icon, style: const TextStyle(fontSize: 26)),
-          const SizedBox(width: 12),
+          Text(reward.icon, style: const TextStyle(fontSize: 24)),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(reward.title, style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 4),
+                Text(reward.title, style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                )),
+                const SizedBox(height: 3),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(value: progress, minHeight: 6),
+                  borderRadius: BorderRadius.circular(10),
+                  child: LinearProgressIndicator(
+                    value: progress, minHeight: 6, color: AppColors.growthGreen, backgroundColor: AppColors.growthGreen.withValues(alpha: 0.12)),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 6),
                 Text(
                   '$childXp / ${reward.xpCost} XP',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.growthGreen, 
+                  fontSize: 13, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 10),
           if (unlocked)
-            const Icon(Icons.lock_open, color: AppColors.growthGreen)
+            const Icon(Icons.lock_open, color: AppColors.growthGreen, size: 22)
           else
-            const Icon(Icons.lock_outline, color: Colors.grey),
+          Icon(Icons.lock_outline, color: AppColors.growthGreen.withValues(alpha: 0.55), size: 22), 
         ],
       ),
     );
