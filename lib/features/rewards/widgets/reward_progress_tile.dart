@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/models/reward.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../app/theme.dart';

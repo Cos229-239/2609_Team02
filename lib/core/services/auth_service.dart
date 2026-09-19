@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
+import '../constants/app_constants.dart';
 import '../models/reward.dart';
 import '../models/task.dart';
 import '../models/user.dart';
@@ -175,6 +176,64 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Sends a Firebase Auth password-reset email whose link opens directly
+  /// in this app instead of a browser.
+  ///
+  /// This relies on Android App Links / iOS Universal Links rather than
+  /// the now-shut-down Firebase Dynamic Links: [AppConstants.authLinkDomain]
+  /// must be connected as this Firebase project's Hosting custom domain
+  /// (and listed under Authentication > Settings > Authorized domains) for
+  /// the link to work — see docs/password-reset-setup.md. The link itself
+  /// carries a `mode=resetPassword&oobCode=...` query string that
+  /// [DeepLinkService] picks up and hands to [verifyPasswordResetCode] /
+  /// [confirmPasswordReset].
+  Future<void> sendPasswordResetEmail({required String email}) async {
+    try {
+      await _auth.sendPasswordResetEmail(
+        email: email.trim(),
+        actionCodeSettings: ActionCodeSettings(
+          url: AppConstants.passwordResetContinueUrl,
+          handleCodeInApp: true,
+          linkDomain: AppConstants.authLinkDomain,
+          androidPackageName: AppConstants.androidPackageName,
+          androidInstallApp: true,
+          androidMinimumVersion: '1',
+          iOSBundleId: AppConstants.iosBundleId,
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      // Don't reveal whether an account exists for this email — treat it
+      // the same as a successful send so the "check your email" screen
+      // can't be used to enumerate registered accounts.
+      if (e.code == 'user-not-found') return;
+      throw Exception(_friendlyAuthError(e));
+    }
+  }
+
+  /// Validates an `oobCode` from a password-reset deep link and returns the
+  /// email address it was issued for, or throws if the code is invalid,
+  /// already used, or expired.
+  Future<String> verifyPasswordResetCode(String oobCode) async {
+    try {
+      return await _auth.verifyPasswordResetCode(oobCode);
+    } on FirebaseAuthException catch (e) {
+      throw Exception(_friendlyAuthError(e));
+    }
+  }
+
+  /// Completes a password reset for a verified `oobCode` with a new
+  /// password chosen in-app.
+  Future<void> confirmPasswordReset({
+    required String oobCode,
+    required String newPassword,
+  }) async {
+    try {
+      await _auth.confirmPasswordReset(code: oobCode, newPassword: newPassword);
+    } on FirebaseAuthException catch (e) {
+      throw Exception(_friendlyAuthError(e));
+    }
+  }
+
   String _friendlyAuthError(FirebaseAuthException e) {
     switch (e.code) {
       case 'invalid-email':
@@ -189,6 +248,10 @@ class AuthService extends ChangeNotifier {
         return 'An account already exists with that email.';
       case 'weak-password':
         return 'Password is too weak — use at least 6 characters.';
+      case 'expired-action-code':
+        return 'This reset link has expired. Request a new one.';
+      case 'invalid-action-code':
+        return 'This reset link is invalid or has already been used.';
       case 'network-request-failed':
         return 'Network error — check your connection and try again.';
       default:

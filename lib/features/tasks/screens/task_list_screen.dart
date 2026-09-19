@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/routes.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/services/database_service.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../widgets/task_tile.dart';
@@ -39,7 +40,7 @@ class TaskListScreen extends StatelessWidget {
                   CircleAvatar(
                     radius: 24,
                     backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                    child: Text(child.avatarEmoji, style: const TextStyle(fontSize: 22)),
+                    child: Text(child.avatarEmoji, style: const TextStyle(fontSize: AppConstants.emojiIconMd)),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -130,7 +131,7 @@ class TaskListScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(reward.icon, style: const TextStyle(fontSize: 20)),
+                          Text(reward.icon, style: const TextStyle(fontSize: AppConstants.emojiIconSm)),
                           const SizedBox(height: 4),
                           Text(
                             reward.title,
