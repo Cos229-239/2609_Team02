@@ -22,22 +22,25 @@ class FamilyMemberCard extends StatelessWidget {
       child: Row(
         children: [
           CircleAvatar(
-            radius: 26,
-            backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.12),
+            radius: 24,
+            backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.10),
             child: Text(user.avatarEmoji, style: const TextStyle(fontSize: AppConstants.emojiIconMd)),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(user.name, style: theme.textTheme.titleMedium?.copyWith(
+                  fontSize: 16,
                   fontWeight: FontWeight.w600
                 )),
-                const SizedBox(height: 3),
+                const SizedBox(height: 2),
                 Text(
                   user.isParent ? 'Parent' : 'Age ${user.age ?? '—'}',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade500),
+                  style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade500,
+                    fontSize: 13,
+                  ),
                 ),
               ],
             ),
