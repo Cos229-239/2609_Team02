@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<lint>
+    <!-- launch_logo_dark.png / launch_wave_dark.png are intentionally
+         night-only splash assets, referenced only from the night-qualified
+         drawable-night/launch_background.xml. They have no light-mode
+         counterpart by design (the light theme uses launch_logo.png /
+         launch_wave.png instead), so lint's default-resource check is a
+         false positive here. -->
+    <issue id="MissingDefaultResource" severity="ignore">
+        <ignore path="**/drawable-night/launch_logo_dark.png" />
+        <ignore path="**/drawable-night/launch_wave_dark.png" />
+    </issue>
+</lint>

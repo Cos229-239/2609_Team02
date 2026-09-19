@@ -41,21 +41,6 @@ class FamotiveApp extends StatelessWidget {
         theme: AppTheme.light,
         initialRoute: homeRouteName,
         onGenerateRoute: AppRoutes.onGenerateRoute,
-        // A Firebase Auth email-action link (password reset, etc.) can
-        // arrive as the *platform's* launch route on a cold start —
-        // because Flutter feeds the URL that opened the app into
-        // onGenerateInitialRoutes before anything else runs — and that
-        // isn't one of AppRoutes' named routes, so passing it straight
-        // through (as this used to) hits AppRoutes.onGenerateRoute's
-        // "No route defined for ..." fallback. We don't try to pattern-
-        // match what that raw string looks like (it's varied across
-        // platforms in practice) — instead, only ever route directly to
-        // it when it's exactly one of our own known, argument-free
-        // routes; anything else falls back to the normal home/login
-        // route. DeepLinkService independently re-reads that same launch
-        // link via the app_links plugin (a separate, non-route-based
-        // channel) and pushes ResetPasswordScreen once it's parsed the
-        // oobCode — see its getInitialLink() call.
         onGenerateInitialRoutes: (initialRoute) {
           final routeName = AppRoutes.isSafeInitialRoute(initialRoute) ? initialRoute : homeRouteName;
           return [AppRoutes.onGenerateRoute(RouteSettings(name: routeName))];
