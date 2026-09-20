@@ -7,7 +7,6 @@ import '../../../core/constants/task_icons.dart';
 import '../../../core/models/task.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/database_service.dart';
-import '../../../shared/widgets/app_card.dart';
 
 enum _ChildTasksView { tasks, history }
 
@@ -117,12 +116,7 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
             badgeColor: AppColors.growthGreen,
           ),
           const SizedBox(height: 6),
-          Text(
-            'Everything you\'ve completed so far.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12,
-            color: Colors.grey.shade500),
-          ),
-          const SizedBox(height: 6),
+          
           if (history.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
@@ -131,7 +125,7 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
           else
             for (final task in history) ...[
               _HistoryRow(task: task),
-              const SizedBox(height: 2),
+              const SizedBox(height: 12),
             ],
         ],
       ],
@@ -269,14 +263,17 @@ class _TaskRow extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Container(
-      padding: const EdgeInsets.symmetric(
+      margin: const EdgeInsets.only(bottom: 8),
+padding: const EdgeInsets.symmetric(
   horizontal: 12,
-  vertical: 4,
+  vertical: 10,
 ),
 decoration: BoxDecoration(
-  color: task.isCompleted
-      ? AppColors.growthGreen.withValues(alpha: 0.06)
-      : Colors.transparent,
+  color: Colors.white,
+  borderRadius: BorderRadius.circular(16),
+  border: Border.all(color: Colors.grey.shade200,
+
+  )
 ),
       child: Row(
         children: [
@@ -381,8 +378,19 @@ class _HistoryRow extends StatelessWidget {
     final approved = task.status == TaskStatus.approved;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      color: AppColors.growthGreen.withValues(alpha: 0.06),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade200,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      
       child: Row(
         children: [
           CircleAvatar(
@@ -390,6 +398,7 @@ class _HistoryRow extends StatelessWidget {
             backgroundColor: AppColors.growthGreen.withValues(alpha: 0.15),
             child: Icon(TaskIconCatalog.resolve(task.icon).icon, color: AppColors.growthGreen, size: 20),
           ),
+    
           const SizedBox(width: 8),
           Expanded(
             child: Column(
