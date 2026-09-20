@@ -52,7 +52,9 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
 
     final availableTasks = db.availableTasks;
 
-    final history = myTasks.where((t) => t.isCompleted).toList(growable: false);
+    final history = myTasks
+        .where((t) => t.status == TaskStatus.approved)
+        .toList(growable: false);
 
     return ListView(
       padding: const EdgeInsets.all(16),
