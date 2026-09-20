@@ -92,5 +92,86 @@ void main() {
         );
       },
     );
+
+    testWidgets(
+  'approved child task displays as approved',
+  (tester) async {
+    final firestore = FakeFirebaseFirestore();
+
+    final mockUser = MockUser(
+      uid: 'child-1',
+      email: 'child@test.com',
+      displayName: 'Test Child',
+    );
+
+    final mockAuth = MockFirebaseAuth(
+      mockUser: mockUser,
+      signedIn: true,
+    );
+
+    await firestore.collection('users').doc('child-1').set(
+      const AppUser(
+        id: 'child-1',
+        name: 'Test Child',
+        email: 'child@test.com',
+        role: UserRole.child,
+        householdId: 'household-1',
+      ).toFirestore(),
+    );
+
+    final authService = AuthService(
+      auth: mockAuth,
+      firestore: firestore,
+    );
+
+    await authService.tryRestoreSession();
+
+    final databaseService = DatabaseService(
+      firestore: firestore,
+    );
+
+    databaseService.tasks = [
+      const TaskModel(
+        id: 'task-approved',
+        title: 'Take Out Trash',
+        assignedToUserId: 'child-1',
+        rewardXp: 25,
+        status: TaskStatus.approved,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<AuthService>.value(
+            value: authService,
+          ),
+          ChangeNotifierProvider<DatabaseService>.value(
+            value: databaseService,
+          ),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: ChildTasksScreen(),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+
+    expect(find.text('Take Out Trash'), findsOneWidget);
+
+    expect(
+      find.text('Approved'),
+      findsOneWidget,
+    );
+
+    expect(
+      find.text('Awaiting Approval'),
+      findsNothing,
+    );
+  },
+);
   });
 }

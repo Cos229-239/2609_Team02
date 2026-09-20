@@ -69,15 +69,21 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
             for (final task in myTasks) ...[
               _TaskRow(
                 task: task,
-                trailing: task.isCompleted
-                    ? const _StatusPill(label: 'Completed', color: AppColors.growthGreen, icon: Icons.check)
-                    : ElevatedButton(
-                        onPressed: () => context.read<DatabaseService>().completeTask(task.id),
-                        style: ElevatedButton.styleFrom
-                        (minimumSize: const Size(0, 28),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
-                        ),
-                        child: const Text('Complete'),
+                trailing: task.status == TaskStatus.completed
+                  ? const _StatusPill(
+                    label: 'Awaiting Approval',color: Colors.orange,icon: Icons.hourglass_bottom,)
+                    : task.status == TaskStatus.approved
+                  ? const _StatusPill(
+                    label: 'Approved',
+                    color: AppColors.growthGreen,
+                    icon: Icons.check_circle,)
+                : ElevatedButton(
+                    onPressed: () => context.read<DatabaseService>().completeTask(task.id),
+                    style: ElevatedButton.styleFrom
+                    (minimumSize: const Size(0, 28),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
+                    ),
+                      child: const Text('Complete'),
                       ),
               ),
               const SizedBox(height: 2),
