@@ -26,16 +26,19 @@ class ProgressScreen extends StatelessWidget {
 
     final overdue = <TaskModel>[];
     final pending = <TaskModel>[];
+    final awaitingApproval = <TaskModel>[];
     final completed = <TaskModel>[];
     for (final task in db.tasks) {
-      if (task.isCompleted) {
-        completed.add(task);
-      } else if (_isOverdue(task.dueDate)) {
-        overdue.add(task);
-      } else {
-        pending.add(task);
-      }
-    }
+  if (task.status == TaskStatus.approved) {
+    completed.add(task);
+  } else if (task.status == TaskStatus.completed) {
+    awaitingApproval.add(task);
+  } else if (_isOverdue(task.dueDate)) {
+    overdue.add(task);
+  } else {
+    pending.add(task);
+  }
+}
     // Soonest-due first within each group; tasks with no due date sort last.
     int byDueDate(TaskModel a, TaskModel b) {
       if (a.dueDate == null && b.dueDate == null) return 0;
@@ -46,6 +49,7 @@ class ProgressScreen extends StatelessWidget {
 
     overdue.sort(byDueDate);
     pending.sort(byDueDate);
+    awaitingApproval.sort(byDueDate);
     completed.sort((a, b) => byDueDate(b, a));
 
     return ListView(
@@ -128,7 +132,17 @@ children: [
           db: db,
           emptyLabel: 'No pending tasks right now.',
         ),
-        const SizedBox(height: 12),
+
+        const SizedBox(height: 20),
+        _TaskSection(
+        icon: Icons.hourglass_bottom,
+        title: 'Awaiting Approval',
+        color: Colors.orange,
+        tasks: awaitingApproval,
+        db: db,
+        emptyLabel: 'No tasks waiting for approval.',
+),
+        const SizedBox(height: 20),
         _TaskSection(
           icon: Icons.check_circle_outline,
           title: 'Completed',

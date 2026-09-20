@@ -1,7 +1,7 @@
 name: famotive
-description: "A new Flutter project."
+description: "A family task/reward app for kids and parents."
 publish_to: 'none'
-version: 0.1.0+1
+version: 0.1.0+2
 
 environment:
   sdk: ^3.13.2
@@ -30,7 +30,9 @@ dependencies:
   # password-reset emails open, so the reset can be completed in-app
   # instead of in a browser. See lib/core/services/deep_link_service.dart.
   app_links: ^7.2.1
-  
+
+  # Opens the mailto: link for Help & Support (Settings screen).
+  url_launcher: ^6.3.1
 
 dev_dependencies:
   flutter_test:

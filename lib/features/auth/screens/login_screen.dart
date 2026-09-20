@@ -99,21 +99,30 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 32),
-                  AuthTextField(
-                    controller: _identifierController,
-                    label: 'Email',
-                    icon: Icons.person_outline,
-                    keyboardType: TextInputType.emailAddress,
-                    validator: Validators.email,
-                  ),
-                  const SizedBox(height: 12),
-                  AuthTextField(
-                    controller: _passwordController,
-                    label: 'Password',
-                    icon: Icons.lock_outline,
-                    obscureText: true,
-                    textInputAction: TextInputAction.done,
-                    validator: Validators.password,
+                  AutofillGroup(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        AuthTextField(
+                          controller: _identifierController,
+                          label: 'Email',
+                          icon: Icons.person_outline,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: Validators.email,
+                          autofillHints: const [AutofillHints.email],
+                        ),
+                        const SizedBox(height: 12),
+                        AuthTextField(
+                          controller: _passwordController,
+                          label: 'Password',
+                          icon: Icons.lock_outline,
+                          obscureText: true,
+                          textInputAction: TextInputAction.done,
+                          validator: Validators.password,
+                          autofillHints: const [AutofillHints.password],
+                        ),
+                      ],
+                    ),
                   ),
                   Align(
                     alignment: Alignment.centerRight,
