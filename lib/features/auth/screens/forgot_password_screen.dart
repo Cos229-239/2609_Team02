@@ -98,6 +98,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.done,
             validator: Validators.email,
+            autofillHints: const [AutofillHints.email],
           ),
           const SizedBox(height: 24),
           AppButton(
