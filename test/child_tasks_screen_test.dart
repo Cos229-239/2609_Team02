@@ -173,5 +173,84 @@ void main() {
     );
   },
 );
+
+testWidgets(
+  'completed child task appears in awaiting approval section',
+  (tester) async {
+    final firestore = FakeFirebaseFirestore();
+
+    final mockUser = MockUser(
+      uid: 'child-1',
+      email: 'child@test.com',
+      displayName: 'Test Child',
+    );
+
+    final mockAuth = MockFirebaseAuth(
+      mockUser: mockUser,
+      signedIn: true,
+    );
+
+    await firestore.collection('users').doc('child-1').set(
+      const AppUser(
+        id: 'child-1',
+        name: 'Test Child',
+        email: 'child@test.com',
+        role: UserRole.child,
+        householdId: 'household-1',
+      ).toFirestore(),
+    );
+
+    final authService = AuthService(
+      auth: mockAuth,
+      firestore: firestore,
+    );
+
+    await authService.tryRestoreSession();
+
+    final databaseService = DatabaseService(
+      firestore: firestore,
+    );
+
+    databaseService.tasks = [
+      const TaskModel(
+        id: 'task-awaiting',
+        title: 'Piano Lessons',
+        assignedToUserId: 'child-1',
+        rewardXp: 200,
+        status: TaskStatus.completed,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<AuthService>.value(
+            value: authService,
+          ),
+          ChangeNotifierProvider<DatabaseService>.value(
+            value: databaseService,
+          ),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: ChildTasksScreen(),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+
+    expect(
+      find.text('Awaiting Approval'),
+      findsNWidgets(2),
+    );
+
+    expect(
+      find.text('Piano Lessons'),
+      findsOneWidget,
+    );
+  },
+);
   });
 }
