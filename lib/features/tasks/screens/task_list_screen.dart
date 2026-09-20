@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:famotive/core/models/task.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/constants/app_constants.dart';
@@ -20,6 +21,17 @@ class TaskListScreen extends StatelessWidget {
     final db = context.watch<DatabaseService>();
     final child = db.userById(childId);
     final tasks = db.tasksForUser(childId);
+    final assignedTasks = tasks
+        .where((task) => task.status == TaskStatus.pending)
+        .toList(growable: false);
+
+    final awaitingApprovalTasks = tasks
+        .where((task) => task.status == TaskStatus.completed)
+        .toList(growable: false);
+
+    final approvedTasks = tasks
+        .where((task) => task.status == TaskStatus.approved)
+        .toList(growable: false);
 
     if (child == null) {
       return Scaffold(
@@ -39,111 +51,153 @@ class TaskListScreen extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 26,
-                    backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                    child: Text(child.avatarEmoji, style: const TextStyle(fontSize: AppConstants.emojiIconMd)),
+                    backgroundColor: Theme.of(context).colorScheme.primary
+                        .withValues(alpha: 0.1),
+                    child: Text(
+                      child.avatarEmoji,
+                      style: const TextStyle(
+                        fontSize: AppConstants.emojiIconMd,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Hi ${child.name}! 👋', style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                        )),
+                        Text(
+                          'Hi ${child.name}! 👋',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
                         const SizedBox(height: 4),
                         Text(
                           'Here is what you earned so far!',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600,
-                          fontSize: 14,
-                          height: 1.0),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Colors.grey.shade600,
+                                fontSize: 14,
+                                height: 1.0,
+                              ),
                         ),
                       ],
                     ),
                   ),
                   Container(
-  padding: const EdgeInsets.symmetric(
-    horizontal: 8,
-    vertical: 4,
-  ),
-  decoration: BoxDecoration(
-  color: Colors.amber.withValues(alpha: 0.08),
-  border: Border.all(
-    color: Colors.amber.shade200,
-    width: 1,
-  ),
-  borderRadius: BorderRadius.circular(14),
-),
-  child: Column(
-    children: [
-      const Icon(Icons.star_rounded, color: Colors.amber, size: 22),
-      Text(
-        '${child.xp} XP',
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          fontSize: 16,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    ],
-  ),
-),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.08),
+                      border: Border.all(
+                        color: Colors.amber.shade200,
+                        width: 1,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.star_rounded,
+                          color: Colors.amber,
+                          size: 22,
+                        ),
+                        Text(
+                          '${child.xp} XP',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 28),
-            Text('My Tasks:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-            )),
+            Text(
+              'My Tasks:',
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontSize: 20, fontWeight: FontWeight.w600),
+            ),
             Text(
               'Complete your tasks to earn more rewards!',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600, fontSize: 14),
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(color: Colors.grey.shade600, fontSize: 14),
             ),
             const SizedBox(height: 22),
-            if (tasks.isNotEmpty)
-  const Row(
-    children: [
-      const Expanded(
-        child: SizedBox(),
-      ),
-      SizedBox(
-        width: 72,
-        child: Center(
-          child: Text('REWARD'),
-        ),
-      ),
-     SizedBox(
-  width: 75,
-  child: Padding(
-    padding: EdgeInsets.only(right: 10),
-      child: Text(
-        'STATUS',
-        textAlign: TextAlign.right,
-      ),
-    ),
-  ),  
-    ],
-  ),
+
             if (tasks.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
                 child: Text('No tasks assigned yet.'),
               )
-            else
-              for (final task in tasks) ...[
+            else ...[
+              const Text(
+                'Assigned/Pending',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              for (final task in assignedTasks) ...[
                 TaskTile(
                   task: task,
-                  onTap: () => Navigator.of(context).pushNamed(AppRoutes.taskDetail, arguments: task.id),
+                  onTap: () =>
+                      Navigator.of(context)
+                          .pushNamed(AppRoutes.taskDetail, arguments: task.id),
                 ),
                 const SizedBox(height: 8),
               ],
+
+              const SizedBox(height: 12),
+
+              const Text(
+                'Awaiting Approval',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              for (final task in awaitingApprovalTasks) ...[
+                TaskTile(
+                  task: task,
+                  onTap: () =>
+                      Navigator.of(context)
+                          .pushNamed(AppRoutes.taskDetail, arguments: task.id),
+                ),
+                const SizedBox(height: 8),
+              ],
+
+              const SizedBox(height: 12),
+
+              const Text(
+                'Approved',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              for (final task in approvedTasks) ...[
+                TaskTile(
+                  task: task,
+                  onTap: () =>
+                      Navigator.of(context)
+                          .pushNamed(AppRoutes.taskDetail, arguments: task.id),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ],
             const SizedBox(height: 25),
-            Text('My Rewards:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontSize: 20,
-            )),
+            Text(
+              'My Rewards:',
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontSize: 20),
+            ),
             Text(
               'Earn more points and earn these rewards next!',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(color: Colors.grey.shade600),
             ),
             const SizedBox(height: 6),
             SizedBox(
@@ -155,7 +209,9 @@ class TaskListScreen extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final reward = db.availableRewards[index];
                   final double progress =
-                      (child.xp / (reward.xpCost == 0 ? 1 : reward.xpCost)).clamp(0.0, 1.0).toDouble();
+                      (child.xp / (reward.xpCost == 0 ? 1 : reward.xpCost))
+                          .clamp(0.0, 1.0)
+                          .toDouble();
                   return SizedBox(
                     width: 110,
                     child: AppCard(
@@ -165,30 +221,30 @@ class TaskListScreen extends StatelessWidget {
                         children: [
                           Center(
                             child: Text(
-                            reward.icon,
-                            style: const TextStyle(
-                            fontSize: 24,
-                           ),
-                         ),
-                        ),
+                              reward.icon,
+                              style: const TextStyle(fontSize: 24),
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           Center(
-  child: Text(
-    reward.title,
-    maxLines: 2,
-    textAlign: TextAlign.center,
-    overflow: TextOverflow.visible,
-    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-      fontWeight: FontWeight.w600,
-    ),
-  ),
-),
+                            child: Text(
+                              reward.title,
+                              maxLines: 2,
+                              textAlign: TextAlign.center,
+                              overflow: TextOverflow.visible,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                          ),
                           const Spacer(),
                           ClipRRect(
                             borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(value: progress, minHeight: 5,
-                            color: Colors.green,
-                            backgroundColor: Colors.green.shade100),
+                            child: LinearProgressIndicator(
+                              value: progress,
+                              minHeight: 5,
+                              color: Colors.green,
+                              backgroundColor: Colors.green.shade100,
+                            ),
                           ),
                         ],
                       ),
