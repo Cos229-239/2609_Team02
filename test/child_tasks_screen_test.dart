@@ -12,245 +12,191 @@ import 'package:famotive/features/tasks/screens/child_tasks_screen.dart';
 
 void main() {
   group('ChildTasksScreen task status regression tests', () {
-    testWidgets(
-      'completed child task displays as awaiting approval',
-      (tester) async {
-        final firestore = FakeFirebaseFirestore();
+    testWidgets('completed child task displays as awaiting approval', (
+      tester,
+    ) async {
+      final firestore = FakeFirebaseFirestore();
 
-        final mockUser = MockUser(
-          uid: 'child-1',
-          email: 'child@test.com',
-          displayName: 'Test Child',
-        );
+      final mockUser = MockUser(
+        uid: 'child-1',
+        email: 'child@test.com',
+        displayName: 'Test Child',
+      );
 
-        final mockAuth = MockFirebaseAuth(
-          mockUser: mockUser,
-          signedIn: true,
-        );
+      final mockAuth = MockFirebaseAuth(mockUser: mockUser, signedIn: true);
 
-        await firestore.collection('users').doc('child-1').set(
-          const AppUser(
-            id: 'child-1',
-            name: 'Test Child',
-            email: 'child@test.com',
-            role: UserRole.child,
-            householdId: 'household-1',
-          ).toFirestore(),
-        );
+      await firestore
+          .collection('users')
+          .doc('child-1')
+          .set(
+            const AppUser(
+              id: 'child-1',
+              name: 'Test Child',
+              email: 'child@test.com',
+              role: UserRole.child,
+              householdId: 'household-1',
+            ).toFirestore(),
+          );
 
-        final authService = AuthService(
-          auth: mockAuth,
-          firestore: firestore,
-        );
+      final authService = AuthService(auth: mockAuth, firestore: firestore);
 
-        await authService.tryRestoreSession();
+      await authService.tryRestoreSession();
 
-        final databaseService = DatabaseService(
-          firestore: firestore,
-        );
+      final databaseService = DatabaseService(firestore: firestore);
 
-        databaseService.tasks = [
-          const TaskModel(
-            id: 'task-awaiting',
-            title: 'Clean Bedroom',
-            assignedToUserId: 'child-1',
-            rewardXp: 25,
-            status: TaskStatus.completed,
-          ),
-        ];
+      databaseService.tasks = [
+        const TaskModel(
+          id: 'task-awaiting',
+          title: 'Clean Bedroom',
+          assignedToUserId: 'child-1',
+          rewardXp: 25,
+          status: TaskStatus.completed,
+        ),
+      ];
 
-        await tester.pumpWidget(
-          MultiProvider(
-            providers: [
-              ChangeNotifierProvider<AuthService>.value(
-                value: authService,
-              ),
-              ChangeNotifierProvider<DatabaseService>.value(
-                value: databaseService,
-              ),
-            ],
-            child: const MaterialApp(
-              home: Scaffold(
-                body: ChildTasksScreen(),
-              ),
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<AuthService>.value(value: authService),
+            ChangeNotifierProvider<DatabaseService>.value(
+              value: databaseService,
             ),
-          ),
-        );
-
-        await tester.pump();
-
-        expect(find.text('Clean Bedroom'), findsOneWidget);
-
-        expect(
-          find.text('Awaiting Approval'),
-          findsOneWidget,
-        );
-
-        expect(
-          find.text('Completed'),
-          findsOneWidget,
-        );
-      },
-    );
-
-    testWidgets(
-  'approved child task displays as approved',
-  (tester) async {
-    final firestore = FakeFirebaseFirestore();
-
-    final mockUser = MockUser(
-      uid: 'child-1',
-      email: 'child@test.com',
-      displayName: 'Test Child',
-    );
-
-    final mockAuth = MockFirebaseAuth(
-      mockUser: mockUser,
-      signedIn: true,
-    );
-
-    await firestore.collection('users').doc('child-1').set(
-      const AppUser(
-        id: 'child-1',
-        name: 'Test Child',
-        email: 'child@test.com',
-        role: UserRole.child,
-        householdId: 'household-1',
-      ).toFirestore(),
-    );
-
-    final authService = AuthService(
-      auth: mockAuth,
-      firestore: firestore,
-    );
-
-    await authService.tryRestoreSession();
-
-    final databaseService = DatabaseService(
-      firestore: firestore,
-    );
-
-    databaseService.tasks = [
-      const TaskModel(
-        id: 'task-approved',
-        title: 'Take Out Trash',
-        assignedToUserId: 'child-1',
-        rewardXp: 25,
-        status: TaskStatus.approved,
-      ),
-    ];
-
-    await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<AuthService>.value(
-            value: authService,
-          ),
-          ChangeNotifierProvider<DatabaseService>.value(
-            value: databaseService,
-          ),
-        ],
-        child: const MaterialApp(
-          home: Scaffold(
-            body: ChildTasksScreen(),
-          ),
+          ],
+          child: const MaterialApp(home: Scaffold(body: ChildTasksScreen())),
         ),
-      ),
-    );
+      );
 
-    await tester.pump();
+      await tester.pump();
 
-    expect(find.text('Take Out Trash'), findsOneWidget);
+      expect(find.text('Clean Bedroom'), findsOneWidget);
 
-    expect(
-      find.text('Approved'),
-      findsOneWidget,
-    );
+      expect(find.text('Awaiting Approval'), findsNWidgets(2));
 
-    expect(
-      find.text('Awaiting Approval'),
-      findsNothing,
-    );
-  },
-);
+      expect(find.text('Completed'), findsOneWidget);
+    });
 
-testWidgets(
-  'completed child task appears in awaiting approval section',
-  (tester) async {
-    final firestore = FakeFirebaseFirestore();
+    testWidgets('approved child task displays as approved', (tester) async {
+      final firestore = FakeFirebaseFirestore();
 
-    final mockUser = MockUser(
-      uid: 'child-1',
-      email: 'child@test.com',
-      displayName: 'Test Child',
-    );
-
-    final mockAuth = MockFirebaseAuth(
-      mockUser: mockUser,
-      signedIn: true,
-    );
-
-    await firestore.collection('users').doc('child-1').set(
-      const AppUser(
-        id: 'child-1',
-        name: 'Test Child',
+      final mockUser = MockUser(
+        uid: 'child-1',
         email: 'child@test.com',
-        role: UserRole.child,
-        householdId: 'household-1',
-      ).toFirestore(),
-    );
+        displayName: 'Test Child',
+      );
 
-    final authService = AuthService(
-      auth: mockAuth,
-      firestore: firestore,
-    );
+      final mockAuth = MockFirebaseAuth(mockUser: mockUser, signedIn: true);
 
-    await authService.tryRestoreSession();
+      await firestore
+          .collection('users')
+          .doc('child-1')
+          .set(
+            const AppUser(
+              id: 'child-1',
+              name: 'Test Child',
+              email: 'child@test.com',
+              role: UserRole.child,
+              householdId: 'household-1',
+            ).toFirestore(),
+          );
 
-    final databaseService = DatabaseService(
-      firestore: firestore,
-    );
+      final authService = AuthService(auth: mockAuth, firestore: firestore);
 
-    databaseService.tasks = [
-      const TaskModel(
-        id: 'task-awaiting',
-        title: 'Piano Lessons',
-        assignedToUserId: 'child-1',
-        rewardXp: 200,
-        status: TaskStatus.completed,
-      ),
-    ];
+      await authService.tryRestoreSession();
 
-    await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<AuthService>.value(
-            value: authService,
-          ),
-          ChangeNotifierProvider<DatabaseService>.value(
-            value: databaseService,
-          ),
-        ],
-        child: const MaterialApp(
-          home: Scaffold(
-            body: ChildTasksScreen(),
-          ),
+      final databaseService = DatabaseService(firestore: firestore);
+
+      databaseService.tasks = [
+        const TaskModel(
+          id: 'task-approved',
+          title: 'Take Out Trash',
+          assignedToUserId: 'child-1',
+          rewardXp: 25,
+          status: TaskStatus.approved,
         ),
-      ),
-    );
+      ];
 
-    await tester.pump();
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<AuthService>.value(value: authService),
+            ChangeNotifierProvider<DatabaseService>.value(
+              value: databaseService,
+            ),
+          ],
+          child: const MaterialApp(home: Scaffold(body: ChildTasksScreen())),
+        ),
+      );
 
-    expect(
-      find.text('Awaiting Approval'),
-      findsNWidgets(2),
-    );
+      await tester.pump();
+      await tester.tap(find.text('Completed'));
+      await tester.pump();
 
-    expect(
-      find.text('Piano Lessons'),
-      findsOneWidget,
-    );
-  },
-);
+      expect(find.text('Take Out Trash'), findsOneWidget);
+
+      expect(find.text('Approved'), findsOneWidget);
+
+      expect(find.text('Awaiting Approval'), findsNothing);
+    });
+
+    testWidgets('completed child task appears in awaiting approval section', (
+      tester,
+    ) async {
+      final firestore = FakeFirebaseFirestore();
+
+      final mockUser = MockUser(
+        uid: 'child-1',
+        email: 'child@test.com',
+        displayName: 'Test Child',
+      );
+
+      final mockAuth = MockFirebaseAuth(mockUser: mockUser, signedIn: true);
+
+      await firestore
+          .collection('users')
+          .doc('child-1')
+          .set(
+            const AppUser(
+              id: 'child-1',
+              name: 'Test Child',
+              email: 'child@test.com',
+              role: UserRole.child,
+              householdId: 'household-1',
+            ).toFirestore(),
+          );
+
+      final authService = AuthService(auth: mockAuth, firestore: firestore);
+
+      await authService.tryRestoreSession();
+
+      final databaseService = DatabaseService(firestore: firestore);
+
+      databaseService.tasks = [
+        const TaskModel(
+          id: 'task-awaiting',
+          title: 'Piano Lessons',
+          assignedToUserId: 'child-1',
+          rewardXp: 200,
+          status: TaskStatus.completed,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<AuthService>.value(value: authService),
+            ChangeNotifierProvider<DatabaseService>.value(
+              value: databaseService,
+            ),
+          ],
+          child: const MaterialApp(home: Scaffold(body: ChildTasksScreen())),
+        ),
+      );
+
+      await tester.pump();
+
+      expect(find.text('Awaiting Approval'), findsNWidgets(2));
+
+      expect(find.text('Piano Lessons'), findsOneWidget);
+    });
   });
 }
