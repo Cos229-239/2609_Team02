@@ -65,7 +65,13 @@ class AppButton extends StatelessWidget {
     late final Widget button;
     switch (variant) {
       case AppButtonVariant.primary:
-        button = ElevatedButton(onPressed: isDisabled ? null : onPressed, child: child);
+        button = ElevatedButton(onPressed: isDisabled ? null : onPressed, 
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF2563EB),
+          foregroundColor: Colors.white,
+          minimumSize: const Size.fromHeight(56),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ), child: child);
         break;
       case AppButtonVariant.secondary:
         button = OutlinedButton(onPressed: isDisabled ? null : onPressed, child: child);

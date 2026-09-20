@@ -44,7 +44,26 @@ class AuthService extends ChangeNotifier {
   Future<AppUser?> _loadProfile(String uid) async {
     final doc = await _firestore.collection('users').doc(uid).get();
     if (!doc.exists) return null;
-    return AppUser.fromFirestore(doc);
+    var profile = AppUser.fromFirestore(doc);
+
+    // Ensure the Firestore profile's email matches the Firebase Auth email.
+    final authEmail = _auth.currentUser?.email;
+    if (authEmail != null && authEmail.isNotEmpty && authEmail != profile.email) {
+      await _firestore.collection('users').doc(uid).update({'email': authEmail});
+      profile = AppUser(
+        id: profile.id,
+        name: profile.name,
+        email: authEmail,
+        role: profile.role,
+        avatarEmoji: profile.avatarEmoji,
+        phoneNumber: profile.phoneNumber,
+        age: profile.age,
+        xp: profile.xp,
+        householdId: profile.householdId,
+      );
+    }
+
+    return profile;
   }
 
   /// Signs in with email/password and loads the matching Firestore profile.
@@ -176,17 +195,121 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Sends a Firebase Auth password-reset email whose link opens directly
-  /// in this app instead of a browser.
-  ///
-  /// This relies on Android App Links / iOS Universal Links rather than
-  /// the now-shut-down Firebase Dynamic Links: [AppConstants.authLinkDomain]
-  /// must be connected as this Firebase project's Hosting custom domain
-  /// (and listed under Authentication > Settings > Authorized domains) for
-  /// the link to work — see docs/password-reset-setup.md. The link itself
-  /// carries a `mode=resetPassword&oobCode=...` query string that
-  /// [DeepLinkService] picks up and hands to [verifyPasswordResetCode] /
-  /// [confirmPasswordReset].
+  Future<void> updateProfile({
+    required String name,
+    required String avatarEmoji,
+    int? age,
+    String? phoneNumber,
+  }) async {
+    final user = _currentUser;
+    if (user == null) throw Exception('Not signed in.');
+
+    final updated = AppUser(
+      id: user.id,
+      name: name,
+      email: user.email,
+      role: user.role,
+      avatarEmoji: avatarEmoji,
+      phoneNumber: phoneNumber,
+      age: age,
+      xp: user.xp,
+      householdId: user.householdId,
+    );
+
+    await _firestore.collection('users').doc(user.id).update({
+      'name': updated.name,
+      'avatarEmoji': updated.avatarEmoji,
+      'age': updated.age,
+      'phoneNumber': updated.phoneNumber,
+    });
+
+    _currentUser = updated;
+    notifyListeners();
+  }
+
+  Future<void> _reauthenticate(String currentPassword) async {
+    final user = _auth.currentUser;
+    if (user == null || user.email == null) {
+      throw Exception('Not signed in.');
+    }
+    final credential = EmailAuthProvider.credential(
+      email: user.email!,
+      password: currentPassword,
+    );
+    try {
+      await user.reauthenticateWithCredential(credential);
+    } on FirebaseAuthException catch (e) {
+      throw Exception(_friendlyAuthError(e));
+    }
+  }
+
+  Future<void> updatePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await _reauthenticate(currentPassword);
+    try {
+      await _auth.currentUser!.updatePassword(newPassword);
+    } on FirebaseAuthException catch (e) {
+      throw Exception(_friendlyAuthError(e));
+    }
+  }
+
+  Future<void> updateEmail({
+    required String newEmail,
+    required String currentPassword,
+  }) async {
+    await _reauthenticate(currentPassword);
+    try {
+      await _auth.currentUser!.verifyBeforeUpdateEmail(
+        newEmail.trim(),
+        ActionCodeSettings(
+          url: AppConstants.emailChangeContinueUrl,
+          handleCodeInApp: true,
+          linkDomain: AppConstants.authLinkDomain,
+          androidPackageName: AppConstants.androidPackageName,
+          androidInstallApp: true,
+          androidMinimumVersion: '1',
+          iOSBundleId: AppConstants.iosBundleId,
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      throw Exception(_friendlyAuthError(e));
+    }
+  }
+
+  Future<String> verifyEmailChangeCode(String oobCode) async {
+    try {
+      final info = await _auth.checkActionCode(oobCode);
+      final newEmail = info.data['email'] as String?;
+      if (newEmail == null || newEmail.isEmpty) {
+        throw Exception('This link is invalid or has expired.');
+      }
+      return newEmail;
+    } on FirebaseAuthException catch (e) {
+      throw Exception(_friendlyAuthError(e));
+    }
+  }
+
+  Future<void> confirmEmailChange({
+    required String oobCode,
+    required String newEmail,
+    String? uid,
+  }) async {
+    try {
+      await _auth.applyActionCode(oobCode);
+    } on FirebaseAuthException catch (e) {
+      throw Exception(_friendlyAuthError(e));
+    }
+
+    if (uid == null || uid.isEmpty) return;
+    try {
+      await _firestore.collection('users').doc(uid).update({'email': newEmail});
+    } catch (_) {
+      // Best-effort only — see comment above.
+    }
+  }
+
   Future<void> sendPasswordResetEmail({required String email}) async {
     try {
       await _auth.sendPasswordResetEmail(
@@ -210,9 +333,6 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  /// Validates an `oobCode` from a password-reset deep link and returns the
-  /// email address it was issued for, or throws if the code is invalid,
-  /// already used, or expired.
   Future<String> verifyPasswordResetCode(String oobCode) async {
     try {
       return await _auth.verifyPasswordResetCode(oobCode);
@@ -221,8 +341,6 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  /// Completes a password reset for a verified `oobCode` with a new
-  /// password chosen in-app.
   Future<void> confirmPasswordReset({
     required String oobCode,
     required String newPassword,
@@ -254,6 +372,8 @@ class AuthService extends ChangeNotifier {
         return 'This reset link is invalid or has already been used.';
       case 'network-request-failed':
         return 'Network error — check your connection and try again.';
+      case 'requires-recent-login':
+        return 'Please log out and back in, then try again.';
       default:
         return e.message ?? 'Something went wrong. Please try again.';
     }

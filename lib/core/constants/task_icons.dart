@@ -47,7 +47,8 @@ class TaskIconCatalog {
     TaskIconEntry('game', 'Game Time', Icons.sports_esports_outlined),
     TaskIconEntry('gift', 'Bonus', Icons.card_giftcard_outlined),
     TaskIconEntry('star', 'Special', Icons.star_outline),
-    TaskIconEntry('checklist', 'General', Icons.checklist_outlined),
+    TaskIconEntry('outside', 'outdoors', Icons.wb_sunny_outlined),
+    TaskIconEntry('food', 'food', Icons.restaurant_outlined),
   ];
 
   static TaskIconEntry resolve(String key) {

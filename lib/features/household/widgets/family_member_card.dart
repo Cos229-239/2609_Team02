@@ -17,23 +17,30 @@ class FamilyMemberCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     return AppCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       onTap: onTap,
       child: Row(
         children: [
           CircleAvatar(
-            radius: 22,
-            backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+            radius: 24,
+            backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.10),
             child: Text(user.avatarEmoji, style: const TextStyle(fontSize: AppConstants.emojiIconMd)),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(user.name, style: theme.textTheme.titleMedium),
+                Text(user.name, style: theme.textTheme.titleMedium?.copyWith(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600
+                )),
+                const SizedBox(height: 2),
                 Text(
                   user.isParent ? 'Parent' : 'Age ${user.age ?? '—'}',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+                  style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade500,
+                    fontSize: 13,
+                  ),
                 ),
               ],
             ),
@@ -41,14 +48,19 @@ class FamilyMemberCard extends StatelessWidget {
           if (user.isChild)
             Row(
               children: [
-                const Icon(Icons.star, color: Colors.amber, size: 18),
+                const Icon(Icons.star_rounded, color: Colors.amber, size: 17),
                 const SizedBox(width: 4),
-                Text('${user.xp} XP', style: theme.textTheme.titleMedium),
+                Text('${user.xp} XP', style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.amber.shade700,
+                )),
               ],
             ),
           if (onTap != null) ...[
-            const SizedBox(width: 4),
-            const Icon(Icons.chevron_right, color: Colors.grey),
+            const SizedBox(width: 10),
+            const Icon(Icons.chevron_right_rounded, color: Colors.grey,
+              size: 26,
+            ),
           ],
         ],
       ),

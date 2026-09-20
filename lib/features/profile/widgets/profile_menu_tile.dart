@@ -17,13 +17,36 @@ class ProfileMenuTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = destructive ? Theme.of(context).colorScheme.error : null;
-    return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text(label, style: TextStyle(color: color)),
-      trailing: destructive ? null : const Icon(Icons.chevron_right, color: Colors.grey),
-      onTap: onTap,
-      contentPadding: EdgeInsets.zero,
-    );
+    final color = destructive
+    ? Theme.of(context).colorScheme.error
+    : Colors.black;
+
+return ListTile(
+  leading: Icon(
+    icon,
+    color: color,
+    size: 24,
+  ),
+  title: Text(
+    label,
+    style: TextStyle(
+      color: color,
+      fontWeight: FontWeight.w500,
+      fontSize: 16,
+    ),
+  ),
+  trailing: destructive
+      ? null
+      : Icon(
+          Icons.chevron_right,
+          color: Colors.grey.shade400,
+          size: 22,
+        ),
+        dense: true,
+        visualDensity: const VisualDensity(vertical: -1),
+  onTap: onTap,
+  contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+  minVerticalPadding: 10,
+);
   }
 }

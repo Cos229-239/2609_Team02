@@ -26,16 +26,19 @@ class ProgressScreen extends StatelessWidget {
 
     final overdue = <TaskModel>[];
     final pending = <TaskModel>[];
+    final awaitingApproval = <TaskModel>[];
     final completed = <TaskModel>[];
     for (final task in db.tasks) {
-      if (task.isCompleted) {
-        completed.add(task);
-      } else if (_isOverdue(task.dueDate)) {
-        overdue.add(task);
-      } else {
-        pending.add(task);
-      }
-    }
+  if (task.status == TaskStatus.approved) {
+    completed.add(task);
+  } else if (task.status == TaskStatus.completed) {
+    awaitingApproval.add(task);
+  } else if (_isOverdue(task.dueDate)) {
+    overdue.add(task);
+  } else {
+    pending.add(task);
+  }
+}
     // Soonest-due first within each group; tasks with no due date sort last.
     int byDueDate(TaskModel a, TaskModel b) {
       if (a.dueDate == null && b.dueDate == null) return 0;
@@ -46,20 +49,32 @@ class ProgressScreen extends StatelessWidget {
 
     overdue.sort(byDueDate);
     pending.sort(byDueDate);
+    awaitingApproval.sort(byDueDate);
     completed.sort((a, b) => byDueDate(b, a));
 
     return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Text('Family Progress', style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 4),
-        Text(
-          'See how everyone is doing this week.',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
-        ),
-        const SizedBox(height: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+children: [
+  Text(
+    'Family Progress',
+    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+      fontWeight: FontWeight.w700,
+    ),
+  ),
+  const SizedBox(height: 6),
+  Text(
+    'See how everyone is doing this week.',
+    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+      color: Colors.grey.shade600,
+    ),
+  ),
+  const SizedBox(height: 20),
         for (final child in children) ...[
           AppCard(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 8,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -69,7 +84,7 @@ class ProgressScreen extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(child.name, style: Theme.of(context).textTheme.titleMedium),
                     const Spacer(),
-                    Text('${child.xp} XP'),
+                    Text('+${child.xp} XP'),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -77,7 +92,9 @@ class ProgressScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppConstants.radiusSm),
                   child: LinearProgressIndicator(
                     value: (child.xp / AppConstants.levelUpXpThreshold).clamp(0.0, 1.0).toDouble(),
-                    minHeight: 8,
+                    minHeight: 6,
+                    color: AppColors.growthGreen,
+                    backgroundColor: const Color.fromARGB(255, 223, 244, 199),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -91,13 +108,13 @@ class ProgressScreen extends StatelessWidget {
           const SizedBox(height: 12),
         ],
         const SizedBox(height: 12),
-        Text('All Tasks', style: Theme.of(context).textTheme.headlineSmall),
+        Text('All Tasks:', style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 4),
         Text(
           'Every task in the household, at a glance.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         _TaskSection(
           icon: Icons.error_outline,
           title: 'Overdue',
@@ -106,7 +123,7 @@ class ProgressScreen extends StatelessWidget {
           db: db,
           emptyLabel: 'Nothing overdue — nice work!',
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 4),
         _TaskSection(
           icon: Icons.schedule,
           title: 'Pending',
@@ -115,6 +132,16 @@ class ProgressScreen extends StatelessWidget {
           db: db,
           emptyLabel: 'No pending tasks right now.',
         ),
+
+        const SizedBox(height: 20),
+        _TaskSection(
+        icon: Icons.hourglass_bottom,
+        title: 'Awaiting Approval',
+        color: Colors.orange,
+        tasks: awaitingApproval,
+        db: db,
+        emptyLabel: 'No tasks waiting for approval.',
+),
         const SizedBox(height: 20),
         _TaskSection(
           icon: Icons.check_circle_outline,
@@ -163,7 +190,7 @@ class _TaskSection extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
           ),
           child: Row(
             children: [
@@ -178,16 +205,13 @@ class _TaskSection extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 8),
-        if (tasks.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Text(emptyLabel, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600)),
-          )
-        else
+        
+        const SizedBox(height: 18),
+
           for (final task in tasks) ...[
+            const SizedBox(height:12),
             _TaskProgressRow(task: task, assignee: _assigneeFor(task)),
-            const SizedBox(height: 8),
+            const SizedBox(height: 1),
           ],
       ],
     );
@@ -210,6 +234,10 @@ class _TaskProgressRow extends StatelessWidget {
     final theme = Theme.of(context);
 
     return AppCard(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 6,
+      ), 
       child: Row(
         children: [
           CircleAvatar(
@@ -222,10 +250,15 @@ class _TaskProgressRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(task.title, style: theme.textTheme.titleMedium),
+                Text(task.title, style: theme.textTheme.titleMedium?.copyWith(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                )),
                 Text(
-                  '${assignee?.name ?? 'Household (unclaimed)'} • ${_dueLabel(task.dueDate)}',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+                  '${assignee?.name ?? 'Household'} • ${_dueLabel(task.dueDate)}',
+                  style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600,
+                  fontSize: 12),
+                  maxLines: 2,
                 ),
               ],
             ),
@@ -239,7 +272,9 @@ class _TaskProgressRow extends StatelessWidget {
                 children: [
                   const Icon(Icons.star, size: 14, color: Colors.amber),
                   const SizedBox(width: 2),
-                  Text('+${task.rewardXp} XP', style: theme.textTheme.bodyMedium),
+                  Text('+${task.rewardXp} XP', style: theme.textTheme.bodyMedium?.copyWith(
+                    fontSize: 12,
+                  )),
                 ],
               ),
             ],
