@@ -4,26 +4,6 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../app/routes.dart';
-
-/// Listens for the incoming deep link Firebase Auth's password-reset
-/// emails open and routes the `oobCode` into [ResetPasswordScreen].
-///
-/// Firebase Dynamic Links (the service this used to go through) was shut
-/// down in Aug 2025; the replacement is a plain Android App Link / iOS
-/// Universal Link that the OS hands straight to this app when it's
-/// installed and famotive.org's domain is verified. See the intent-filter
-/// in `android/app/src/main/AndroidManifest.xml` and the associated-
-/// domains entitlement in `ios/Runner/Runner.entitlements`, and
-/// `docs/password-reset-setup.md` for the Firebase/DNS console steps that
-/// make the domain actually verify.
-///
-/// The link Firebase actually sends looks like `famotive.org/__/auth/
-/// links` followed by a `link` query parameter, whose value is meant to
-/// be a URL-encoded `firebaseapp.com/__/auth/action` link carrying the
-/// real `mode`, `oobCode` and `continueUrl` params. In practice that
-/// `link` value isn't always percent-encoded, so its own `&`/`=` end up
-/// parsed as this URI's *own* top-level query params instead of staying
-/// nested — see [_modeAndOobCodeFrom], which checks both shapes.
 class DeepLinkService {
   DeepLinkService({required this.navigatorKey});
 
@@ -31,9 +11,6 @@ class DeepLinkService {
   final AppLinks _appLinks = AppLinks();
   StreamSubscription<Uri>? _subscription;
 
-  /// Starts listening. Safe to call once, after `runApp` — call it without
-  /// awaiting it from `main()` (a cold-start link, if any, is only handled
-  /// once the first frame is up; see [_handleUri]).
   Future<void> init() async {
     try {
       final initialUri = await _appLinks.getInitialLink();
@@ -52,10 +29,22 @@ class DeepLinkService {
 
   void _handleUri(Uri uri) {
     final (mode, oobCode) = _modeAndOobCodeFrom(uri);
-    if (mode != 'resetPassword' || oobCode == null || oobCode.isEmpty) return;
+    if (oobCode == null || oobCode.isEmpty) return;
+
+    final String routeName;
+    switch (mode) {
+      case 'resetPassword':
+        routeName = AppRoutes.resetPassword;
+        break;
+      case 'verifyAndChangeEmail':
+        routeName = AppRoutes.confirmEmailChange;
+        break;
+      default:
+        return;
+    }
 
     void navigate() {
-      navigatorKey.currentState?.pushNamed(AppRoutes.resetPassword, arguments: oobCode);
+      navigatorKey.currentState?.pushNamed(routeName, arguments: oobCode);
     }
 
     // The very first link (cold start) can arrive before the Navigator
@@ -67,15 +56,15 @@ class DeepLinkService {
     }
   }
 
-  /// Reads `mode`/`oobCode` off [uri], covering both shapes Firebase's
-  /// password-reset links show up in in practice — see the class doc.
-  /// Tries top-level params first (the shape actually observed in
-  /// testing), then falls back to unwrapping a `link` query parameter's
-  /// value as its own URI (the properly-encoded shape).
+  /// The `mode` values this service knows how to route (password reset
+  /// and email-change confirmation).
+  static const _supportedModes = {'resetPassword', 'verifyAndChangeEmail'};
+
+  
   (String?, String?) _modeAndOobCodeFrom(Uri uri) {
     var mode = uri.queryParameters['mode'];
     var oobCode = uri.queryParameters['oobCode'];
-    if (mode == 'resetPassword' && oobCode != null && oobCode.isNotEmpty) {
+    if (_supportedModes.contains(mode) && oobCode != null && oobCode.isNotEmpty) {
       return (mode, oobCode);
     }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/constants/app_constants.dart';
@@ -7,13 +8,26 @@ import '../../../core/services/auth_service.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../widgets/profile_menu_tile.dart';
 
-/// "Settings" tab — account info and app settings placeholders, plus
-/// sign-out (which closes the sample flow loop back to the login screen).
-///
-/// This only returns the tab's content; `MainTabShell` supplies the
-/// shared app bar, bottom nav bar and `SafeArea`.
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
+
+  /// Opens the device's mail app with a pre-filled support request,
+  /// pre-addressed to support@famotive.org.
+  Future<void> _launchSupportEmail(BuildContext context) async {
+    final uri = Uri(
+      scheme: 'mailto',
+      path: 'support@famotive.org',
+      queryParameters: {'subject': 'App Support Request'},
+    );
+    final launched = await launchUrl(uri);
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Couldn't open your email app — reach us at support@famotive.org"),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,17 +74,17 @@ class ProfileScreen extends StatelessWidget {
               ProfileMenuTile(
                 icon: Icons.person_outline,
                 label: 'Account Settings',
-                onTap: () {},
+                onTap: () => Navigator.of(context).pushNamed(AppRoutes.accountSettings),
               ),
               ProfileMenuTile(
                 icon: Icons.notifications_none,
                 label: 'Notifications',
-                onTap: () {},
+                onTap: () => Navigator.of(context).pushNamed(AppRoutes.notificationSettings),
               ),
               ProfileMenuTile(
                 icon: Icons.help_outline,
                 label: 'Help & Support',
-                onTap: () {},
+                onTap: () => _launchSupportEmail(context),
               ),
             ],
           ),
