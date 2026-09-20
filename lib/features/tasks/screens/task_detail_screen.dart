@@ -35,7 +35,7 @@ class TaskDetailScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Task Details')),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -53,28 +53,28 @@ class TaskDetailScreen extends StatelessWidget {
                             color: Theme.of(context).colorScheme.secondary,
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Text(task.title, style: Theme.of(context).textTheme.headlineSmall),
                         ),
                       ],
                     ),
                     if (task.description.isNotEmpty) ...[
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 6),
                       Text(task.description, style: Theme.of(context).textTheme.bodyMedium),
                     ],
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     Row(
                       children: [
-                        const Icon(Icons.star, color: Colors.amber, size: 18),
-                        const SizedBox(width: 4),
-                        Text('Reward: ${task.rewardXp} XP', style: Theme.of(context).textTheme.bodyMedium),
+                        const Icon(Icons.star, color: Colors.amber, size: 24),
+                        const SizedBox(width: 2),
+                        Text('Reward: +${task.rewardXp} XP', style: Theme.of(context).textTheme.bodyMedium),
                       ],
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 22),
               if (task.status == TaskStatus.pending)
                 AppButton(
                   label: 'Mark as Complete',

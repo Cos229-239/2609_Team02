@@ -28,20 +28,27 @@ class TaskTile extends StatelessWidget {
     final theme = Theme.of(context);
 
     return AppCard(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: 10,
+      ),
       onTap: onTap,
       child: Row(
         children: [
           CircleAvatar(
-            radius: 20,
+            radius: 18,
             backgroundColor: theme.colorScheme.secondary.withValues(alpha: 0.12),
             child: Icon(TaskIconCatalog.resolve(task.icon).icon, color: theme.colorScheme.secondary, size: 20),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(task.title, style: theme.textTheme.titleMedium),
+                Text(task.title, style: theme.textTheme.titleMedium?.copyWith(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                )),
                 if (task.description.isNotEmpty)
                   Text(
                     task.description,
@@ -53,20 +60,38 @@ class TaskTile extends StatelessWidget {
           if (trailing != null)
             trailing!
           else
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.star, size: 16, color: Colors.amber),
-                    const SizedBox(width: 2),
-                    Text('${task.rewardXp} XP', style: theme.textTheme.bodyMedium),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                _StatusBadge(status: task.status),
-              ],
+            
+  Row(
+    children: [
+      SizedBox(
+        width: 89,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.star,
+              size: 16,
+              color: Colors.amber,
             ),
+            const SizedBox(width: 2),
+            Text(
+              '+${task.rewardXp} XP',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+      SizedBox(
+        width: 55,
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: _StatusBadge(status: task.status),
+        ),
+      ),
+    ],
+  ),
         ],
       ),
     );

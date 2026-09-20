@@ -97,16 +97,24 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
       appBar: AppBar(title: const Text('Create Task')),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
           children: [
-            Text('Icon', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
+            Text('Choose an Icon:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
+            ),
+            const SizedBox(height: 12),
             _IconPicker(
               selectedKey: _selectedIconKey,
               onSelected: (key) => setState(() => _selectedIconKey = key),
             ),
-            const SizedBox(height: 20),
-            Text('Task Name', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 16),
+            Text('Name this Task:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+            ),
             const SizedBox(height: 8),
             TextField(
               controller: _titleController,
@@ -114,15 +122,20 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               decoration: const InputDecoration(hintText: 'e.g. Take Out the Trash'),
               onChanged: (_) => setState(() {}),
             ),
-            const SizedBox(height: 20),
-            Text('Due Date', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 16),
+            Text('Select a Due Date:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+            ),
             const SizedBox(height: 8),
             AppCard(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               onTap: _pickDueDate,
               child: Row(
                 children: [
                   Icon(Icons.calendar_today_outlined, color: Theme.of(context).colorScheme.primary),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       _dueDate == null ? 'No due date — tap to set one' : _formatDate(_dueDate!),
@@ -141,24 +154,31 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
             ),
             const SizedBox(height: 20),
             AppCard(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               child: Row(
                 children: [
                   Icon(Icons.repeat, color: Theme.of(context).colorScheme.primary),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Repeat this task', style: Theme.of(context).textTheme.titleMedium),
+                        Text('Repeat this task?', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        )),
                         Text(
-                          'Comes back around again after it\'s completed',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+                          'If selected: This task will repeat when task is complete.',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600,
+                          fontSize: 12,)
                         ),
                       ],
                     ),
                   ),
                   Switch(
                     value: _isRecurring,
+                    activeThumbColor: Colors.white,
+                    activeTrackColor: const Color(0xFF4CAF50),
                     onChanged: (value) => setState(() => _isRecurring = value),
                   ),
                 ],

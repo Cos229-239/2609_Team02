@@ -38,38 +38,51 @@ class TaskListScreen extends StatelessWidget {
               child: Row(
                 children: [
                   CircleAvatar(
-                    radius: 24,
+                    radius: 26,
                     backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                     child: Text(child.avatarEmoji, style: const TextStyle(fontSize: AppConstants.emojiIconMd)),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Hi ${child.name}! 👋', style: Theme.of(context).textTheme.titleMedium),
+                        Text('Hi ${child.name}! 👋', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                        )),
+                        const SizedBox(height: 4),
                         Text(
-                          'Here are your tasks and the rewards you can earn!',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+                          'Here is what you earned so far!',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600,
+                          fontSize: 14,
+                          height: 1.0),
                         ),
                       ],
                     ),
                   ),
                   Container(
   padding: const EdgeInsets.symmetric(
-    horizontal: 16,
-    vertical: 10,
+    horizontal: 8,
+    vertical: 4,
   ),
   decoration: BoxDecoration(
-    border: Border.all(color: Colors.grey.shade300),
-    borderRadius: BorderRadius.circular(12),
+  color: Colors.amber.withValues(alpha: 0.08),
+  border: Border.all(
+    color: Colors.amber.shade200,
+    width: 1,
   ),
+  borderRadius: BorderRadius.circular(14),
+),
   child: Column(
     children: [
-      const Icon(Icons.star, color: Colors.amber),
+      const Icon(Icons.star_rounded, color: Colors.amber, size: 22),
       Text(
         '${child.xp} XP',
-        style: Theme.of(context).textTheme.titleMedium,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     ],
   ),
@@ -77,22 +90,38 @@ class TaskListScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-            Text('My Tasks', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 28),
+            Text('My Tasks:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            )),
             Text(
-              'Complete your tasks to earn awesome rewards!',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+              'Complete your tasks to earn more rewards!',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600, fontSize: 14),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 22),
             if (tasks.isNotEmpty)
   const Row(
     children: [
-      Expanded(
-        child: Text('TASK'),
+      const Expanded(
+        child: SizedBox(),
       ),
-      Text('REWARD'),
-      SizedBox(width: 24),
-      Text('STATUS'),
+      SizedBox(
+        width: 72,
+        child: Center(
+          child: Text('REWARD'),
+        ),
+      ),
+     SizedBox(
+  width: 75,
+  child: Padding(
+    padding: EdgeInsets.only(right: 10),
+      child: Text(
+        'STATUS',
+        textAlign: TextAlign.right,
+      ),
+    ),
+  ),  
     ],
   ),
             if (tasks.isEmpty)
@@ -108,19 +137,21 @@ class TaskListScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
               ],
-            const SizedBox(height: 20),
-            Text('My Rewards', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 25),
+            Text('My Rewards:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontSize: 20,
+            )),
             Text(
-              'Earn points and get amazing rewards!',
+              'Earn more points and earn these rewards next!',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             SizedBox(
-              height: 120,
+              height: 125,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: db.availableRewards.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                separatorBuilder: (_, _) => const SizedBox(width: 6),
                 itemBuilder: (context, index) {
                   final reward = db.availableRewards[index];
                   final double progress =
@@ -128,21 +159,36 @@ class TaskListScreen extends StatelessWidget {
                   return SizedBox(
                     width: 110,
                     child: AppCard(
+                      padding: const EdgeInsets.all(12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(reward.icon, style: const TextStyle(fontSize: AppConstants.emojiIconSm)),
-                          const SizedBox(height: 4),
-                          Text(
-                            reward.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.visible,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                          ),
+                          Center(
+                            child: Text(
+                            reward.icon,
+                            style: const TextStyle(
+                            fontSize: 24,
+                           ),
+                         ),
+                        ),
+                          const SizedBox(height: 8),
+                          Center(
+  child: Text(
+    reward.title,
+    maxLines: 2,
+    textAlign: TextAlign.center,
+    overflow: TextOverflow.visible,
+    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+      fontWeight: FontWeight.w600,
+    ),
+  ),
+),
                           const Spacer(),
                           ClipRRect(
                             borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(value: progress, minHeight: 5),
+                            child: LinearProgressIndicator(value: progress, minHeight: 5,
+                            color: Colors.green,
+                            backgroundColor: Colors.green.shade100),
                           ),
                         ],
                       ),
