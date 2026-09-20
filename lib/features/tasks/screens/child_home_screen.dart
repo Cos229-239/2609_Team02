@@ -43,39 +43,39 @@ class ChildHomeScreen extends StatelessWidget {
         break;
       }
     }
-    final nextRewardXp = nextTask?.rewardXp ?? 0;
+    final nextRewardXp = nextTask?.rewardXp ?? 50;
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       children: [
         Text('${_greeting()}, ${child.name}! 👋', style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 4),
         Text(
-          remaining == 0 ? "You're all done for today!" : "You're doing great! Keep going!",
+           "You're doing great!" " " "Keep going!",
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
         _NextRewardCard(
           progress: progress,
           nextRewardXp: nextRewardXp,
           completedCount: completedCount,
           totalCount: totalCount,
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 10),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Row(
               children: [
-                Icon(Icons.event_available, color: Theme.of(context).colorScheme.primary),
+                Icon(Icons.event_available, color: Colors.blue.shade700),
                 const SizedBox(width: 8),
-                Text("Today's Tasks", style: Theme.of(context).textTheme.titleMedium),
+                Text("Today's Tasks", style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
               ],
             ),
             _CountBadge(completed: completedCount, total: totalCount),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         if (tasks.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
@@ -89,25 +89,76 @@ class ChildHomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
           ],
+          const SizedBox(height: 8),
+
+AppCard(
+  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+  child: Row(
+    children: [
+      const Icon(
+        Icons.emoji_events_rounded,
+        color: Colors.amber,
+        size: 34,
+      ),
+      const SizedBox(width: 8),
+
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Keep it up, ${child.name}!',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              remaining == 1
+                  ? "You're only 1 task away from your next reward!"
+                  : "Keep completing tasks to earn your next reward!",
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+              )
+            ),
+          ],
+        ),
+      ),
+
+      const SizedBox(width: 8),
+
+      Text(
+        '+$nextRewardXp XP',
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          color: Colors.black,
+        ),
+      ),
+    ],
+  ),
+),
         if (remaining > 0) ...[
           const SizedBox(height: 12),
           AppCard(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             color: AppColors.growthGreen.withValues(alpha: 0.08),
             child: Row(
               children: [
-                const Text('🦖', style: TextStyle(fontSize: AppConstants.emojiIconXl)),
-                const SizedBox(width: 12),
+                const Text('🦖', style: TextStyle(fontSize: 32)),
+                const SizedBox(width: 18),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Keep it up, ${child.name}!', style: Theme.of(context).textTheme.titleMedium),
                       Text(
-                        remaining == 1
-                            ? "You're only 1 task away from your next reward!"
-                            : "You're only $remaining tasks away from your next reward!",
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
-                      ),
+  "1 task away from your next reward!",
+  style: Theme.of(context).textTheme.bodySmall,
+  maxLines: 1,
+  overflow: TextOverflow.ellipsis,
+),
                     ],
                   ),
                 ),
@@ -143,25 +194,69 @@ class _NextRewardCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppCard(
-      color: AppColors.growthGreen.withValues(alpha: 0.08),
+      color:Colors.white,
       child: Row(
         children: [
           SizedBox(
-            width: 56,
-            height: 56,
+            width: 80,
+            height: 80,
             child: Stack(
               alignment: Alignment.center,
               children: [
-                CircularProgressIndicator(
-                  value: progress,
-                  strokeWidth: 5,
-                  backgroundColor: AppColors.growthGreen.withValues(alpha: 0.15),
-                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.growthGreen),
+                Transform.scale(
+  scale: 1.35,
+  child: Transform.rotate(
+    angle: 0.8,
+    child: CircularProgressIndicator(
+    value: 0.90,
+    strokeWidth: 4,
+    backgroundColor: Colors.transparent,
+    valueColor: const AlwaysStoppedAnimation<Color>(
+    Colors.amber,
+    ),
+  ),
+),
                 ),
-                Text(
-                  '${(progress * 100).round()}%',
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: AppConstants.captionFontSize),
-                ),
+Positioned(
+  top: -2,
+  left: 40,
+  child: Container(
+  width: 22,
+  height: 38,
+  decoration: BoxDecoration(
+    color: Colors.amber,
+    shape: BoxShape.circle,
+  ),
+  child: const Icon(
+    Icons.star,
+    size: 20,
+    color: Colors.white,
+  ),
+),
+),
+  Stack(
+    alignment: Alignment.center,
+  children: [
+    Positioned(
+  top: -2,
+  left: 25,
+  child: const Icon(
+    Icons.star,
+    size: 18,
+    color: AppColors.growthGreen,
+  ),
+),
+    
+    
+    Text(
+      '${(progress * 100).round()}%',
+      style: const TextStyle(
+        fontWeight: FontWeight.w700,
+        fontSize: 10,
+      ),
+    ),
+  ],
+),
               ],
             ),
           ),
@@ -175,17 +270,53 @@ class _NextRewardCard extends StatelessWidget {
                   style: Theme.of(context)
                       .textTheme
                       .bodyMedium
-                      ?.copyWith(color: AppColors.growthGreen, fontWeight: FontWeight.w600),
+                      ?.copyWith(color: Colors.black, fontWeight: FontWeight.w600),
                 ),
-                Text('+$nextRewardXp XP', style: Theme.of(context).textTheme.titleLarge),
+                Text(
+  '+$nextRewardXp XP',
+  style: Theme.of(context).textTheme.titleLarge,
+),
+                const SizedBox(height: 8),
+
+ClipRRect(
+  borderRadius: BorderRadius.circular(10),
+  child: LinearProgressIndicator(
+    value: totalCount == 0 ? 0 : completedCount / totalCount,
+    minHeight: 8,
+    backgroundColor: Colors.grey.shade300,
+    valueColor: const AlwaysStoppedAnimation<Color>(
+      Color(0xFF4CAF50),
+    ),
+  ),
+),
+
+const SizedBox(height: 4),
+                
                 Text(
                   '$completedCount of $totalCount tasks completed',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
                 ),
               ],
             ),
           ),
-          const Icon(Icons.stars_rounded, color: Colors.amber, size: 36),
+          Column(
+  mainAxisSize: MainAxisSize.min,
+  children: [
+    Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 3,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+     
+    ),
+    const SizedBox(height: 6),
+    
+  ],
+),
         ],
       ),
     );
@@ -201,7 +332,7 @@ class _CountBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: AppColors.growthGreen.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
@@ -211,8 +342,14 @@ class _CountBadge extends StatelessWidget {
         children: [
           const Icon(Icons.check, size: 14, color: AppColors.growthGreen),
           const SizedBox(width: 4),
-          Text('$completed of $total', style: const TextStyle(color: AppColors.growthGreen, fontWeight: FontWeight.w600)),
-        ],
+Text(
+  '$completed of $total',
+  style: const TextStyle(
+    color: AppColors.growthGreen,
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+  ),
+),        ],
       ),
     );
   }
@@ -228,41 +365,88 @@ class _ChildTaskRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return AppCard(
-      color: task.isCompleted ? AppColors.growthGreen.withValues(alpha: 0.06) : null,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
       child: Row(
         children: [
           CircleAvatar(
-            radius: 20,
-            backgroundColor: theme.colorScheme.secondary.withValues(alpha: 0.15),
-            child: Icon(TaskIconCatalog.resolve(task.icon).icon, color: theme.colorScheme.secondary, size: 20),
-          ),
-          const SizedBox(width: 12),
+  radius: 18,
+  backgroundColor: AppColors.growthGreen.withValues(alpha: 0.15),
+  child: Icon(
+    task.title == 'Go outside'
+        ? Icons.wb_sunny_outlined
+        : task.title == 'Eat Sushi'
+            ? Icons.restaurant_outlined
+            : TaskIconCatalog.resolve(task.icon).icon,
+    color: AppColors.growthGreen,
+    size: 18,
+  ),
+),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(task.title, style: theme.textTheme.titleMedium),
+                Text(task.title, style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600)),
                 Text(
                   '${task.isRecurring ? 'Daily Task' : 'One-time Task'} • ${_dueLabel(task.dueDate)}',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+                  style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
                 ),
               ],
             ),
           ),
           if (task.isCompleted)
-            const CircleAvatar(
-              radius: 14,
-              backgroundColor: AppColors.growthGreen,
-              child: Icon(Icons.check, color: Colors.white, size: 16),
-            )
+  Column(
+  crossAxisAlignment: CrossAxisAlignment.end,
+  children: [
+    Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.growthGreen.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: const Text(
+        '✓ Completed',
+        style: TextStyle(
+          color: AppColors.growthGreen,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    ),
+    const SizedBox(height: 4),
+    const Text(
+      '★ +50 XP',
+      style: TextStyle(
+        color: Colors.amber,
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+  ],
+)
           else
-            ElevatedButton.icon(
-              onPressed: onComplete,
-              icon: const Icon(Icons.arrow_forward, size: 16),
-              label: const Text('Complete'),
-              style: ElevatedButton.styleFrom(minimumSize: const Size(0, 36)),
-            ),
+  InkWell(
+    onTap: onComplete,
+    borderRadius: BorderRadius.circular(14),
+    child: Container(
+      width: 24,
+      height: 24,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.grey.shade400,
+          width: 2,
+        ),
+      ),
+    ),
+  ),
         ],
       ),
     );
