@@ -9,12 +9,7 @@ import '../../../shared/widgets/app_card.dart';
 /// indicator. Reused by the child's task list and the parent's
 /// create/assign screen.
 class TaskTile extends StatelessWidget {
-  const TaskTile({
-    super.key,
-    required this.task,
-    this.onTap,
-    this.trailing,
-  });
+  const TaskTile({super.key, required this.task, this.onTap, this.trailing});
 
   final TaskModel task;
   final VoidCallback? onTap;
@@ -28,70 +23,61 @@ class TaskTile extends StatelessWidget {
     final theme = Theme.of(context);
 
     return AppCard(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 10,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       onTap: onTap,
       child: Row(
         children: [
           CircleAvatar(
             radius: 18,
-            backgroundColor: theme.colorScheme.secondary.withValues(alpha: 0.12),
-            child: Icon(TaskIconCatalog.resolve(task.icon).icon, color: theme.colorScheme.secondary, size: 20),
+            backgroundColor: theme.colorScheme.secondary.withValues(
+              alpha: 0.12,
+            ),
+            child: Icon(
+              TaskIconCatalog.resolve(task.icon).icon,
+              color: theme.colorScheme.secondary,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(task.title, style: theme.textTheme.titleMedium?.copyWith(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                )),
+                Text(
+                  task.title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 if (task.description.isNotEmpty)
                   Text(
                     task.description,
-                    style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey.shade600,
+                    ),
                   ),
               ],
             ),
           ),
           if (trailing != null)
             trailing!
-          else
-            
-  Row(
-    children: [
-      SizedBox(
-        width: 89,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.star,
-              size: 16,
-              color: Colors.amber,
+          else ...[
+            const SizedBox(width: 8),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.star, size: 16, color: Colors.amber),
+                const SizedBox(width: 2),
+                Text(
+                  '+${task.rewardXp} XP',
+                  style: theme.textTheme.bodyMedium?.copyWith(fontSize: 13),
+                ),
+              ],
             ),
-            const SizedBox(width: 2),
-            Text(
-              '+${task.rewardXp} XP',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontSize: 13,
-              ),
-            ),
+            const SizedBox(width: 12),
+            Flexible(child: _StatusBadge(status: task.status)),
           ],
-        ),
-      ),
-      SizedBox(
-        width: 55,
-        child: Align(
-          alignment: Alignment.centerRight,
-          child: _StatusBadge(status: task.status),
-        ),
-      ),
-    ],
-  ),
         ],
       ),
     );
@@ -106,8 +92,16 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color, icon) = switch (status) {
-      TaskStatus.pending => ('To Do', Colors.grey, Icons.radio_button_unchecked),
-      TaskStatus.completed => ('Pending Approval', Colors.orange, Icons.hourglass_bottom),
+      TaskStatus.pending => (
+        'To Do',
+        Colors.grey,
+        Icons.radio_button_unchecked,
+      ),
+      TaskStatus.completed => (
+        'Pending Approval',
+        Colors.orange,
+        Icons.hourglass_bottom,
+      ),
       TaskStatus.approved => ('Done', Colors.green, Icons.check_circle),
     };
 
@@ -116,7 +110,18 @@ class _StatusBadge extends StatelessWidget {
       children: [
         Icon(icon, size: 14, color: color),
         const SizedBox(width: 4),
-        Text(label, style: TextStyle(color: color, fontSize: AppConstants.captionFontSize, fontWeight: FontWeight.w600)),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: color,
+              fontSize: AppConstants.captionFontSize,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
       ],
     );
   }
