@@ -39,7 +39,7 @@ void main() {
             id: 'reward-1',
             title: '+30 Minutes Game Time',
             type: RewardType.screenTime,
-            xpCost: 200,
+            coinCost: 200,
             icon: '🎮',
           ),
         ];

@@ -14,7 +14,9 @@ class AppUser {
     this.phoneNumber,
     this.age,
     this.xp = 0,
+    this.coins = 0,
     this.householdId,
+    this.pinnedRewardId,
   });
 
   final String id;
@@ -26,11 +28,46 @@ class AppUser {
   final String avatarEmoji;
   final String? phoneNumber;
   final int? age;
+
+  /// Leveling/leaderboard total: never spent.
   final int xp;
+
+  /// Spendable currency, earned from tasks and spent on rewards.
+  final int coins;
+
   final String? householdId;
+
+  /// Id of the reward this child has pinned as a goal, or null.
+  final String? pinnedRewardId;
 
   bool get isParent => role == UserRole.parent;
   bool get isChild => role == UserRole.child;
+
+  AppUser copyWith({
+    String? name,
+    String? avatarEmoji,
+    int? age,
+    String? phoneNumber,
+    String? email,
+    int? xp,
+    int? coins,
+    String? pinnedRewardId,
+    bool clearPinnedRewardId = false,
+  }) {
+    return AppUser(
+      id: id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      role: role,
+      avatarEmoji: avatarEmoji ?? this.avatarEmoji,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      age: age ?? this.age,
+      xp: xp ?? this.xp,
+      coins: coins ?? this.coins,
+      householdId: householdId,
+      pinnedRewardId: clearPinnedRewardId ? null : (pinnedRewardId ?? this.pinnedRewardId),
+    );
+  }
 
   factory AppUser.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? const {};
@@ -46,7 +83,9 @@ class AppUser {
       avatarEmoji: data['avatarEmoji'] as String? ?? '🙂',
       age: data['age'] as int?,
       xp: data['xp'] as int? ?? 0,
+      coins: data['coins'] as int? ?? 0,
       householdId: data['householdId'] as String?,
+      pinnedRewardId: data['pinnedRewardId'] as String?,
     );
   }
 
@@ -59,7 +98,9 @@ class AppUser {
       'phoneNumber': phoneNumber,
       'age': age,
       'xp': xp,
+      'coins': coins,
       'householdId': householdId,
+      'pinnedRewardId': pinnedRewardId,
     };
   }
 }

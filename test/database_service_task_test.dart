@@ -352,6 +352,242 @@ void main() {
       expect(availableTasks.first.assignedToUserId, isNull);
     });
 
+    test('approves a completed task and awards coins to the assigned child', () async {
+      await firestore.collection('users').doc('child-1').set({
+        'xp': 0,
+        'coins': 20,
+        'householdId': householdId,
+      });
+
+      const task = TaskModel(
+        id: 'task-1',
+        title: 'Feed the Dog',
+        assignedToUserId: 'child-1',
+        rewardXp: 50,
+        coinReward: 15,
+        status: TaskStatus.completed,
+      );
+
+      await databaseService.addTask(task);
+
+      final snapshot = await firestore
+          .collection('households')
+          .doc(householdId)
+          .collection('tasks')
+          .get();
+
+      final taskId = snapshot.docs.first.id;
+
+      await databaseService.approveTask(taskId);
+
+      final child = await firestore.collection('users').doc('child-1').get();
+
+      expect(child.data()?['xp'], 50);
+      expect(child.data()?['coins'], 35);
+    });
+
+    test('updateTask overwrites the editable fields of an existing task', () async {
+      const task = TaskModel(
+        id: 'task-1',
+        title: 'Old Title',
+        rewardXp: 10,
+        coinReward: 5,
+      );
+
+      await databaseService.addTask(task);
+
+      final snapshot = await firestore
+          .collection('households')
+          .doc(householdId)
+          .collection('tasks')
+          .get();
+
+      final taskId = snapshot.docs.first.id;
+      final saved = TaskModel.fromFirestore(snapshot.docs.first);
+
+      final updated = saved.copyWith(
+        title: 'New Title',
+        description: 'Updated description',
+        rewardXp: 40,
+        coinReward: 20,
+      );
+
+      await databaseService.updateTask(taskId, updated);
+
+      final refreshed = await firestore
+          .collection('households')
+          .doc(householdId)
+          .collection('tasks')
+          .doc(taskId)
+          .get();
+
+      expect(refreshed.data()?['title'], 'New Title');
+      expect(refreshed.data()?['description'], 'Updated description');
+      expect(refreshed.data()?['rewardXp'], 40);
+      expect(refreshed.data()?['coinReward'], 20);
+    });
+
+    test('setTaskArchived toggles the archived flag', () async {
+      const task = TaskModel(id: 'task-1', title: 'Archive Me');
+      await databaseService.addTask(task);
+
+      final snapshot = await firestore
+          .collection('households')
+          .doc(householdId)
+          .collection('tasks')
+          .get();
+      final taskId = snapshot.docs.first.id;
+
+      await databaseService.setTaskArchived(taskId, true);
+      var doc = await firestore
+          .collection('households')
+          .doc(householdId)
+          .collection('tasks')
+          .doc(taskId)
+          .get();
+      expect(doc.data()?['archived'], isTrue);
+
+      await databaseService.setTaskArchived(taskId, false);
+      doc = await firestore
+          .collection('households')
+          .doc(householdId)
+          .collection('tasks')
+          .doc(taskId)
+          .get();
+      expect(doc.data()?['archived'], isFalse);
+    });
+
+    test('removeTask permanently deletes the task', () async {
+      const task = TaskModel(id: 'task-1', title: 'Delete Me');
+      await databaseService.addTask(task);
+
+      final snapshot = await firestore
+          .collection('households')
+          .doc(householdId)
+          .collection('tasks')
+          .get();
+      final taskId = snapshot.docs.first.id;
+
+      await databaseService.removeTask(taskId);
+
+      final afterDelete = await firestore
+          .collection('households')
+          .doc(householdId)
+          .collection('tasks')
+          .get();
+      expect(afterDelete.docs, isEmpty);
+    });
+
+    test('archived tasks are excluded from activeTasks/tasksForUser/availableTasks', () async {
+      const archivedAssigned = TaskModel(
+        id: 'task-1',
+        title: 'Archived Assigned',
+        assignedToUserId: 'child-1',
+        archived: true,
+      );
+      const activeAssigned = TaskModel(
+        id: 'task-2',
+        title: 'Active Assigned',
+        assignedToUserId: 'child-1',
+      );
+      const archivedAvailable = TaskModel(
+        id: 'task-3',
+        title: 'Archived Available',
+        archived: true,
+      );
+      const activeAvailable = TaskModel(
+        id: 'task-4',
+        title: 'Active Available',
+      );
+
+      await databaseService.addTask(archivedAssigned);
+      await databaseService.addTask(activeAssigned);
+      await databaseService.addTask(archivedAvailable);
+      await databaseService.addTask(activeAvailable);
+
+      // Allow the Firestore listener in DatabaseService to receive the updates.
+      await Future<void>.delayed(Duration.zero);
+
+      expect(databaseService.archivedTasks.map((t) => t.title), containsAll(['Archived Assigned', 'Archived Available']));
+
+      final myTasks = databaseService.tasksForUser('child-1');
+      expect(myTasks, hasLength(1));
+      expect(myTasks.first.title, 'Active Assigned');
+
+      final available = databaseService.availableTasks;
+      expect(available, hasLength(1));
+      expect(available.first.title, 'Active Available');
+    });
+
+    test('addTask returns the id Firestore assigned the new document', () async {
+      const task = TaskModel(id: 'placeholder', title: 'Water Plants');
+
+      final newId = await databaseService.addTask(task);
+
+      final doc = await firestore
+          .collection('households')
+          .doc(householdId)
+          .collection('tasks')
+          .doc(newId)
+          .get();
+
+      expect(doc.exists, isTrue);
+      expect(doc.data()?['title'], 'Water Plants');
+    });
+
+    test('reassignTask changes who a task is assigned to', () async {
+      const task = TaskModel(
+        id: 'task-1',
+        title: 'Mow the Lawn',
+        assignedToUserId: 'child-1',
+        status: TaskStatus.completed,
+      );
+      await databaseService.addTask(task);
+
+      final snapshot = await firestore
+          .collection('households')
+          .doc(householdId)
+          .collection('tasks')
+          .get();
+      final taskId = snapshot.docs.first.id;
+
+      await databaseService.reassignTask(taskId, 'child-2');
+
+      final reassigned = await firestore
+          .collection('households')
+          .doc(householdId)
+          .collection('tasks')
+          .doc(taskId)
+          .get();
+      expect(reassigned.data()?['assignedToUserId'], 'child-2');
+    });
+
+    test('reassignTask can move a task back to the household pool', () async {
+      const task = TaskModel(
+        id: 'task-1',
+        title: 'Mow the Lawn',
+        assignedToUserId: 'child-1',
+      );
+      await databaseService.addTask(task);
+
+      final snapshot = await firestore
+          .collection('households')
+          .doc(householdId)
+          .collection('tasks')
+          .get();
+      final taskId = snapshot.docs.first.id;
+
+      await databaseService.reassignTask(taskId, null);
+
+      final reassigned = await firestore
+          .collection('households')
+          .doc(householdId)
+          .collection('tasks')
+          .doc(taskId)
+          .get();
+      expect(reassigned.data()?['assignedToUserId'], isNull);
+    });
+
     test(
       'does not allow a second child to claim an already assigned task',
       () async {

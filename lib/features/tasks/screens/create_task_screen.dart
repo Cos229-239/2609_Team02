@@ -1,53 +1,82 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../app/routes.dart';
 import '../../../app/theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/task_icons.dart';
 import '../../../core/models/task.dart';
 import '../../../core/services/database_service.dart';
+import '../../../core/services/description_suggester.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/number_stepper.dart';
 
 enum _AssignTarget { household, child }
 
-/// "Create Task" — a parent picks an icon, names the task, sets an
-/// optional due date and repeat, then either assigns it to one specific
-/// child or leaves it open as a household task anyone can claim (see
-/// [DatabaseService.claimTask]).
+/// "Create Task" / "Edit Task" screen. Passing [taskId] switches it into
+/// edit mode, pre-filled from the existing task.
 class CreateTaskScreen extends StatefulWidget {
-  const CreateTaskScreen({super.key, this.initialChildId});
+  const CreateTaskScreen({super.key, this.initialChildId, this.taskId});
 
-  /// Pre-selects a specific child (e.g. when reached by tapping a child
-  /// from the Home or Family screen) instead of defaulting to "household".
+  /// Pre-selects a child instead of defaulting to "household". Ignored
+  /// when [taskId] is set.
   final String? initialChildId;
+
+  /// When set, edits this task instead of creating a new one.
+  final String? taskId;
 
   @override
   State<CreateTaskScreen> createState() => _CreateTaskScreenState();
 }
 
 class _CreateTaskScreenState extends State<CreateTaskScreen> {
-  final _titleController = TextEditingController();
-  String _selectedIconKey = TaskIconCatalog.defaultKey;
+  late final TextEditingController _titleController;
+  late final TextEditingController _descriptionController;
+  late String _selectedIconKey;
   DateTime? _dueDate;
-  bool _isRecurring = false;
-  // Set from `widget.initialChildId` in initState rather than as a field
-  // initializer: field initializers run before the State is attached to
-  // its widget, so `widget` isn't accessible there yet.
+  late bool _isRecurring;
+  late int _xp;
+  late int _coins;
+  // Set in initState: widget isn't accessible from field initializers.
   late _AssignTarget _assignTarget;
   String? _selectedChildId;
+
+  /// The task being edited, or null when creating a new one.
+  TaskModel? _originalTask;
+
+  bool get _isEditing => _originalTask != null;
 
   @override
   void initState() {
     super.initState();
-    _selectedChildId = widget.initialChildId;
-    _assignTarget = widget.initialChildId != null ? _AssignTarget.child : _AssignTarget.household;
+
+    TaskModel? existing;
+    if (widget.taskId != null) {
+      final db = context.read<DatabaseService>();
+      for (final t in db.tasks) {
+        if (t.id == widget.taskId) {
+          existing = t;
+          break;
+        }
+      }
+    }
+    _originalTask = existing;
+
+    _titleController = TextEditingController(text: existing?.title ?? '');
+    _descriptionController = TextEditingController(text: existing?.description ?? '');
+    _selectedIconKey = existing?.icon ?? TaskIconCatalog.defaultKey;
+    _dueDate = existing?.dueDate;
+    _isRecurring = existing?.isRecurring ?? false;
+    _xp = existing?.rewardXp ?? AppConstants.defaultTaskXp;
+    _coins = existing?.coinReward ?? AppConstants.defaultTaskCoins;
+    _selectedChildId = existing?.assignedToUserId ?? widget.initialChildId;
+    _assignTarget = _selectedChildId != null ? _AssignTarget.child : _AssignTarget.household;
   }
 
   @override
   void dispose() {
     _titleController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
@@ -64,41 +93,174 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     if (picked != null) setState(() => _dueDate = picked);
   }
 
-  void _createTask(DatabaseService db) {
+  void _applySuggestedDescription() {
+    final title = _titleController.text.trim();
+    if (title.isEmpty) return;
+    setState(() {
+      _descriptionController.text = DescriptionSuggester.suggest(
+        title: title,
+        iconKey: _selectedIconKey,
+      );
+    });
+  }
+
+  void _submit(DatabaseService db) {
     final title = _titleController.text.trim();
     if (title.isEmpty) return;
 
     final assignedToUserId = _assignTarget == _AssignTarget.household ? null : _selectedChildId;
+    final description = _descriptionController.text.trim();
+    final original = _originalTask;
 
-    db.addTask(
-      TaskModel(
-        id: 'task-${DateTime.now().millisecondsSinceEpoch}',
+    if (original != null) {
+      final updated = original.copyWith(
         title: title,
+        description: description,
         icon: _selectedIconKey,
         assignedToUserId: assignedToUserId,
-        dueDate: _dueDate,
+        clearAssignedToUserId: assignedToUserId == null,
+        rewardXp: _xp,
+        coinReward: _coins,
         isRecurring: _isRecurring,
+        dueDate: _dueDate,
+        clearDueDate: _dueDate == null,
+      );
+      db.updateTask(original.id, updated);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('"$title" updated!')),
+      );
+    } else {
+      db.addTask(
+        TaskModel(
+          id: 'task-${DateTime.now().millisecondsSinceEpoch}',
+          title: title,
+          description: description,
+          icon: _selectedIconKey,
+          assignedToUserId: assignedToUserId,
+          dueDate: _dueDate,
+          isRecurring: _isRecurring,
+          rewardXp: _xp,
+          coinReward: _coins,
+          createdAt: DateTime.now(),
+        ),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('"$title" created!')),
+      );
+    }
+
+    Navigator.of(context).pop();
+  }
+
+  Future<void> _toggleArchived() async {
+    final task = _originalTask;
+    if (task == null) return;
+    final newValue = !task.archived;
+    await context.read<DatabaseService>().setTaskArchived(task.id, newValue);
+    if (!mounted) return;
+    setState(() => _originalTask = task.copyWith(archived: newValue));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(newValue ? 'Task archived.' : 'Task unarchived.')),
+    );
+  }
+
+  Future<void> _confirmDelete() async {
+    final task = _originalTask;
+    if (task == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Task?'),
+        content: Text(
+          'This permanently removes "${task.title}". This can\'t be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('"$title" created!')),
-    );
-    Navigator.of(context).pop();
+    if (confirmed != true || !mounted) return;
+
+    await context.read<DatabaseService>().removeTask(task.id);
+    if (mounted) Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
     final db = context.watch<DatabaseService>();
     final children = db.children;
-    final selectedChild = _selectedChildId == null ? null : db.userById(_selectedChildId!);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Task')),
+      appBar: AppBar(
+        title: Text(_isEditing ? 'Edit Task' : 'Create Task'),
+        actions: [
+          if (_isEditing)
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'archive') _toggleArchived();
+                if (value == 'delete') _confirmDelete();
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'archive',
+                  child: Row(
+                    children: [
+                      Icon(
+                        _originalTask!.archived ? Icons.unarchive_outlined : Icons.archive_outlined,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(_originalTask!.archived ? 'Unarchive Task' : 'Archive Task'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                      SizedBox(width: 10),
+                      Text('Delete Task', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
           children: [
+            if (_isEditing && _originalTask!.isArchived) ...[
+              AppCard(
+                color: Colors.orange.withValues(alpha: 0.08),
+                child: Row(
+                  children: [
+                    Icon(Icons.archive_outlined, color: Colors.orange.shade800),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _originalTask!.archived
+                            ? 'This task is archived.'
+                            : 'This task auto-archived - it\'s more than ${AppConstants.taskArchiveAfterDays} days old.',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.orange.shade900),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             Text('Choose an Icon:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontSize: 20,
               fontWeight: FontWeight.w600,
@@ -118,11 +280,65 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
             const SizedBox(height: 8),
             TextField(
               controller: _titleController,
-              autofocus: true,
+              autofocus: !_isEditing,
               decoration: const InputDecoration(hintText: 'e.g. Take Out the Trash'),
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 16),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: Text('Description (optional):', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  )),
+                ),
+                TextButton.icon(
+                  onPressed: _canSubmit ? _applySuggestedDescription : null,
+                  icon: const Icon(Icons.auto_awesome, size: 18),
+                  label: const Text('Suggest'),
+                ),
+              ],
+            ),
+            TextField(
+              controller: _descriptionController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                hintText: 'What does "done" look like for this task?',
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Suggestions come from an on-device assistant - nothing leaves this device.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500, fontSize: 11),
+            ),
+            const SizedBox(height: 20),
+            Text('Rewards for Completing This Task:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            )),
+            const SizedBox(height: 8),
+            NumberStepper(
+              label: 'XP Earned',
+              icon: Icons.star,
+              iconColor: Colors.amber,
+              value: _xp,
+              step: 5,
+              max: 1000,
+              onChanged: (value) => setState(() => _xp = value),
+            ),
+            const SizedBox(height: 8),
+            NumberStepper(
+              label: 'Coins Earned',
+              icon: Icons.monetization_on,
+              iconColor: Colors.amber.shade700,
+              value: _coins,
+              step: 5,
+              max: 1000,
+              onChanged: (value) => setState(() => _coins = value),
+            ),
+            const SizedBox(height: 20),
             Text('Select a Due Date:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontSize: 16,
               fontWeight: FontWeight.w600,
@@ -138,7 +354,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      _dueDate == null ? 'No due date — tap to set one' : _formatDate(_dueDate!),
+                      _dueDate == null ? 'No due date - tap to set one' : _formatDate(_dueDate!),
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ),
@@ -190,7 +406,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
             _AssignOptionCard(
               icon: Icons.groups_outlined,
               title: 'Household Task',
-              subtitle: 'Left open — any child can claim it',
+              subtitle: 'Left open - any child can claim it',
               selected: _assignTarget == _AssignTarget.household,
               onTap: () => setState(() => _assignTarget = _AssignTarget.household),
             ),
@@ -199,7 +415,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               _AssignOptionCard(
                 avatarEmoji: child.avatarEmoji,
                 title: child.name,
-                subtitle: 'Age ${child.age ?? '—'}',
+                subtitle: 'Age ${child.age ?? '-'}',
                 selected: _assignTarget == _AssignTarget.child && _selectedChildId == child.id,
                 onTap: () => setState(() {
                   _assignTarget = _AssignTarget.child;
@@ -208,20 +424,11 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               ),
               const SizedBox(height: 8),
             ],
-            if (_assignTarget == _AssignTarget.child && selectedChild != null) ...[
-              const SizedBox(height: 4),
-              TextButton.icon(
-                onPressed: () =>
-                    Navigator.of(context).pushNamed(AppRoutes.rewardChoose, arguments: selectedChild.id),
-                icon: const Icon(Icons.card_giftcard),
-                label: Text("Manage rewards for ${selectedChild.name}"),
-              ),
-            ],
             const SizedBox(height: 24),
             AppButton(
-              label: 'Create Task',
-              icon: Icons.add_task,
-              onPressed: _canSubmit ? () => _createTask(context.read<DatabaseService>()) : null,
+              label: _isEditing ? 'Save Changes' : 'Create Task',
+              icon: _isEditing ? Icons.save_outlined : Icons.add_task,
+              onPressed: _canSubmit ? () => _submit(context.read<DatabaseService>()) : null,
             ),
           ],
         ),

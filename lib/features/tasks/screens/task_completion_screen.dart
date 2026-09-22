@@ -9,7 +9,7 @@ import '../../../core/services/database_service.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 
-/// "Completion of children tasks" — the celebration screen shown right
+/// "Completion of children tasks": the celebration screen shown right
 /// after a task is marked done, recapping what was completed and what
 /// was earned. Ends the sample flow by returning to the child's task
 /// list / home.
@@ -80,7 +80,17 @@ class TaskCompletionScreen extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text('+${task.rewardXp} XP'),
+                      Row(
+                        children: [
+                          Text('+${task.rewardXp} XP'),
+                          if (task.coinReward > 0) ...[
+                            const SizedBox(width: 12),
+                            Icon(Icons.monetization_on, size: 16, color: Colors.amber.shade700),
+                            const SizedBox(width: 2),
+                            Text('+${task.coinReward} coins'),
+                          ],
+                        ],
+                      ),
                     ],
                   ),
                 ),
