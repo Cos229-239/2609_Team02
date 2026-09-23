@@ -54,6 +54,7 @@ class TaskTile extends StatelessWidget {
                   Text(
                     task.description,
                     style: theme.textTheme.bodyMedium?.copyWith(
+                      fontSize: 12,
                       color: Colors.grey.shade600,
                     ),
                   ),
@@ -63,7 +64,7 @@ class TaskTile extends StatelessWidget {
           if (trailing != null)
             trailing!
           else ...[
-            const SizedBox(width: 8),
+            const SizedBox(width: 16),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -76,7 +77,12 @@ class TaskTile extends StatelessWidget {
               ],
             ),
             const SizedBox(width: 12),
-            Flexible(child: _StatusBadge(status: task.status)),
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: _StatusBadge(status: task.status),
+                ),
+                ),
           ],
         ],
       ),

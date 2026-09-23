@@ -131,7 +131,7 @@ class TaskListScreen extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyMedium
                   ?.copyWith(color: Colors.grey.shade600, fontSize: 14),
             ),
-            const SizedBox(height: 22),
+            const SizedBox(height: 20),
 
             if (tasks.isEmpty)
               const Padding(
@@ -141,7 +141,10 @@ class TaskListScreen extends StatelessWidget {
             else ...[
               const Text(
                 'Assigned/Pending',
-                style: TextStyle(fontWeight: FontWeight.w600),
+                style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
               ),
               const SizedBox(height: 8),
               for (final task in assignedTasks) ...[
@@ -158,7 +161,10 @@ class TaskListScreen extends StatelessWidget {
 
               const Text(
                 'Awaiting Approval',
-                style: TextStyle(fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                )
               ),
               const SizedBox(height: 8),
               for (final task in awaitingApprovalTasks) ...[
@@ -175,7 +181,10 @@ class TaskListScreen extends StatelessWidget {
 
               const Text(
                 'Approved',
-                style: TextStyle(fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 8),
               for (final task in approvedTasks) ...[
