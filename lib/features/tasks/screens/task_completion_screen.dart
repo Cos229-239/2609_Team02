@@ -46,7 +46,7 @@ class TaskCompletionScreen extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'You completed your task and earned amazing rewards!',
+                'You completed your assigned task, Way to Go!',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
                 textAlign: TextAlign.center,
               ),
@@ -60,7 +60,10 @@ class TaskCompletionScreen extends StatelessWidget {
                         children: [
                           const Icon(Icons.check_circle, color: Colors.green),
                           const SizedBox(width: 8),
-                          Text('Task Completed', style: Theme.of(context).textTheme.titleMedium),
+                          Text('Task Completed:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600
+                          )),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -68,7 +71,12 @@ class TaskCompletionScreen extends StatelessWidget {
                         children: [
                           Icon(TaskIconCatalog.resolve(task.icon).icon, size: 18),
                           const SizedBox(width: 8),
-                          Text(task.title),
+                          Expanded(
+                            child: Text(
+                              task.title,
+                              softWrap: true,
+                              ),
+                              ),
                         ],
                       ),
                       const Divider(height: 24),
@@ -76,17 +84,21 @@ class TaskCompletionScreen extends StatelessWidget {
                         children: [
                           const Icon(Icons.star, color: Colors.amber),
                           const SizedBox(width: 8),
-                          Text('Reward Earned', style: Theme.of(context).textTheme.titleMedium),
+                          Text('Reward Earned:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600)
+                          ),
+                      
+                      const Spacer(),
+                      Text('+${task.rewardXp} XP'),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Text('+${task.rewardXp} XP'),
                     ],
                   ),
                 ),
               const SizedBox(height: 32),
               AppButton(
-                label: 'Great Job! Keep Up the Fantastic Work!',
+                label: 'Great Job! Keep It Up!',
                 variant: AppButtonVariant.success,
                 onPressed: () => Navigator.of(context)
                     .pushNamedAndRemoveUntil(AppRoutes.home, (route) => false),
