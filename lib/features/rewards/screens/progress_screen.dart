@@ -270,7 +270,11 @@ class _TaskProgressRow extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              _StatusPill(task: task),
+              Transform.translate(
+                offset: const Offset(8, 0),
+                child: _StatusPill(task: task),
+              ),
+              
               const SizedBox(height: 4),
               Row(
                 children: [
@@ -315,7 +319,7 @@ class _StatusPill extends StatelessWidget {
     };
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
       decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
       child: Row(
         mainAxisSize: MainAxisSize.min,

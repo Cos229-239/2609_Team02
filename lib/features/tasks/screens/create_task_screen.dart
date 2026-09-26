@@ -185,7 +185,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            Text('Assign To', style: Theme.of(context).textTheme.titleMedium),
+            Text('Assign To:', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             _AssignOptionCard(
               icon: Icons.groups_outlined,
@@ -313,6 +313,7 @@ class _AssignOptionCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     return AppCard(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       onTap: onTap,
       color: selected ? AppColors.primaryBlue.withValues(alpha: 0.06) : null,
       child: Row(

@@ -145,7 +145,7 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
                     child.id,
                   ),
                   style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(0, 28),
+                    minimumSize: const Size(0, 24),
                   ),
                   child: const Text('Claim'),
                 ),
@@ -333,7 +333,7 @@ class _TaskRow extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: EdgeInsets.symmetric(horizontal: 14, vertical: isAvailable ? 2 : 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -380,7 +380,10 @@ class _TaskRow extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              trailing,
+              Transform.translate(
+                offset: const Offset(8, 0),
+                child: trailing,
+                ),
               const SizedBox(height: 2),
               Row(
                 mainAxisSize: MainAxisSize.min,
@@ -432,7 +435,7 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),

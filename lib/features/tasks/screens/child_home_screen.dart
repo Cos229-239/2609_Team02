@@ -91,70 +91,23 @@ class ChildHomeScreen extends StatelessWidget {
           ],
           const SizedBox(height: 8),
 
-AppCard(
-  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-  child: Row(
-    children: [
-      const Icon(
-        Icons.emoji_events_rounded,
-        color: Colors.amber,
-        size: 34,
-      ),
-      const SizedBox(width: 8),
 
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Keep it up, ${child.name}!',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              remaining == 1
-                  ? "You're only 1 task away from your next reward!"
-                  : "Keep completing tasks to earn your next reward!",
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontSize: 14,
-                fontWeight: FontWeight.w400,
-              )
-            ),
-          ],
-        ),
-      ),
-
-      const SizedBox(width: 8),
-
-      Text(
-        '+$nextRewardXp XP',
-        style: const TextStyle(
-          fontWeight: FontWeight.bold,
-          color: Colors.black,
-        ),
-      ),
-    ],
-  ),
-),
         if (remaining > 0) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 20),
           AppCard(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             color: AppColors.growthGreen.withValues(alpha: 0.08),
             child: Row(
               children: [
-                const Text('🦖', style: TextStyle(fontSize: 32)),
-                const SizedBox(width: 18),
+                const Text('🦖', style: TextStyle(fontSize: 38)),
+                const SizedBox(width: 20),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Keep it up, ${child.name}!', style: Theme.of(context).textTheme.titleMedium),
                       Text(
-  "1 task away from your next reward!",
+  "You are 1 task away from your next reward!",
   style: Theme.of(context).textTheme.bodySmall,
   maxLines: 1,
   overflow: TextOverflow.ellipsis,
