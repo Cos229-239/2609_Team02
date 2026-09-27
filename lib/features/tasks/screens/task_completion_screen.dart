@@ -9,7 +9,7 @@ import '../../../core/services/database_service.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 
-/// "Completion of children tasks" — the celebration screen shown right
+/// "Completion of children tasks": the celebration screen shown right
 /// after a task is marked done, recapping what was completed and what
 /// was earned. Ends the sample flow by returning to the child's task
 /// list / home.
