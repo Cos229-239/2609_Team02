@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../app/routes.dart';
 import '../../../app/theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/task_icons.dart';
@@ -9,10 +10,14 @@ import '../../../core/models/user.dart';
 import '../../../core/services/database_service.dart';
 import '../../../shared/widgets/app_card.dart';
 
-/// "Progress" tab — the parent's overview of the whole household: each
-/// child's XP progress, plus every task in the household broken out into
-/// Overdue, Pending and Completed so a parent can see at a glance what
-/// still needs attention without hunting through each child's task list.
+/// Distinct from `null` (dialog dismissed without a choice).
+const String _householdPoolSentinel = '__household_pool__';
+
+/// What a task row's trailing action does, based on its section.
+enum _RowActions { edit, approveOrReassign, duplicateOnly }
+
+/// "Progress" tab: each child's XP, and every task grouped into
+/// Overdue, Pending, Awaiting Approval, Completed and Archived.
 ///
 /// This only returns the tab's content; `MainTabShell` supplies the
 /// shared app bar, bottom nav bar and `SafeArea`.
@@ -28,7 +33,7 @@ class ProgressScreen extends StatelessWidget {
     final pending = <TaskModel>[];
     final awaitingApproval = <TaskModel>[];
     final completed = <TaskModel>[];
-    for (final task in db.tasks) {
+    for (final task in db.activeTasks) {
   if (task.status == TaskStatus.approved) {
     completed.add(task);
   } else if (task.status == TaskStatus.completed) {
@@ -39,6 +44,8 @@ class ProgressScreen extends StatelessWidget {
     pending.add(task);
   }
 }
+    final archived = db.archivedTasks;
+
     // Soonest-due first within each group; tasks with no due date sort last.
     int byDueDate(TaskModel a, TaskModel b) {
       if (a.dueDate == null && b.dueDate == null) return 0;
@@ -51,6 +58,7 @@ class ProgressScreen extends StatelessWidget {
     pending.sort(byDueDate);
     awaitingApproval.sort(byDueDate);
     completed.sort((a, b) => byDueDate(b, a));
+    archived.sort((a, b) => byDueDate(b, a));
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -85,6 +93,10 @@ children: [
                     Text(child.name, style: Theme.of(context).textTheme.titleMedium),
                     const Spacer(),
                     Text('+${child.xp} XP'),
+                    const SizedBox(width: 10),
+                    Icon(Icons.monetization_on, size: 16, color: Colors.amber.shade700),
+                    const SizedBox(width: 2),
+                    Text('${child.coins}'),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -111,7 +123,8 @@ children: [
         Text('All Tasks:', style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 4),
         Text(
-          'Every task in the household, at a glance.',
+          'Overdue/Pending tasks can be edited. Tasks already awaiting '
+          'approval, completed or archived get quick actions instead.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
         ),
         const SizedBox(height: 12),
@@ -121,7 +134,8 @@ children: [
           color: Colors.red.shade600,
           tasks: overdue,
           db: db,
-          emptyLabel: 'Nothing overdue — nice work!',
+          emptyLabel: 'Nothing overdue - nice work!',
+          actions: _RowActions.edit,
         ),
         const SizedBox(height: 4),
         _TaskSection(
@@ -131,6 +145,7 @@ children: [
           tasks: pending,
           db: db,
           emptyLabel: 'No pending tasks right now.',
+          actions: _RowActions.edit,
         ),
 
         const SizedBox(height: 20),
@@ -141,6 +156,7 @@ children: [
         tasks: awaitingApproval,
         db: db,
         emptyLabel: 'No tasks waiting for approval.',
+        actions: _RowActions.approveOrReassign,
 ),
         const SizedBox(height: 20),
         _TaskSection(
@@ -150,6 +166,18 @@ children: [
           tasks: completed,
           db: db,
           emptyLabel: 'Nothing completed yet.',
+          actions: _RowActions.duplicateOnly,
+        ),
+        const SizedBox(height: 20),
+        _TaskSection(
+          icon: Icons.archive_outlined,
+          title: 'Archived',
+          color: Colors.grey.shade600,
+          tasks: archived,
+          db: db,
+          emptyLabel: 'No archived tasks.',
+          archivedDisplay: true,
+          actions: _RowActions.duplicateOnly,
         ),
       ],
     );
@@ -172,6 +200,8 @@ class _TaskSection extends StatelessWidget {
     required this.tasks,
     required this.db,
     required this.emptyLabel,
+    required this.actions,
+    this.archivedDisplay = false,
   });
 
   final IconData icon;
@@ -180,6 +210,8 @@ class _TaskSection extends StatelessWidget {
   final List<TaskModel> tasks;
   final DatabaseService db;
   final String emptyLabel;
+  final _RowActions actions;
+  final bool archivedDisplay;
 
   @override
   Widget build(BuildContext context) {
@@ -205,14 +237,26 @@ class _TaskSection extends StatelessWidget {
             ],
           ),
         ),
-        
-        const SizedBox(height: 18),
+        if (tasks.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+            child: Text(emptyLabel, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600)),
+          )
+        else ...[
+          const SizedBox(height: 18),
 
           for (final task in tasks) ...[
             const SizedBox(height:12),
-            _TaskProgressRow(task: task, assignee: _assigneeFor(task)),
+            _TaskProgressRow(
+              task: task,
+              assignee: _assigneeFor(task),
+              db: db,
+              actions: actions,
+              archivedDisplay: archivedDisplay,
+            ),
             const SizedBox(height: 1),
           ],
+        ],
       ],
     );
   }
@@ -224,16 +268,94 @@ class _TaskSection extends StatelessWidget {
 }
 
 class _TaskProgressRow extends StatelessWidget {
-  const _TaskProgressRow({required this.task, required this.assignee});
+  const _TaskProgressRow({
+    required this.task,
+    required this.assignee,
+    required this.db,
+    required this.actions,
+    this.archivedDisplay = false,
+  });
 
   final TaskModel task;
   final AppUser? assignee;
+  final DatabaseService db;
+  final _RowActions actions;
+  final bool archivedDisplay;
+
+  Future<void> _reassign(BuildContext context) async {
+    final selection = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: Text('Re-assign "${task.title}"'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.of(dialogContext).pop(_householdPoolSentinel),
+            child: const Row(
+              children: [
+                Icon(Icons.groups_outlined),
+                SizedBox(width: 12),
+                Text('Household Task (unassigned)'),
+              ],
+            ),
+          ),
+          for (final child in db.children)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(dialogContext).pop(child.id),
+              child: Row(
+                children: [
+                  Text(child.avatarEmoji, style: const TextStyle(fontSize: 20)),
+                  const SizedBox(width: 12),
+                  Text(child.name),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+
+    if (selection == null || !context.mounted) return;
+    final newChildId = selection == _householdPoolSentinel ? null : selection;
+    await db.reassignTask(task.id, newChildId);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          newChildId == null
+              ? '"${task.title}" moved back to the household pool.'
+              : '"${task.title}" re-assigned to ${db.userById(newChildId)?.name ?? 'a child'}.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _duplicate(BuildContext context) async {
+    final duplicate = TaskModel(
+      id: 'task-${DateTime.now().millisecondsSinceEpoch}',
+      title: '${task.title} (Copy)',
+      description: task.description,
+      icon: task.icon,
+      assignedToUserId: task.assignedToUserId,
+      rewardXp: task.rewardXp,
+      coinReward: task.coinReward,
+      isRecurring: task.isRecurring,
+      createdAt: DateTime.now(),
+    );
+    final newTaskId = await db.addTask(duplicate);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Duplicated as a new pending task - fine-tune it now.')),
+    );
+    Navigator.of(context).pushNamed(AppRoutes.taskEdit, arguments: newTaskId);
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return AppCard(
+      onTap: actions == _RowActions.edit
+          ? () => Navigator.of(context).pushNamed(AppRoutes.taskEdit, arguments: task.id)
+          : null,
       padding: const EdgeInsets.symmetric(
         horizontal: 12,
         vertical: 6,
@@ -255,7 +377,9 @@ class _TaskProgressRow extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 )),
                 Text(
-                  '${assignee?.name ?? 'Household'} • ${_dueLabel(task.dueDate)}',
+                  archivedDisplay
+                      ? '${assignee?.name ?? 'Household'} • Archived'
+                      : '${assignee?.name ?? 'Household'} • ${_dueLabel(task.dueDate)}',
                   style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600,
                   fontSize: 12),
                   maxLines: 2,
@@ -266,7 +390,10 @@ class _TaskProgressRow extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              _StatusPill(task: task),
+              if (archivedDisplay)
+                const _ArchivedPill()
+              else
+                _StatusPill(task: task),
               const SizedBox(height: 4),
               Row(
                 children: [
@@ -275,10 +402,20 @@ class _TaskProgressRow extends StatelessWidget {
                   Text('+${task.rewardXp} XP', style: theme.textTheme.bodyMedium?.copyWith(
                     fontSize: 12,
                   )),
+                  if (task.coinReward > 0) ...[
+                    const SizedBox(width: 6),
+                    Icon(Icons.monetization_on, size: 13, color: Colors.amber.shade700),
+                    const SizedBox(width: 1),
+                    Text('+${task.coinReward}', style: theme.textTheme.bodyMedium?.copyWith(
+                      fontSize: 12,
+                    )),
+                  ],
                 ],
               ),
             ],
           ),
+          const SizedBox(width: 4),
+          _TrailingAction(actions: actions, onReassign: () => _reassign(context), onApprove: () => db.approveTask(task.id), onDuplicate: () => _duplicate(context)),
         ],
       ),
     );
@@ -290,10 +427,69 @@ class _TaskProgressRow extends StatelessWidget {
     final dueDay = DateTime(dueDate.year, dueDate.month, dueDate.day);
     final todayDay = DateTime(today.year, today.month, today.day);
     final difference = dueDay.difference(todayDay).inDays;
-    if (difference < 0) return difference == -1 ? 'Overdue by 1 day' : 'Overdue by ${-difference} days';
+    if (difference < 0) return difference == -1 ? 'Past Due by 1 day' : 'Past Due by ${-difference} days';
     if (difference == 0) return 'Due Today';
     if (difference == 1) return 'Due Tomorrow';
     return 'Due in $difference Days';
+  }
+}
+
+/// The trailing control on a task row, based on [_RowActions].
+class _TrailingAction extends StatelessWidget {
+  const _TrailingAction({
+    required this.actions,
+    required this.onReassign,
+    required this.onApprove,
+    required this.onDuplicate,
+  });
+
+  final _RowActions actions;
+  final VoidCallback onReassign;
+  final VoidCallback onApprove;
+  final VoidCallback onDuplicate;
+
+  @override
+  Widget build(BuildContext context) {
+    switch (actions) {
+      case _RowActions.edit:
+        return const Icon(Icons.chevron_right, color: Colors.grey, size: 20);
+      case _RowActions.approveOrReassign:
+        return PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert, color: Colors.grey),
+          onSelected: (value) {
+            if (value == 'approve') onApprove();
+            if (value == 'reassign') onReassign();
+          },
+          itemBuilder: (context) => const [
+            PopupMenuItem(
+              value: 'approve',
+              child: Row(
+                children: [
+                  Icon(Icons.check_circle_outline, size: 20, color: AppColors.growthGreen),
+                  SizedBox(width: 10),
+                  Text('Approve'),
+                ],
+              ),
+            ),
+            PopupMenuItem(
+              value: 'reassign',
+              child: Row(
+                children: [
+                  Icon(Icons.swap_horiz, size: 20),
+                  SizedBox(width: 10),
+                  Text('Re-assign'),
+                ],
+              ),
+            ),
+          ],
+        );
+      case _RowActions.duplicateOnly:
+        return IconButton(
+          icon: const Icon(Icons.copy_outlined, size: 20, color: Colors.grey),
+          tooltip: 'Duplicate',
+          onPressed: onDuplicate,
+        );
+    }
   }
 }
 
@@ -319,6 +515,27 @@ class _StatusPill extends StatelessWidget {
           Icon(icon, size: 14, color: color),
           const SizedBox(width: 4),
           Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: AppConstants.captionFontSize)),
+        ],
+      ),
+    );
+  }
+}
+
+class _ArchivedPill extends StatelessWidget {
+  const _ArchivedPill();
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Colors.grey.shade600;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.archive_outlined, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text('Archived', style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: AppConstants.captionFontSize)),
         ],
       ),
     );

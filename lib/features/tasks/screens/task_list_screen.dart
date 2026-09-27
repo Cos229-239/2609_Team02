@@ -8,7 +8,7 @@ import '../../../core/services/database_service.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../widgets/task_tile.dart';
 
-/// "Children's view of tasks assigned" — shows one child's tasks and
+/// "Children's view of tasks assigned": shows one child's tasks and
 /// their earned rewards. Also used by parents (tapping a child from Home
 /// or Family) to see that child's task list.
 class TaskListScreen extends StatelessWidget {
@@ -195,7 +195,7 @@ class TaskListScreen extends StatelessWidget {
                   ?.copyWith(fontSize: 20),
             ),
             Text(
-              'Earn more points and earn these rewards next!',
+              'Earn more coins and unlock these rewards next!',
               style: Theme.of(context).textTheme.bodyMedium
                   ?.copyWith(color: Colors.grey.shade600),
             ),
@@ -209,7 +209,7 @@ class TaskListScreen extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final reward = db.availableRewards[index];
                   final double progress =
-                      (child.xp / (reward.xpCost == 0 ? 1 : reward.xpCost))
+                      (child.coins / (reward.coinCost == 0 ? 1 : reward.coinCost))
                           .clamp(0.0, 1.0)
                           .toDouble();
                   return SizedBox(

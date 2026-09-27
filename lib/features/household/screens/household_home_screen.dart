@@ -9,7 +9,7 @@ import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../widgets/family_member_card.dart';
 
-/// "Home" tab — the parent's dashboard. Surfaces a quick family summary
+/// "Home" tab: the parent's dashboard. Surfaces a quick family summary
 /// and the primary "assign tasks" action from the wireframes, plus quick
 /// access into each child's task list.
 ///
@@ -42,7 +42,29 @@ class HouseholdHomeScreen extends StatelessWidget {
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600,
           fontSize: 16),
         ),
-        const SizedBox(height: 28),
+        const SizedBox(height: 20),
+        if (db.unacknowledgedRedemptions.isNotEmpty) ...[
+          AppCard(
+            onTap: () => MainTabShell.switchTab(context, AppTab.family),
+            color: Colors.amber.withValues(alpha: 0.12),
+            child: Row(
+              children: [
+                const Text('🎉', style: TextStyle(fontSize: 22)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    db.unacknowledgedRedemptions.length == 1
+                        ? '1 reward was just redeemed - tap to review in Family.'
+                        : '${db.unacknowledgedRedemptions.length} rewards were just redeemed - tap to review in Family.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: Colors.grey),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
         AppButton(
           label: 'Create a New Task',
           icon: Icons.add_task,

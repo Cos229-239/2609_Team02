@@ -50,17 +50,7 @@ class AuthService extends ChangeNotifier {
     final authEmail = _auth.currentUser?.email;
     if (authEmail != null && authEmail.isNotEmpty && authEmail != profile.email) {
       await _firestore.collection('users').doc(uid).update({'email': authEmail});
-      profile = AppUser(
-        id: profile.id,
-        name: profile.name,
-        email: authEmail,
-        role: profile.role,
-        avatarEmoji: profile.avatarEmoji,
-        phoneNumber: profile.phoneNumber,
-        age: profile.age,
-        xp: profile.xp,
-        householdId: profile.householdId,
-      );
+      profile = profile.copyWith(email: authEmail);
     }
 
     return profile;
@@ -204,6 +194,8 @@ class AuthService extends ChangeNotifier {
     final user = _currentUser;
     if (user == null) throw Exception('Not signed in.');
 
+    // Built directly, not via `copyWith`, so an explicit null clears
+    // phoneNumber/age instead of leaving them unchanged.
     final updated = AppUser(
       id: user.id,
       name: name,
@@ -213,6 +205,7 @@ class AuthService extends ChangeNotifier {
       phoneNumber: phoneNumber,
       age: age,
       xp: user.xp,
+      coins: user.coins,
       householdId: user.householdId,
     );
 
@@ -306,7 +299,7 @@ class AuthService extends ChangeNotifier {
     try {
       await _firestore.collection('users').doc(uid).update({'email': newEmail});
     } catch (_) {
-      // Best-effort only — see comment above.
+      // Best-effort only: see comment above.
     }
   }
 
@@ -325,7 +318,7 @@ class AuthService extends ChangeNotifier {
         ),
       );
     } on FirebaseAuthException catch (e) {
-      // Don't reveal whether an account exists for this email — treat it
+      // Don't reveal whether an account exists for this email: treat it
       // the same as a successful send so the "check your email" screen
       // can't be used to enumerate registered accounts.
       if (e.code == 'user-not-found') return;
@@ -365,13 +358,13 @@ class AuthService extends ChangeNotifier {
       case 'email-already-in-use':
         return 'An account already exists with that email.';
       case 'weak-password':
-        return 'Password is too weak — use at least 6 characters.';
+        return 'Password is too weak: use at least 6 characters.';
       case 'expired-action-code':
         return 'This reset link has expired. Request a new one.';
       case 'invalid-action-code':
         return 'This reset link is invalid or has already been used.';
       case 'network-request-failed':
-        return 'Network error — check your connection and try again.';
+        return 'Network error: check your connection and try again.';
       case 'requires-recent-login':
         return 'Please log out and back in, then try again.';
       default:

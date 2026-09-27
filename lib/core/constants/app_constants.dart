@@ -1,6 +1,4 @@
-/// App-wide constants: copy, spacing, sizing and timing values shared
-/// across features. Keeping these in one place avoids "magic numbers"
-/// scattered through the UI code.
+/// App-wide constants: copy, spacing, sizing and timing values.
 class AppConstants {
   AppConstants._();
 
@@ -57,5 +55,9 @@ class AppConstants {
 
   // Gamification defaults (placeholder balancing values)
   static const int defaultTaskXp = 50;
+  static const int defaultTaskCoins = 10;
   static const int levelUpXpThreshold = 500;
+
+  // See `TaskModel.isAgedOut`.
+  static const int taskArchiveAfterDays = 60;
 }

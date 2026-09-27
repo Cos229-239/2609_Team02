@@ -10,13 +10,9 @@ import '../../../core/services/database_service.dart';
 
 enum _ChildTasksView { tasks, history }
 
-/// "Tasks" tab for a signed-in child — replaces the parent's "Family" tab.
-/// A child can see the tasks already claimed/assigned to them, mark them
-/// complete, claim new tasks from the household's shared pool, and look
-/// back at a history of everything they've completed. They cannot create
-/// tasks, assign tasks to anyone else, or manage the family — those
-/// actions live only on the parent's screens. The reward catalog and
-/// family leaderboard live on the separate Rewards tab.
+/// "Tasks" tab for a signed-in child: claimed/assigned tasks, tasks
+/// available to claim, and a completion history. Task/family management
+/// stays parent-only; the reward catalog lives on the Rewards tab.
 ///
 /// This only returns the tab's content; [MainTabShell] supplies the
 /// shared app bar, bottom nav bar and [SafeArea].
@@ -75,7 +71,7 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
           if (activeTasks.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
-              child: Text('Nothing claimed yet — grab a task below!'),
+              child: Text('Nothing claimed yet - grab a task below!'),
             )
           else
             for (final task in activeTasks) ...[
@@ -132,7 +128,7 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
           if (availableTasks.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
-              child: Text('No unclaimed tasks right now — check back later!'),
+              child: Text('No unclaimed tasks right now - check back later!'),
             )
           else
             for (final task in availableTasks) ...[
@@ -165,7 +161,7 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
               child: Text(
-                'Nothing completed yet — finish a task to see it here!',
+                'Nothing completed yet - finish a task to see it here!',
               ),
             )
           else
@@ -397,6 +393,24 @@ class _TaskRow extends StatelessWidget {
                   ),
                 ],
               ),
+              if (task.coinReward > 0) ...[
+                const SizedBox(height: 1),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.monetization_on, size: 12, color: Colors.amber.shade800),
+                    const SizedBox(width: 1),
+                    Text(
+                      '+${task.coinReward}',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.amber.shade800,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ],
@@ -412,7 +426,8 @@ class _TaskRow extends StatelessWidget {
       dueDate.month,
       dueDate.day,
     ).difference(DateTime(today.year, today.month, today.day)).inDays;
-    if (difference <= 0) return 'Due Today';
+    if (difference < 0) return 'Past Due';
+    if (difference == 0) return 'Due Today';
     if (difference == 1) return 'Due Tomorrow';
     return 'Due in $difference Days';
   }
@@ -537,6 +552,23 @@ class _HistoryRow extends StatelessWidget {
                   ),
                 ],
               ),
+              if (task.coinReward > 0) ...[
+                const SizedBox(height: 1),
+                Row(
+                  children: [
+                    Icon(Icons.monetization_on, size: 12, color: Colors.amber.shade800),
+                    const SizedBox(width: 1),
+                    Text(
+                      '+${task.coinReward}',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.amber.shade800,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ],

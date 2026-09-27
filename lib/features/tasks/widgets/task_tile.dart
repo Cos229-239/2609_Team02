@@ -64,15 +64,35 @@ class TaskTile extends StatelessWidget {
             trailing!
           else ...[
             const SizedBox(width: 8),
-            Row(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.star, size: 16, color: Colors.amber),
-                const SizedBox(width: 2),
-                Text(
-                  '+${task.rewardXp} XP',
-                  style: theme.textTheme.bodyMedium?.copyWith(fontSize: 13),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.star, size: 16, color: Colors.amber),
+                    const SizedBox(width: 2),
+                    Text(
+                      '+${task.rewardXp} XP',
+                      style: theme.textTheme.bodyMedium?.copyWith(fontSize: 13),
+                    ),
+                  ],
                 ),
+                if (task.coinReward > 0) ...[
+                  const SizedBox(height: 2),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.monetization_on, size: 14, color: Colors.amber.shade700),
+                      const SizedBox(width: 2),
+                      Text(
+                        '+${task.coinReward}',
+                        style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
             const SizedBox(width: 12),

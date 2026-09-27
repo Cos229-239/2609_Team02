@@ -9,12 +9,8 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/services/database_service.dart';
 import '../../../shared/widgets/app_card.dart';
 
-/// "Home" tab for a signed-in child. Unlike [HouseholdHomeScreen] (the
-/// parent's dashboard with "Create Task" and the family roster), this is
-/// the kid-facing view from the mid-fi mockups: today's progress toward
-/// the next reward, plus a simple checklist of today's tasks a child can
-/// mark complete themselves. Children can't create, edit or assign tasks
-/// from here — that stays parent-only.
+/// "Home" tab for a signed-in child: today's progress and task list.
+/// Children can't create, edit or assign tasks; that's parent-only.
 ///
 /// This only returns the tab's content; [MainTabShell] supplies the
 /// shared app bar, bottom nav bar and [SafeArea].
@@ -79,7 +75,7 @@ class ChildHomeScreen extends StatelessWidget {
         if (tasks.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
-            child: Text('No tasks assigned yet — check Tasks to claim one!'),
+            child: Text('No tasks assigned yet - check Tasks to claim one!'),
           )
         else
           for (final task in tasks) ...[
@@ -421,31 +417,58 @@ class _ChildTaskRow extends StatelessWidget {
       ),
     ),
     const SizedBox(height: 4),
-    const Text(
-      '★ +50 XP',
-      style: TextStyle(
+    Text(
+      '★ +${task.rewardXp} XP',
+      style: const TextStyle(
         color: Colors.amber,
         fontSize: 12,
         fontWeight: FontWeight.w600,
       ),
     ),
+    if (task.coinReward > 0) ...[
+      const SizedBox(height: 2),
+      Text(
+        '🪙 +${task.coinReward}',
+        style: TextStyle(
+          color: Colors.amber.shade800,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    ],
   ],
 )
           else
-  InkWell(
-    onTap: onComplete,
-    borderRadius: BorderRadius.circular(14),
-    child: Container(
-      width: 24,
-      height: 24,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: Colors.grey.shade400,
-          width: 2,
+  Column(
+    crossAxisAlignment: CrossAxisAlignment.end,
+    children: [
+      InkWell(
+        onTap: onComplete,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.grey.shade400,
+              width: 2,
+            ),
+          ),
         ),
       ),
-    ),
+      if (task.coinReward > 0) ...[
+        const SizedBox(height: 4),
+        Text(
+          '🪙 +${task.coinReward}',
+          style: TextStyle(
+            color: Colors.amber.shade800,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    ],
   ),
         ],
       ),
@@ -458,7 +481,8 @@ class _ChildTaskRow extends StatelessWidget {
     final difference = DateTime(dueDate.year, dueDate.month, dueDate.day)
         .difference(DateTime(today.year, today.month, today.day))
         .inDays;
-    if (difference <= 0) return 'Due Today';
+    if (difference < 0) return 'Past Due';
+    if (difference == 0) return 'Due Today';
     if (difference == 1) return 'Due Tomorrow';
     return 'Due in $difference Days';
   }

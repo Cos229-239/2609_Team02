@@ -7,7 +7,6 @@ import '../features/auth/screens/reset_password_screen.dart';
 import '../features/auth/screens/confirm_email_change_screen.dart';
 import '../features/profile/screens/account_settings_screen.dart';
 import '../features/profile/screens/notifications_settings_screen.dart';
-import '../features/rewards/screens/reward_choose_screen.dart';
 import '../features/tasks/screens/create_task_screen.dart';
 import '../features/tasks/screens/task_completion_screen.dart';
 import '../features/tasks/screens/task_detail_screen.dart';
@@ -15,10 +14,7 @@ import '../features/tasks/screens/task_list_screen.dart';
 import '../shared/layouts/main_tab_shell.dart';
 import '../shared/screens/route_not_found_screen.dart';
 
-/// Centralized route names + a single `onGenerateRoute` factory, so
-/// navigation reads as `Navigator.pushNamed(context, AppRoutes.taskCreate)`
-/// from anywhere in the app instead of screens importing each other
-/// directly or building `MaterialPageRoute`s ad hoc.
+/// Centralized route names + a single `onGenerateRoute` factory.
 class AppRoutes {
   AppRoutes._();
 
@@ -41,7 +37,7 @@ class AppRoutes {
   static const String taskDetail = '/tasks/detail';
   static const String taskCreate = '/tasks/create';
   static const String taskCompletion = '/tasks/completion';
-  static const String rewardChoose = '/rewards/choose';
+  static const String taskEdit = '/tasks/edit';
 
   // Settings sub-screens, pushed from the Settings tab.
   static const String accountSettings = '/settings/account';
@@ -92,9 +88,9 @@ class AppRoutes {
       case taskCompletion:
         final taskId = args as String;
         return _page(TaskCompletionScreen(taskId: taskId), settings);
-      case rewardChoose:
-        final childId = args as String;
-        return _page(RewardChooseScreen(childId: childId), settings);
+      case taskEdit:
+        final taskId = args as String;
+        return _page(CreateTaskScreen(taskId: taskId), settings);
 
       case accountSettings:
         return _page(const AccountSettingsScreen(), settings);

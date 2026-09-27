@@ -5,6 +5,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 /// parental confirmation on a device, while a badge is granted instantly).
 enum RewardType { points, screenTime, activity, treat, badge }
 
+/// One item in a household's reward store. Parents create/edit/delete
+/// these (see [DatabaseService.addReward] and friends); children spend
+/// coins earned from approved tasks to redeem them (see
+/// [DatabaseService.redeemReward]), which records a [Redemption].
 class Reward {
   const Reward({
     required this.id,
@@ -12,7 +16,7 @@ class Reward {
     required this.type,
     this.description = '',
     this.icon = '⭐',
-    this.xpCost = 0,
+    this.coinCost = 0,
   });
 
   final String id;
@@ -21,44 +25,60 @@ class Reward {
   final String icon;
   final RewardType type;
 
-  /// How much XP this reward costs to redeem. 0 for rewards that are simply
-  /// earned alongside a task (like the flat "50 XP" reward itself).
-  final int xpCost;
+  /// How many coins this reward costs to redeem from the store.
+  final int coinCost;
+
+  Reward copyWith({
+    String? title,
+    String? description,
+    String? icon,
+    RewardType? type,
+    int? coinCost,
+  }) {
+    return Reward(
+      id: id,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      icon: icon ?? this.icon,
+      type: type ?? this.type,
+      coinCost: coinCost ?? this.coinCost,
+    );
+  }
 
   /// Seeded into a household's `rewards` subcollection when it's created,
   /// so every new family starts out with a sample catalog to work with.
   static const List<Reward> defaultCatalog = [
     Reward(
       id: 'reward-xp',
-      title: '50 XP',
-      description: 'Earn 50 points',
+      title: '50 Bonus Coins',
+      description: 'A little pocket-money style bonus.',
       icon: '⭐',
       type: RewardType.points,
-      xpCost: 50,
+      coinCost: 50,
     ),
     Reward(
       id: 'reward-screentime',
       title: '+30 Minutes Game Time',
-      description: 'Earn 100 points',
+      description: 'Extra screen time, parent-approved.',
       icon: '🎮',
       type: RewardType.screenTime,
-      xpCost: 100,
+      coinCost: 100,
     ),
     Reward(
       id: 'reward-outing',
       title: 'Fun Day Out',
-      description: 'Earn 200 points',
+      description: 'A family outing of your choice.',
       icon: '🌳',
       type: RewardType.activity,
-      xpCost: 200,
+      coinCost: 200,
     ),
     Reward(
       id: 'reward-treat',
       title: 'Sweet Treat of Choice',
-      description: 'Earn 150 points',
+      description: 'Pick your favorite treat.',
       icon: '🍬',
       type: RewardType.treat,
-      xpCost: 150,
+      coinCost: 150,
     ),
   ];
 
@@ -73,7 +93,7 @@ class Reward {
         (t) => t.name == data['type'],
         orElse: () => RewardType.points,
       ),
-      xpCost: data['xpCost'] as int? ?? 0,
+      coinCost: data['coinCost'] as int? ?? 0,
     );
   }
 
@@ -83,7 +103,7 @@ class Reward {
       'description': description,
       'icon': icon,
       'type': type.name,
-      'xpCost': xpCost,
+      'coinCost': coinCost,
     };
   }
 }
