@@ -221,9 +221,9 @@ Famotive is a team project developed as part of a Full Sail University course.
 # Tiffany Loum
 ### `SOFTWARE ENGINEER // QA`
 
-> **CALLSIGN:** @TKLoum.  
+> **CALLSIGN:** @TKLoum
 > **STATUS:** `ONLINE`  
-> **SPECIALIZATION:**  
+> **SPECIALIZATION:**  QA / INTEGRATION / TEST AUTOMATION
 
 </td>
 </tr>
