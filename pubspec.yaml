@@ -1,7 +1,7 @@
 name: famotive
 description: "A family task/reward app for kids and parents."
 publish_to: 'none'
-version: 0.1.0+2
+version: 0.1.0+3
 
 environment:
   sdk: ^3.13.2
