@@ -131,7 +131,7 @@ class TaskListScreen extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyMedium
                   ?.copyWith(color: Colors.grey.shade600, fontSize: 14),
             ),
-            const SizedBox(height: 22),
+            const SizedBox(height: 28),
 
             if (tasks.isEmpty)
               const Padding(
@@ -139,11 +139,36 @@ class TaskListScreen extends StatelessWidget {
                 child: Text('No tasks assigned yet.'),
               )
             else ...[
-              const Text(
-                'Assigned/Pending',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
+              const Row(
+  children: [
+    Icon(
+      Icons.schedule_rounded,
+      size: 18,
+    ),
+    SizedBox(width: 6),
+    Text(
+      'Assigned/Pending',
+      style: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+  ],
+),
+              const SizedBox(height: 6),
+
+              if (assignedTasks.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 20),
+                  child: Text(
+                    'No assigned or pending tasks.',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 13,
+                    ),
+                    ),
+                    ),
+
               for (final task in assignedTasks) ...[
                 TaskTile(
                   task: task,
@@ -156,11 +181,36 @@ class TaskListScreen extends StatelessWidget {
 
               const SizedBox(height: 12),
 
-              const Text(
-                'Awaiting Approval',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
+              const Row(
+  children: [
+    Icon(
+      Icons.hourglass_empty_rounded,
+      size: 18,
+    ),
+    SizedBox(width: 6),
+    Text(
+      'Awaiting Approval',
+      style: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+  ],
+),
               const SizedBox(height: 8),
+
+              if (awaitingApprovalTasks.isEmpty)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 20),
+                child: Text(
+                  'No tasks waiting for approval.',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 13,
+                  ),
+                  ),
+                  ),
+
               for (final task in awaitingApprovalTasks) ...[
                 TaskTile(
                   task: task,
@@ -173,10 +223,23 @@ class TaskListScreen extends StatelessWidget {
 
               const SizedBox(height: 12),
 
-              const Text(
-                'Approved',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
+              const Row(
+  children: [
+    Icon(
+      Icons.check_circle_outline_rounded,
+      size: 18,
+      color: Colors.green,
+    ),
+    SizedBox(width: 6),
+    Text(
+      'Approved',
+      style: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+  ],
+),
               const SizedBox(height: 8),
               for (final task in approvedTasks) ...[
                 TaskTile(

@@ -66,6 +66,7 @@ children: [
   Text(
     'Family Progress',
     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+      fontSize: 28,
       fontWeight: FontWeight.w700,
     ),
   ),
@@ -74,6 +75,7 @@ children: [
     'See how everyone is doing this week.',
     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
       color: Colors.grey.shade600,
+      fontSize: 14,
     ),
   ),
   const SizedBox(height: 20),
@@ -99,7 +101,7 @@ children: [
                     Text('${child.coins}'),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(AppConstants.radiusSm),
                   child: LinearProgressIndicator(
@@ -109,7 +111,7 @@ children: [
                     backgroundColor: const Color.fromARGB(255, 223, 244, 199),
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
                 Text(
                   '${AppConstants.levelUpXpThreshold - child.xp > 0 ? AppConstants.levelUpXpThreshold - child.xp : 0} XP to next level',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
@@ -120,7 +122,10 @@ children: [
           const SizedBox(height: 12),
         ],
         const SizedBox(height: 12),
-        Text('All Tasks:', style: Theme.of(context).textTheme.headlineSmall),
+        Text('All Tasks:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+        )),
         const SizedBox(height: 4),
         Text(
           'Overdue/Pending tasks can be edited. Tasks already awaiting '
@@ -137,7 +142,7 @@ children: [
           emptyLabel: 'Nothing overdue - nice work!',
           actions: _RowActions.edit,
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 12),
         _TaskSection(
           icon: Icons.schedule,
           title: 'Pending',
@@ -148,7 +153,7 @@ children: [
           actions: _RowActions.edit,
         ),
 
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
         _TaskSection(
         icon: Icons.hourglass_bottom,
         title: 'Awaiting Approval',
@@ -158,7 +163,7 @@ children: [
         emptyLabel: 'No tasks waiting for approval.',
         actions: _RowActions.approveOrReassign,
 ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
         _TaskSection(
           icon: Icons.check_circle_outline,
           title: 'Completed',
@@ -358,7 +363,7 @@ class _TaskProgressRow extends StatelessWidget {
           : null,
       padding: const EdgeInsets.symmetric(
         horizontal: 12,
-        vertical: 6,
+        vertical: 8,
       ), 
       child: Row(
         children: [
@@ -373,7 +378,7 @@ class _TaskProgressRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(task.title, style: theme.textTheme.titleMedium?.copyWith(
-                  fontSize: 15,
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
                 )),
                 Text(
@@ -381,7 +386,7 @@ class _TaskProgressRow extends StatelessWidget {
                       ? '${assignee?.name ?? 'Household'} • Archived'
                       : '${assignee?.name ?? 'Household'} • ${_dueLabel(task.dueDate)}',
                   style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600,
-                  fontSize: 12),
+                  fontSize: 13),
                   maxLines: 2,
                 ),
               ],
@@ -400,7 +405,7 @@ class _TaskProgressRow extends StatelessWidget {
                   const Icon(Icons.star, size: 14, color: Colors.amber),
                   const SizedBox(width: 2),
                   Text('+${task.rewardXp} XP', style: theme.textTheme.bodyMedium?.copyWith(
-                    fontSize: 12,
+                    fontSize: 13,
                   )),
                   if (task.coinReward > 0) ...[
                     const SizedBox(width: 6),
@@ -507,7 +512,7 @@ class _StatusPill extends StatelessWidget {
     };
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
       decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
