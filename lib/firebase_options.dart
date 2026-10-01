@@ -51,18 +51,18 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyB56it5o8iSQGocqF2Ed63bRPbdjuxakMM',
-    appId: '1:451691992012:android:1d6247e1b8f7905f03c369',
+    appId: '1:451691992012:android:3c75a75a1e28ef6003c369',
     messagingSenderId: '451691992012',
     projectId: 'famotive-8c858',
     storageBucket: 'famotive-8c858.firebasestorage.app',
   );
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyAcfaRS9CsYjuEIMJJT2MaL_LSh5OWj3QI',
-    appId: '1:451691992012:ios:3eecb0650c2bce9d03c369',
+    appId: '1:451691992012:ios:597e55f2eb0f0d6603c369',
     messagingSenderId: '451691992012',
     projectId: 'famotive-8c858',
     storageBucket: 'famotive-8c858.firebasestorage.app',
-    iosClientId: '451691992012-vle1pu6u20outdast4b5hn2ms20b0r29.apps.googleusercontent.com',
-    iosBundleId: 'com.example.famotive',
+    iosClientId: '451691992012-82bm4f26sdhveurbgb8tqj41m300vpoq.apps.googleusercontent.com',
+    iosBundleId: 'com.famotive',
   );
 }
