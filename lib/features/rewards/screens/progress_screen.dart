@@ -81,6 +81,10 @@ children: [
   const SizedBox(height: 20),
         for (final child in children) ...[
           AppCard(
+            onTap: () => Navigator.of(context).pushNamed(
+              AppRoutes.taskList,
+              arguments: child.id,
+            ),
             padding: const EdgeInsets.symmetric(
               horizontal: 14,
               vertical: 8,
