@@ -41,7 +41,10 @@ void main() {
       );
       final rewardId = await addReward(reward);
 
-      await databaseService.redeemReward(rewardId: rewardId, childId: 'child-1');
+      await databaseService.redeemReward(
+        rewardId: rewardId,
+        childId: 'child-1',
+      );
 
       final child = await firestore.collection('users').doc('child-1').get();
       expect(child.data()?['coins'], 40);
@@ -58,6 +61,71 @@ void main() {
       expect(redemptions.docs.first.data()['childId'], 'child-1');
       expect(redemptions.docs.first.data()['acknowledgedByParent'], isFalse);
     });
+
+    test('redeeming a reward deducts coins without changing XP', () async {
+      await firestore.collection('users').doc('child-1').set({
+        'coins': 100,
+        'xp': 500,
+        'householdId': householdId,
+      });
+
+      const reward = Reward(
+        id: 'placeholder',
+        title: 'Movie Night',
+        type: RewardType.activity,
+        coinCost: 60,
+      );
+      final rewardId = await addReward(reward);
+
+      await databaseService.redeemReward(
+        rewardId: rewardId,
+        childId: 'child-1',
+      );
+
+      final child = await firestore.collection('users').doc('child-1').get();
+
+      expect(child.data()?['coins'], 40);
+      expect(child.data()?['xp'], 500);
+    });
+
+    test(
+      'redeeming a reward only deducts coins from the specified child',
+      () async {
+        await firestore.collection('users').doc('child-1').set({
+          'coins': 100,
+          'xp': 500,
+          'householdId': householdId,
+        });
+
+        await firestore.collection('users').doc('child-2').set({
+          'coins': 200,
+          'xp': 300,
+          'householdId': householdId,
+        });
+
+        const reward = Reward(
+          id: 'placeholder',
+          title: 'Movie Night',
+          type: RewardType.activity,
+          coinCost: 60,
+        );
+        final rewardId = await addReward(reward);
+
+        await databaseService.redeemReward(
+          rewardId: rewardId,
+          childId: 'child-1',
+        );
+
+        final child1 = await firestore.collection('users').doc('child-1').get();
+        final child2 = await firestore.collection('users').doc('child-2').get();
+
+        expect(child1.data()?['coins'], 40);
+        expect(child1.data()?['xp'], 500);
+
+        expect(child2.data()?['coins'], 200);
+        expect(child2.data()?['xp'], 300);
+      },
+    );
 
     test('redeeming without enough coins throws and changes nothing', () async {
       await firestore.collection('users').doc('child-1').set({
@@ -89,33 +157,42 @@ void main() {
       expect(redemptions.docs, isEmpty);
     });
 
-    test('acknowledgeAllRedemptions marks every pending redemption seen', () async {
-      await firestore.collection('users').doc('child-1').set({
-        'coins': 100,
-        'householdId': householdId,
-      });
-      const reward = Reward(
-        id: 'placeholder',
-        title: 'Treat',
-        type: RewardType.treat,
-        coinCost: 20,
-      );
-      final rewardId = await addReward(reward);
+    test(
+      'acknowledgeAllRedemptions marks every pending redemption seen',
+      () async {
+        await firestore.collection('users').doc('child-1').set({
+          'coins': 100,
+          'householdId': householdId,
+        });
+        const reward = Reward(
+          id: 'placeholder',
+          title: 'Treat',
+          type: RewardType.treat,
+          coinCost: 20,
+        );
+        final rewardId = await addReward(reward);
 
-      await databaseService.redeemReward(rewardId: rewardId, childId: 'child-1');
-      await databaseService.redeemReward(rewardId: rewardId, childId: 'child-1');
+        await databaseService.redeemReward(
+          rewardId: rewardId,
+          childId: 'child-1',
+        );
+        await databaseService.redeemReward(
+          rewardId: rewardId,
+          childId: 'child-1',
+        );
 
-      // Allow the Firestore listener in DatabaseService to receive the
-      // new redemption docs.
-      await Future<void>.delayed(Duration.zero);
+        // Allow the Firestore listener in DatabaseService to receive the
+        // new redemption docs.
+        await Future<void>.delayed(Duration.zero);
 
-      expect(databaseService.unacknowledgedRedemptions, hasLength(2));
+        expect(databaseService.unacknowledgedRedemptions, hasLength(2));
 
-      await databaseService.acknowledgeAllRedemptions();
-      await Future<void>.delayed(Duration.zero);
+        await databaseService.acknowledgeAllRedemptions();
+        await Future<void>.delayed(Duration.zero);
 
-      expect(databaseService.unacknowledgedRedemptions, isEmpty);
-    });
+        expect(databaseService.unacknowledgedRedemptions, isEmpty);
+      },
+    );
 
     test('updateReward overwrites the stored fields', () async {
       const reward = Reward(
@@ -161,19 +238,22 @@ void main() {
       expect(snapshot.docs, isEmpty);
     });
 
-    test('rewardById finds a synced reward by id, or null if unknown', () async {
-      const reward = Reward(
-        id: 'placeholder',
-        title: 'Pinnable Reward',
-        type: RewardType.treat,
-        coinCost: 30,
-      );
-      final rewardId = await addReward(reward);
-      await Future<void>.delayed(Duration.zero);
+    test(
+      'rewardById finds a synced reward by id, or null if unknown',
+      () async {
+        const reward = Reward(
+          id: 'placeholder',
+          title: 'Pinnable Reward',
+          type: RewardType.treat,
+          coinCost: 30,
+        );
+        final rewardId = await addReward(reward);
+        await Future<void>.delayed(Duration.zero);
 
-      expect(databaseService.rewardById(rewardId)?.title, 'Pinnable Reward');
-      expect(databaseService.rewardById('does-not-exist'), isNull);
-    });
+        expect(databaseService.rewardById(rewardId)?.title, 'Pinnable Reward');
+        expect(databaseService.rewardById('does-not-exist'), isNull);
+      },
+    );
 
     test('setPinnedReward stores and clears a pinned goal', () async {
       await firestore.collection('users').doc('child-1').set({
