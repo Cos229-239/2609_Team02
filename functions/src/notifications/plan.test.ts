@@ -3,14 +3,12 @@ import assert from 'node:assert/strict';
 
 import { buildMessage } from './messages';
 import {
-  DUE_REMINDER_OFFSET_MS,
-  LATE_GRACE_MS,
-  OVERDUE_OFFSET_MS,
-  dueSweepWindow,
-  planDueReminder,
+  planDigest,
+  planMorning,
   planRedemptionCreated,
   planTaskCreated,
   planTaskUpdated,
+  type MorningTask,
   type NotificationKind,
   type TaskData,
 } from './plan';
@@ -31,6 +29,11 @@ test('new unassigned task notifies all children except the creator', () => {
 test('new assigned task notifies the assignee', () => {
   const plans = planTaskCreated({ title: 'Dishes', assignedToUserId: KID, status: 'pending' }, PARENT);
   assert.deepEqual(plans, [{ kind: 'task_assigned', audience: { type: 'user', userId: KID }, excludeUserIds: [] }]);
+});
+
+test('generated occurrences of repeating tasks are silent (the morning digest covers them)', () => {
+  assert.deepEqual(planTaskCreated({ assignedToUserId: KID, scheduleId: 's1' }, undefined), []);
+  assert.deepEqual(planTaskCreated({ assignedToUserId: null, scheduleId: 's1' }, undefined), []);
 });
 
 test('archived or non-pending new tasks are silent', () => {
@@ -108,9 +111,9 @@ test('archived tasks are silent', () => {
   assert.deepEqual(planTaskUpdated({ assignedToUserId: null }, { assignedToUserId: KID, archived: true }, PARENT), []);
 });
 
-test('writing the due-reminder log does not trigger anything', () => {
-  const t: TaskData = { assignedToUserId: KID, status: 'pending', dueDate: new Date(0) };
-  assert.deepEqual(planTaskUpdated(t, { ...t }, undefined), []);
+test('archiving a missed occurrence does not trigger anything', () => {
+  const t: TaskData = { assignedToUserId: KID, status: 'pending', dueDate: new Date(0), scheduleId: 's1' };
+  assert.deepEqual(planTaskUpdated(t, { ...t, archived: true }, undefined), []);
 });
 
 // --- Redemption ---------------------------------------------------------------
@@ -121,51 +124,53 @@ test('redemption notifies parents', () => {
   ]);
 });
 
-// --- Due / overdue -------------------------------------------------------------
+// --- Morning run -----------------------------------------------------------------
 
-const due = new Date('2026-10-05T06:00:00Z'); // local midnight in America/Denver
-const at = (offsetMs: number) => new Date(due.getTime() + offsetMs);
-const base: TaskData = { assignedToUserId: KID, status: 'pending', dueDate: due };
-
-test('no reminder before the due-day reminder time', () => {
-  assert.equal(planDueReminder(base, at(DUE_REMINDER_OFFSET_MS - 1)), null);
+const TODAY = '2026-10-05';
+const YESTERDAY = '2026-10-04';
+const mt = (id: string, day: string, extra: Partial<MorningTask> = {}): MorningTask => ({
+  id, title: id, assignedToUserId: KID, status: 'pending', day, ...extra,
 });
 
-test('due reminder once on the due day', () => {
-  assert.equal(planDueReminder(base, at(DUE_REMINDER_OFFSET_MS)), 'task_due');
-  assert.equal(planDueReminder(base, at(DUE_REMINDER_OFFSET_MS), { dueFor: due.getTime() }), null);
+test('morning plan buckets due, overdue, pool and missed occurrences', () => {
+  const plan = planMorning(
+    [
+      mt('due', TODAY),
+      mt('due2', TODAY, { assignedToUserId: KID2 }),
+      mt('late', YESTERDAY),
+      mt('pool', TODAY, { assignedToUserId: null }),
+      mt('poolYesterday', YESTERDAY, { assignedToUserId: null }),
+      mt('done', TODAY, { status: 'completed' }),
+      mt('archived', TODAY, { archived: true }),
+      mt('missed', '2026-10-02', { scheduleId: 's1' }),
+      mt('oldOneOff', '2026-10-02'),
+      mt('tomorrow', '2026-10-06'),
+    ],
+    TODAY,
+    YESTERDAY,
+  );
+  assert.deepEqual(plan.children.get(KID)?.due.map((t) => t.id), ['due']);
+  assert.deepEqual(plan.children.get(KID)?.overdue.map((t) => t.id), ['late']);
+  assert.deepEqual(plan.children.get(KID2)?.due.map((t) => t.id), ['due2']);
+  assert.deepEqual(plan.pool.map((t) => t.id), ['pool']);
+  assert.deepEqual(plan.toArchive, ['missed']);
 });
 
-test('overdue notice once the next morning', () => {
-  assert.equal(planDueReminder(base, at(OVERDUE_OFFSET_MS)), 'task_overdue');
-  assert.equal(planDueReminder(base, at(OVERDUE_OFFSET_MS), { dueFor: due.getTime() }), 'task_overdue');
-  assert.equal(planDueReminder(base, at(OVERDUE_OFFSET_MS), { overdueFor: due.getTime() }), null);
+test('digest: nothing, one specific item, or one summary', () => {
+  const none = { due: [], overdue: [], pool: [] };
+  assert.equal(planDigest(none), null);
+  assert.deepEqual(planDigest({ ...none, due: [mt('a', TODAY)] }), { kind: 'task_due', task: mt('a', TODAY) });
+  assert.equal(planDigest({ ...none, overdue: [mt('a', YESTERDAY)] })?.kind, 'task_overdue');
+  assert.equal(planDigest({ ...none, pool: [mt('p', TODAY)] })?.kind, 'task_available');
+  assert.deepEqual(planDigest({ ...none, due: [mt('a', TODAY)], pool: [mt('p', TODAY)] }), { kind: 'daily_digest' });
 });
 
-test('stale overdue notices are skipped', () => {
-  assert.equal(planDueReminder(base, at(OVERDUE_OFFSET_MS + LATE_GRACE_MS + 1)), null);
-});
-
-test('moving the due date re-arms reminders', () => {
-  const old = due.getTime() - 7 * 24 * 3600 * 1000;
-  assert.equal(planDueReminder(base, at(DUE_REMINDER_OFFSET_MS), { dueFor: old, overdueFor: old }), 'task_due');
-});
-
-test('no reminders for completed, unassigned, archived or undated tasks', () => {
-  const now = at(DUE_REMINDER_OFFSET_MS);
-  assert.equal(planDueReminder({ ...base, status: 'completed' }, now), null);
-  assert.equal(planDueReminder({ ...base, assignedToUserId: null }, now), null);
-  assert.equal(planDueReminder({ ...base, archived: true }, now), null);
-  assert.equal(planDueReminder({ ...base, dueDate: null }, now), null);
-});
-
-test('sweep window covers every task that could need a reminder', () => {
-  const now = at(OVERDUE_OFFSET_MS);
-  const { from, to } = dueSweepWindow(now);
-  assert.ok(from.getTime() <= due.getTime() && due.getTime() <= to.getTime());
-  // Just-due and about-to-expire edges.
-  assert.ok(dueSweepWindow(at(DUE_REMINDER_OFFSET_MS)).to.getTime() >= due.getTime());
-  assert.ok(dueSweepWindow(at(OVERDUE_OFFSET_MS + LATE_GRACE_MS)).from.getTime() <= due.getTime());
+test('digest copy summarizes each group', () => {
+  const m = buildMessage('daily_digest', {
+    digest: { due: ['Feed the Dog', 'Set the Table', 'Trash'], overdue: ['Read'], pool: ['Dishes', 'Laundry'] },
+  });
+  assert.equal(m.body, '3 quests due today: Feed the Dog, Set the Table and 1 more · 1 overdue from yesterday · 2 up for grabs.');
+  assert.equal(buildMessage('daily_digest', { digest: { due: ['A', 'B'], overdue: [], pool: [] } }).body, '2 quests due today: A and B.');
 });
 
 // --- Copy ----------------------------------------------------------------------
@@ -181,7 +186,7 @@ test('message copy mentions names, task and rewards', () => {
   );
   const all: NotificationKind[] = [
     'task_available', 'task_assigned', 'task_due', 'task_overdue', 'task_approved',
-    'task_accepted', 'task_completed', 'reward_redeemed',
+    'task_accepted', 'task_completed', 'reward_redeemed', 'daily_digest',
   ];
   for (const k of all) {
     const m = buildMessage(k, {});

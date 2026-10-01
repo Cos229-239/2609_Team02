@@ -13,7 +13,8 @@ import 'auth_service.dart';
 ///
 /// The notifications themselves are sent by Cloud Functions
 /// (functions/src/index.ts) in response to Firestore changes:
-///   - children: new task available / assigned, due today, past due, approved
+///   - children: new task available / assigned, approved, and a 9 AM
+///     (household time) digest of what's due today / overdue
 ///   - parents:  task accepted (claimed), task completed, reward redeemed
 ///
 /// This service only has to:
@@ -277,6 +278,9 @@ class NotificationService {
       // A new pool task: the child's Tasks tab is where it can be claimed.
       // (AppRoutes.family is the 2nd tab: "Family" for parents, "Tasks" for children.)
       case 'task_available':
+        return const NotificationRoute(AppRoutes.family, replaceStack: true);
+      // Morning summary of several tasks: the child's Tasks tab lists them all.
+      case 'daily_digest':
         return const NotificationRoute(AppRoutes.family, replaceStack: true);
       // Parents review redemptions on the Family tab.
       case 'reward_redeemed':

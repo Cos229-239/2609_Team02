@@ -3,8 +3,9 @@ rules_version = '2';
 // Data model:
 //   users/{uid}                       - profile: name, email, role, xp, coins, householdId, ...
 //   users/{uid}/fcmTokens/{token}     - push-notification device tokens (owner only)
-//   households/{householdId}          - name, inviteCode, memberIds
+//   households/{householdId}          - name, inviteCode, memberIds, timezone (IANA), nextRunAt (server)
 //   households/{householdId}/tasks/{taskId}
+//   households/{householdId}/taskSchedules/{scheduleId} - repeating tasks
 //   households/{householdId}/rewards/{rewardId}
 //   households/{householdId}/redemptions/{redemptionId}
 //
@@ -61,6 +62,13 @@ service cloud.firestore {
       allow delete: if false;
 
       match /tasks/{taskId} {
+        allow read, write: if isSignedIn() &&
+          get(/databases/$(database)/documents/households/$(householdId)).data.memberIds.hasAny([request.auth.uid]);
+      }
+
+      // Repeating-task schedules. The server (Cloud Functions) turns each
+      // into one ordinary task per occurrence under /tasks.
+      match /taskSchedules/{scheduleId} {
         allow read, write: if isSignedIn() &&
           get(/databases/$(database)/documents/households/$(householdId)).data.memberIds.hasAny([request.auth.uid]);
       }

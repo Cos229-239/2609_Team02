@@ -342,7 +342,6 @@ class _TaskProgressRow extends StatelessWidget {
       assignedToUserId: task.assignedToUserId,
       rewardXp: task.rewardXp,
       coinReward: task.coinReward,
-      isRecurring: task.isRecurring,
       createdAt: DateTime.now(),
     );
     final newTaskId = await db.addTask(duplicate);

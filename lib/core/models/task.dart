@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../constants/app_constants.dart';
 import '../constants/task_icons.dart';
+import 'task_schedule.dart';
 
 /// Lifecycle of an assigned chore/quest.
 enum TaskStatus { pending, completed, approved }
@@ -16,7 +17,8 @@ class TaskModel {
     this.rewardXp = AppConstants.defaultTaskXp,
     this.coinReward = AppConstants.defaultTaskCoins,
     this.status = TaskStatus.pending,
-    this.isRecurring = false,
+    this.repeat,
+    this.scheduleId,
     this.dueDate,
     this.createdAt,
     this.archived = false,
@@ -39,7 +41,14 @@ class TaskModel {
   final int coinReward;
 
   final TaskStatus status;
-  final bool isRecurring;
+
+  /// Cadence of the repeating task this is one occurrence of; null = one-time.
+  final TaskRepeat? repeat;
+
+  /// The [TaskSchedule] that generated this occurrence; null = one-time task.
+  final String? scheduleId;
+
+  /// Local midnight of the due day.
   final DateTime? dueDate;
 
   /// Used to auto-archive stale tasks: see [isArchived].
@@ -47,6 +56,21 @@ class TaskModel {
 
   /// Manually archived by a parent, independent of [isAgedOut].
   final bool archived;
+
+  /// One occurrence of a repeating task (see [TaskSchedule]).
+  bool get isRecurring => scheduleId != null;
+
+  /// An occurrence for a future day. The server creates them a day ahead
+  /// so they're ready at midnight; until then they stay hidden.
+  bool get isUpcoming {
+    final due = dueDate;
+    if (!isRecurring || due == null) return false;
+    final now = DateTime.now();
+    return DateTime(due.year, due.month, due.day).isAfter(DateTime(now.year, now.month, now.day));
+  }
+
+  /// "Daily Task", "Weekly Task", … or "One-time Task".
+  String get repeatLabel => repeat?.taskLabel ?? (isRecurring ? 'Repeating Task' : 'One-time Task');
 
   bool get isCompleted =>
       status == TaskStatus.completed || status == TaskStatus.approved;
@@ -74,7 +98,6 @@ class TaskModel {
     int? rewardXp,
     int? coinReward,
     TaskStatus? status,
-    bool? isRecurring,
     DateTime? dueDate,
     bool clearDueDate = false,
     DateTime? createdAt,
@@ -91,7 +114,8 @@ class TaskModel {
       rewardXp: rewardXp ?? this.rewardXp,
       coinReward: coinReward ?? this.coinReward,
       status: status ?? this.status,
-      isRecurring: isRecurring ?? this.isRecurring,
+      repeat: repeat,
+      scheduleId: scheduleId,
       dueDate: clearDueDate ? null : (dueDate ?? this.dueDate),
       createdAt: createdAt ?? this.createdAt,
       archived: archived ?? this.archived,
@@ -112,7 +136,8 @@ class TaskModel {
         (s) => s.name == data['status'],
         orElse: () => TaskStatus.pending,
       ),
-      isRecurring: data['isRecurring'] as bool? ?? false,
+      repeat: TaskRepeat.fromName(data['repeat']),
+      scheduleId: data['scheduleId'] as String?,
       dueDate: (data['dueDate'] as Timestamp?)?.toDate(),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
       archived: data['archived'] as bool? ?? false,
@@ -128,58 +153,28 @@ class TaskModel {
       'rewardXp': rewardXp,
       'coinReward': coinReward,
       'status': status.name,
-      'isRecurring': isRecurring,
+      'repeat': repeat?.name,
+      'scheduleId': scheduleId,
       'dueDate': dueDate == null ? null : Timestamp.fromDate(dueDate!),
       'createdAt': createdAt == null ? null : Timestamp.fromDate(createdAt!),
       'archived': archived,
     };
   }
 
-  /// Seed data for a new household's shared task pool.
+  /// One-off seed tasks for a new household's shared pool. (The repeating
+  /// starters are [TaskSchedule.defaultCatalog].)
   ///
   /// Due dates are local midnight of the due day, like the ones the date
-  /// picker produces: the push-notification reminders (functions/) are timed
-  /// as offsets from midnight, so a time-of-day here would shift them.
+  /// picker produces: reminders are planned per local day.
   static List<TaskModel> defaultAvailableCatalog(DateTime now) {
-    DateTime dueIn(int days) => DateTime(now.year, now.month, now.day + days);
     return [
-      TaskModel(
-        id: 'seed-trash',
-        title: 'Take Out the Trash',
-        icon: 'trash',
-        rewardXp: 25,
-        coinReward: 5,
-        dueDate: dueIn(1),
-        isRecurring: true,
-        createdAt: now,
-      ),
-      TaskModel(
-        id: 'seed-table',
-        title: 'Set the Table',
-        icon: 'table',
-        rewardXp: 20,
-        coinReward: 5,
-        dueDate: dueIn(1),
-        isRecurring: true,
-        createdAt: now,
-      ),
-      TaskModel(
-        id: 'seed-dog',
-        title: 'Feed the Dog',
-        icon: 'pet',
-        rewardXp: 15,
-        coinReward: 5,
-        dueDate: dueIn(2),
-        isRecurring: true,
-        createdAt: now,
-      ),
       TaskModel(
         id: 'seed-read',
         title: 'Read for 20 Minutes',
         icon: 'reading',
         rewardXp: 20,
         coinReward: 5,
-        dueDate: dueIn(3),
+        dueDate: DateTime(now.year, now.month, now.day + 3),
         createdAt: now,
       ),
     ];

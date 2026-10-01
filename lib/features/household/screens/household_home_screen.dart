@@ -71,6 +71,44 @@ class HouseholdHomeScreen extends StatelessWidget {
           variant: AppButtonVariant.primary,
           onPressed: () => Navigator.of(context).pushNamed(AppRoutes.taskCreate),
         ),
+        if (db.schedules.isNotEmpty) ...[
+          const SizedBox(height: 32),
+          Text('Repeating Tasks', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          )),
+          const SizedBox(height: 4),
+          Text(
+            "Each day's task shows up that morning; reminders go out at 9 AM.",
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 12),
+          for (final schedule in db.schedules) ...[
+            AppCard(
+              onTap: () => Navigator.of(context).pushNamed(AppRoutes.scheduleEdit, arguments: schedule.id),
+              child: Row(
+                children: [
+                  Icon(Icons.repeat, color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(schedule.title, style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+                        Text(
+                          '${schedule.describe()} • ${db.userById(schedule.assignedToUserId ?? '')?.name ?? 'Household'}',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: Colors.grey),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ],
         const SizedBox(height: 32),
         Text('Your Family', style: Theme.of(context).textTheme.titleMedium?.copyWith(
           fontSize: 20,

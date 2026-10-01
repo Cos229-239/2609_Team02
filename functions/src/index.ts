@@ -2,8 +2,14 @@
  * Famotive push notifications (Firebase Cloud Messaging).
  *
  * Children are notified when a task is created in the pool, assigned to
- * them, due today, past due, or approved. Parents are notified when a child
- * accepts (claims) a task, completes a task, or redeems a reward.
+ * them, or approved, plus one 9 AM (household time) digest of what's due
+ * today / overdue from yesterday. Parents are notified when a child accepts
+ * (claims) a task, completes a task, or redeems a reward.
+ *
+ * Repeating tasks: parents create `households/{id}/taskSchedules/{id}`;
+ * this file generates one ordinary task per occurrence (id
+ * `{scheduleId}_{YYYYMMDD}`), a day ahead, so each is completed and approved
+ * on its own. Calendar math lives in ./notifications/recurrence.ts.
  *
  * Device tokens live at `users/{uid}/fcmTokens/{token}` (written by the
  * app's NotificationService). A user can opt out with
@@ -13,13 +19,14 @@
  * ./notifications/plan.ts; this file only does the Firestore/FCM I/O.
  *
  * Delivery is at-most-once: Firestore triggers can fire more than once for
- * the same change, and scheduled sweeps can overlap, so every send is
- * "claimed" in Firestore first (see claimEvent / claimDueReminder).
+ * the same change, and scheduled runs can overlap, so every send is
+ * "claimed" in Firestore first (see claimEvent and the household's nextRunAt).
  */
 import { setGlobalOptions } from 'firebase-functions/v2';
 import {
   onDocumentCreatedWithAuthContext,
   onDocumentUpdatedWithAuthContext,
+  onDocumentWritten,
 } from 'firebase-functions/v2/firestore';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { logger } from 'firebase-functions';
@@ -35,17 +42,27 @@ import { getMessaging } from 'firebase-admin/messaging';
 
 import { buildMessage, type MessageContext } from './notifications/messages';
 import {
-  dueSweepWindow,
-  planDueReminder,
+  planDigest,
+  planMorning,
   planRedemptionCreated,
   planTaskCreated,
   planTaskUpdated,
   type Audience,
-  type DueNotificationLog,
+  type MorningTask,
   type NotificationKind,
   type PlannedNotification,
   type TaskData,
 } from './notifications/plan';
+import {
+  addDays,
+  isValidTimeZone,
+  localDay,
+  nextLocalHour,
+  occurrenceId,
+  occurrencesBetween,
+  parseRule,
+  startOfDay,
+} from './notifications/recurrence';
 
 initializeApp();
 setGlobalOptions({ maxInstances: 10 });
@@ -63,6 +80,12 @@ const PROCESSED_EVENT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 /** gRPC status for "document already exists". */
 const ALREADY_EXISTS = 6;
 const REDEMPTION_PATH = 'households/{householdId}/redemptions/{redemptionId}';
+const HOUSEHOLD_PATH = 'households/{householdId}';
+const SCHEDULE_PATH = 'households/{householdId}/taskSchedules/{scheduleId}';
+/** Schedule fields only the server writes; changing them isn't an edit. */
+const SCHEDULE_SERVER_FIELDS = ['generatedThrough'];
+/** How far back the morning run looks for tasks (to archive missed occurrences). */
+const MORNING_LOOKBACK_DAYS = 14;
 
 /** FCM error codes meaning "this token is dead — forget it". */
 const STALE_TOKEN_CODES = new Set([
@@ -89,7 +112,14 @@ function toTaskData(data: DocumentData | undefined): TaskData {
     archived: d.archived === true,
     dueDate: due && typeof due.toDate === 'function' ? due.toDate() : null,
     claimedBy: d.claimedBy ?? null,
+    scheduleId: d.scheduleId ?? null,
   };
+}
+
+/** A household's IANA time zone, or null if it hasn't been set yet. */
+function householdZone(data: DocumentData | undefined): string | null {
+  const tz = data?.timezone;
+  return isValidTimeZone(tz) ? tz : null;
 }
 
 /** Small per-invocation cache so one event never reads a user twice. */
@@ -247,31 +277,182 @@ async function claimEvent(eventId: string, source: string): Promise<boolean> {
   }
 }
 
-const LOG_FIELD = { task_due: 'dueFor', task_overdue: 'overdueFor' } as const;
-type DueKind = keyof typeof LOG_FIELD;
+// --- Repeating tasks -----------------------------------------------------------
 
 /**
- * Atomically re-checks a task and, if it still needs [kind] for its current
- * due date, records that in `notificationLog` before anything is sent. Two
- * overlapping sweeps can both see the task, but only one transaction wins,
- * so the reminder goes out once. Returns the claimed task, or null.
+ * Creates the task docs for [scheduleRef]'s occurrences after the schedule's
+ * `generatedThrough` (or after [floor], whichever is later) up to [through],
+ * and advances `generatedThrough`. One transaction, deterministic ids: safe
+ * to call repeatedly and concurrently. A parent deleting a generated task
+ * isn't undone, because days already generated are never revisited.
  */
-async function claimDueReminder(
-  ref: DocumentReference,
-  kind: DueKind,
-  now: Date,
-): Promise<{ raw: DocumentData; task: TaskData; previous: number | null } | null> {
+async function generateOccurrences(
+  scheduleRef: DocumentReference,
+  tz: string,
+  floor: string,
+  through: string,
+): Promise<number> {
+  const tasks = scheduleRef.parent.parent!.collection('tasks');
   return db.runTransaction(async (tx) => {
-    const fresh = await tx.get(ref);
-    const raw = fresh.data();
-    if (!raw) return null;
-    const task = toTaskData(raw);
-    const log = (raw.notificationLog ?? {}) as DueNotificationLog;
-    if (!task.dueDate || planDueReminder(task, now, log) !== kind) return null;
+    const snap = await tx.get(scheduleRef);
+    const data = snap.data();
+    if (!data || data.archived === true) return 0;
+    const rule = parseRule(data);
+    if (!rule) {
+      logger.warn('Skipping schedule with an invalid rule', { schedule: scheduleRef.path });
+      return 0;
+    }
 
-    tx.update(ref, { [`notificationLog.${LOG_FIELD[kind]}`]: task.dueDate.getTime() });
-    return { raw, task, previous: log[LOG_FIELD[kind]] ?? null };
+    const done = typeof data.generatedThrough === 'string' ? data.generatedThrough : null;
+    const after = done && done > floor ? done : floor;
+    if (after >= through) return 0;
+
+    const days = occurrencesBetween(rule, after, through);
+    const refs = days.map((day) => tasks.doc(occurrenceId(scheduleRef.id, day)));
+    const existing = refs.length ? await tx.getAll(...refs) : [];
+
+    let created = 0;
+    days.forEach((day, i) => {
+      if (existing[i].exists) return;
+      created++;
+      tx.create(refs[i], {
+        title: data.title ?? '',
+        description: data.description ?? '',
+        icon: data.icon ?? null,
+        rewardXp: data.rewardXp ?? null,
+        coinReward: data.coinReward ?? null,
+        assignedToUserId: data.assignedToUserId ?? null,
+        status: 'pending',
+        archived: false,
+        isRecurring: true,
+        repeat: rule.repeat,
+        scheduleId: scheduleRef.id,
+        occurrenceDate: day,
+        dueDate: Timestamp.fromDate(startOfDay(day, tz)),
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    });
+    tx.update(scheduleRef, { generatedThrough: through });
+    return created;
   });
+}
+
+/** Deletes a schedule's not-yet-started occurrences after [today]. */
+async function removeFutureOccurrences(householdRef: DocumentReference, scheduleId: string, today: string) {
+  const snap = await householdRef.collection('tasks').where('scheduleId', '==', scheduleId).get();
+  const doomed = snap.docs.filter((d) => {
+    const t = d.data();
+    // Keep anything a child has already claimed or started.
+    return (
+      typeof t.occurrenceDate === 'string' &&
+      t.occurrenceDate > today &&
+      (t.status ?? 'pending') === 'pending' &&
+      !t.claimedBy
+    );
+  });
+  for (let i = 0; i < doomed.length; i += 400) {
+    const batch = db.batch();
+    doomed.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+  return doomed.length;
+}
+
+/** Order-independent JSON of a value (Timestamps compare by value). */
+function stableJson(v: unknown): string {
+  if (v instanceof Timestamp) return `ts:${v.toMillis()}`;
+  if (Array.isArray(v)) return `[${v.map(stableJson).join(',')}]`;
+  if (v && typeof v === 'object') {
+    const o = v as Record<string, unknown>;
+    return `{${Object.keys(o).sort().map((k) => `${JSON.stringify(k)}:${stableJson(o[k])}`).join(',')}}`;
+  }
+  return JSON.stringify(v) ?? 'undefined';
+}
+
+function withoutServerFields(data: DocumentData | undefined): string {
+  if (!data) return '';
+  const copy = { ...data };
+  for (const f of SCHEDULE_SERVER_FIELDS) delete copy[f];
+  return stableJson(copy);
+}
+
+// --- Morning run ---------------------------------------------------------------
+
+/**
+ * 9 AM in one household: top up repeating-task occurrences through
+ * tomorrow, archive missed occurrences, and send each child one digest.
+ */
+async function runMorning(householdRef: DocumentReference, tz: string, now: Date): Promise<void> {
+  const householdId = householdRef.id;
+  const today = localDay(now, tz);
+  const yesterday = addDays(today, -1);
+  const tomorrow = addDays(today, 1);
+
+  const schedules = await householdRef.collection('taskSchedules').get();
+  for (const s of schedules.docs) {
+    try {
+      await generateOccurrences(s.ref, tz, yesterday, tomorrow);
+    } catch (err) {
+      logger.error('Generating occurrences failed', { schedule: s.ref.path, err });
+    }
+  }
+
+  const snap = await householdRef
+    .collection('tasks')
+    .where('dueDate', '>=', Timestamp.fromDate(startOfDay(addDays(today, -MORNING_LOOKBACK_DAYS), tz)))
+    .where('dueDate', '<', Timestamp.fromDate(startOfDay(tomorrow, tz)))
+    .get();
+
+  const raw = new Map<string, DocumentData>();
+  const tasks: MorningTask[] = [];
+  for (const d of snap.docs) {
+    const data = d.data();
+    const due = data.dueDate as Timestamp | null | undefined;
+    if (!due || typeof due.toDate !== 'function') continue;
+    raw.set(d.id, data);
+    tasks.push({
+      id: d.id,
+      title: data.title,
+      assignedToUserId: data.assignedToUserId ?? null,
+      status: data.status,
+      archived: data.archived === true,
+      day: localDay(due.toDate(), tz),
+      scheduleId: data.scheduleId ?? null,
+    });
+  }
+
+  const plan = planMorning(tasks, today, yesterday);
+
+  if (plan.toArchive.length) {
+    const batch = db.batch();
+    plan.toArchive.forEach((id) => batch.update(householdRef.collection('tasks').doc(id), { archived: true, missed: true }));
+    await batch.commit();
+  }
+
+  const users = new UserCache();
+  const children = await resolveRecipients(householdId, { type: 'children' }, [], users);
+  for (const childId of children) {
+    const mine = plan.children.get(childId) ?? { due: [], overdue: [] };
+    const digest = planDigest({ ...mine, pool: plan.pool });
+    if (!digest) continue;
+    try {
+      if (digest.task) {
+        const ctx = await taskContext(raw.get(digest.task.id), undefined, users);
+        await sendToUsers([childId], digest.kind, ctx, { householdId, taskId: digest.task.id });
+      } else {
+        const titles = (list: MorningTask[]) => list.map((t) => t.title ?? '');
+        await sendToUsers(
+          [childId],
+          digest.kind,
+          { digest: { due: titles(mine.due), overdue: titles(mine.overdue), pool: titles(plan.pool) } },
+          { householdId },
+        );
+      }
+    } catch (err) {
+      logger.error('Morning digest failed', { householdId, childId, err });
+    }
+  }
+  logger.info('Morning run done', { householdId, today, children: children.length, archived: plan.toArchive.length });
 }
 
 // --- Triggers ----------------------------------------------------------------
@@ -333,52 +514,80 @@ export const notifyOnRewardRedeemed = onDocumentCreatedWithAuthContext(REDEMPTIO
 });
 
 /**
- * Every 15 minutes: "due today" and "past due" reminders for assigned,
- * still-pending tasks. Each reminder is sent once per due date — recorded
- * in the task's `notificationLog` so editing the due date re-arms it.
+ * The morning run. Each household stores `nextRunAt` (its next 9 AM, in its
+ * own time zone), so this only reads households that are actually due — an
+ * indexed query that is usually empty — instead of scanning tasks. Runs on
+ * the hour and half hour so half-hour zones (e.g. India) are on time too.
  *
- * The log entry is claimed in a transaction *before* sending, so overlapping
- * sweeps (a slow run, or a duplicate scheduler delivery) can't both send. If
- * the send then fails, the claim is rolled back so the next sweep retries.
+ * `nextRunAt` is advanced in a transaction before the household is
+ * processed, so overlapping runs can't double-send.
  */
-export const sendDueReminders = onSchedule({ schedule: 'every 15 minutes', timeZone: 'UTC' }, async () => {
+export const runHouseholdMornings = onSchedule({ schedule: 'every 30 minutes', timeZone: 'UTC' }, async () => {
   const now = new Date();
-  const { from, to } = dueSweepWindow(now);
+  const due = await db.collection('households').where('nextRunAt', '<=', Timestamp.fromDate(now)).get();
 
-  const snap = await db
-    .collectionGroup('tasks')
-    .where('dueDate', '>=', Timestamp.fromDate(from))
-    .where('dueDate', '<=', Timestamp.fromDate(to))
-    .get();
-
-  const users = new UserCache();
-  for (const doc of snap.docs) {
-    const raw = doc.data();
-    const kind = planDueReminder(toTaskData(raw), now, (raw.notificationLog ?? {}) as DueNotificationLog);
-    const householdId = doc.ref.parent.parent?.id;
-    if (!kind || !householdId) continue;
-
-    let claim: Awaited<ReturnType<typeof claimDueReminder>> = null;
+  for (const doc of due.docs) {
     try {
-      claim = await claimDueReminder(doc.ref, kind, now);
-      if (!claim || !claim.task.assignedToUserId) continue;
-
-      const ctx = await taskContext(claim.raw, undefined, users);
-      await dispatch(
-        [{ kind, audience: { type: 'user', userId: claim.task.assignedToUserId }, excludeUserIds: [] }],
-        householdId,
-        ctx,
-        { taskId: doc.id },
-        users,
-      );
+      const tz = await db.runTransaction(async (tx) => {
+        const fresh = await tx.get(doc.ref);
+        const data = fresh.data();
+        const next = data?.nextRunAt as Timestamp | undefined;
+        if (!data || !next || next.toMillis() > now.getTime()) return null;
+        const zone = householdZone(data);
+        // No zone: stop scheduling until the app sets one (see onHouseholdWritten).
+        tx.update(doc.ref, { nextRunAt: zone ? Timestamp.fromDate(nextLocalHour(now, zone)) : FieldValue.delete() });
+        return zone;
+      });
+      if (tz) await runMorning(doc.ref, tz, now);
     } catch (err) {
-      logger.error('Due reminder failed', { taskId: doc.id, householdId, err });
-      if (claim) {
-        // Release the claim so the next sweep tries again.
-        await doc.ref
-          .update({ [`notificationLog.${LOG_FIELD[kind]}`]: claim.previous })
-          .catch((e) => logger.error('Could not release due-reminder claim', { taskId: doc.id, e }));
-      }
+      logger.error('Morning run failed', { householdId: doc.id, err });
     }
+  }
+});
+
+/** Keeps `nextRunAt` in step with the household's time zone. */
+export const onHouseholdWritten = onDocumentWritten(HOUSEHOLD_PATH, async (event) => {
+  const before = event.data?.before.data();
+  const after = event.data?.after.data();
+  if (!after) return;
+
+  const tz = householdZone(after);
+  if (!tz) return;
+  if (after.nextRunAt && householdZone(before) === tz) return; // already scheduled for this zone
+
+  await event.data!.after.ref.update({ nextRunAt: Timestamp.fromDate(nextLocalHour(new Date(), tz)) });
+  logger.info('Scheduled household mornings', { householdId: event.params.householdId, tz });
+});
+
+/**
+ * A repeating task was created, edited or deleted. Edits and deletes drop
+ * occurrences after today that haven't been started; creates and edits then
+ * generate today's (if it falls today) and tomorrow's occurrences right away.
+ */
+export const onTaskScheduleWritten = onDocumentWritten(SCHEDULE_PATH, async (event) => {
+  const before = event.data?.before;
+  const after = event.data?.after;
+  // Ignore our own generatedThrough bookkeeping.
+  if (before?.exists && after?.exists && withoutServerFields(before.data()) === withoutServerFields(after.data())) return;
+
+  const householdRef = db.collection('households').doc(event.params.householdId);
+  const tz = householdZone((await householdRef.get()).data());
+  if (!tz) {
+    logger.warn('Household has no time zone yet; occurrences wait for its first morning run', {
+      householdId: event.params.householdId,
+    });
+    return;
+  }
+  const today = localDay(new Date(), tz);
+
+  if (before?.exists) {
+    const removed = await removeFutureOccurrences(householdRef, event.params.scheduleId, today);
+    // Re-plan from today on (today's occurrence is kept/created, never duplicated).
+    if (after?.exists) await after.ref.update({ generatedThrough: addDays(today, -1) });
+    logger.info('Schedule changed', { scheduleId: event.params.scheduleId, removed });
+  }
+  if (after?.exists) {
+    const created = await generateOccurrences(after.ref, tz, addDays(today, -1), addDays(today, 1));
+    logger.info('Generated occurrences', { scheduleId: event.params.scheduleId, created });
   }
 });

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../app/routes.dart';
 import '../../../app/theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/task_icons.dart';
 import '../../../core/models/task.dart';
+import '../../../core/models/task_schedule.dart';
 import '../../../core/services/database_service.dart';
 import '../../../core/services/description_suggester.dart';
 import '../../../shared/widgets/app_button.dart';
@@ -13,17 +15,24 @@ import '../../../shared/widgets/number_stepper.dart';
 
 enum _AssignTarget { household, child }
 
-/// "Create Task" / "Edit Task" screen. Passing [taskId] switches it into
-/// edit mode, pre-filled from the existing task.
+/// "Create Task" / "Edit Task" / "Edit Repeating Task" screen.
+///
+/// Passing [taskId] edits that task (for an occurrence of a repeating task:
+/// just that one day). Passing [scheduleId] edits the repeating task itself.
+/// Creating with a repeat other than "Does not repeat" saves a
+/// [TaskSchedule]; the server then creates one task per occurrence.
 class CreateTaskScreen extends StatefulWidget {
-  const CreateTaskScreen({super.key, this.initialChildId, this.taskId});
+  const CreateTaskScreen({super.key, this.initialChildId, this.taskId, this.scheduleId});
 
   /// Pre-selects a child instead of defaulting to "household". Ignored
-  /// when [taskId] is set.
+  /// when editing.
   final String? initialChildId;
 
   /// When set, edits this task instead of creating a new one.
   final String? taskId;
+
+  /// When set, edits this repeating task.
+  final String? scheduleId;
 
   @override
   State<CreateTaskScreen> createState() => _CreateTaskScreenState();
@@ -33,8 +42,12 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   late final TextEditingController _titleController;
   late final TextEditingController _descriptionController;
   late String _selectedIconKey;
+  /// Due date (one-time) or start date (repeating).
   DateTime? _dueDate;
-  late bool _isRecurring;
+
+  /// Null = "Does not repeat".
+  TaskRepeat? _repeat;
+  Set<int> _weekdays = {};
   late int _xp;
   late int _coins;
   // Set in initState: widget isn't accessible from field initializers.
@@ -44,15 +57,24 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   /// The task being edited, or null when creating a new one.
   TaskModel? _originalTask;
 
-  bool get _isEditing => _originalTask != null;
+  /// The repeating task being edited.
+  TaskSchedule? _originalSchedule;
+
+  bool get _isEditingSchedule => _originalSchedule != null;
+  bool get _isEditing => _originalTask != null || _isEditingSchedule;
+
+  /// Editing one occurrence of a repeating task: its cadence lives on the schedule.
+  bool get _isOccurrence => _originalTask?.isRecurring ?? false;
+
+  bool get _canChooseRepeat => !_isOccurrence;
 
   @override
   void initState() {
     super.initState();
 
+    final db = context.read<DatabaseService>();
     TaskModel? existing;
     if (widget.taskId != null) {
-      final db = context.read<DatabaseService>();
       for (final t in db.tasks) {
         if (t.id == widget.taskId) {
           existing = t;
@@ -61,15 +83,20 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
       }
     }
     _originalTask = existing;
+    final schedule = widget.scheduleId == null ? null : db.scheduleById(widget.scheduleId);
+    _originalSchedule = schedule;
 
-    _titleController = TextEditingController(text: existing?.title ?? '');
-    _descriptionController = TextEditingController(text: existing?.description ?? '');
-    _selectedIconKey = existing?.icon ?? TaskIconCatalog.defaultKey;
-    _dueDate = existing?.dueDate;
-    _isRecurring = existing?.isRecurring ?? false;
-    _xp = existing?.rewardXp ?? AppConstants.defaultTaskXp;
-    _coins = existing?.coinReward ?? AppConstants.defaultTaskCoins;
-    _selectedChildId = existing?.assignedToUserId ?? widget.initialChildId;
+    _titleController = TextEditingController(text: schedule?.title ?? existing?.title ?? '');
+    _descriptionController = TextEditingController(text: schedule?.description ?? existing?.description ?? '');
+    _selectedIconKey = schedule?.icon ?? existing?.icon ?? TaskIconCatalog.defaultKey;
+    _dueDate = schedule?.startDate ?? existing?.dueDate;
+    _repeat = schedule?.repeat ?? existing?.repeat;
+    _weekdays = {...?schedule?.effectiveWeekdays};
+    _xp = schedule?.rewardXp ?? existing?.rewardXp ?? AppConstants.defaultTaskXp;
+    _coins = schedule?.coinReward ?? existing?.coinReward ?? AppConstants.defaultTaskCoins;
+    _selectedChildId = schedule != null
+        ? schedule.assignedToUserId
+        : (existing?.assignedToUserId ?? widget.initialChildId);
     _assignTarget = _selectedChildId != null ? _AssignTarget.child : _AssignTarget.household;
   }
 
@@ -82,15 +109,66 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
   bool get _canSubmit => _titleController.text.trim().isNotEmpty;
 
-  Future<void> _pickDueDate() async {
+  DateTime get _today {
     final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day);
+  }
+
+  Future<void> _pickDueDate() async {
+    final today = _today;
+    final initial = _dueDate ?? today;
     final picked = await showDatePicker(
       context: context,
-      initialDate: _dueDate ?? now,
-      firstDate: DateTime(now.year, now.month, now.day),
-      lastDate: now.add(const Duration(days: 365)),
+      initialDate: initial,
+      // An existing task/schedule may already be dated in the past.
+      firstDate: initial.isBefore(today) ? initial : today,
+      lastDate: today.add(const Duration(days: 365)),
     );
-    if (picked != null) setState(() => _dueDate = picked);
+    if (picked == null) return;
+    setState(() {
+      // Weekly cadences follow the start day until the parent picks days.
+      if (_repeat != null && _repeat!.usesWeekdays && _dueDate != null &&
+          _weekdays.length == 1 && _weekdays.single == _dueDate!.weekday) {
+        _weekdays = {picked.weekday};
+      }
+      _dueDate = picked;
+    });
+  }
+
+  void _setRepeat(TaskRepeat? repeat) {
+    setState(() {
+      _repeat = repeat;
+      if (repeat != null) {
+        _dueDate ??= _today; // repeating tasks need a start date
+        if (repeat.usesWeekdays && _weekdays.isEmpty) _weekdays = {_dueDate!.weekday};
+      }
+    });
+  }
+
+  void _toggleWeekday(int day) {
+    setState(() {
+      if (_weekdays.contains(day)) {
+        if (_weekdays.length > 1) _weekdays = {..._weekdays}..remove(day);
+      } else {
+        _weekdays = {..._weekdays, day};
+      }
+    });
+  }
+
+  TaskSchedule _buildSchedule({required String id, required String title, required String description, String? assignedToUserId}) {
+    return TaskSchedule(
+      id: id,
+      title: title,
+      description: description,
+      icon: _selectedIconKey,
+      rewardXp: _xp,
+      coinReward: _coins,
+      assignedToUserId: assignedToUserId,
+      repeat: _repeat!,
+      weekdays: _repeat!.usesWeekdays ? (_weekdays.toList()..sort()) : const [],
+      startDate: _dueDate ?? _today,
+      createdAt: _originalSchedule?.createdAt ?? DateTime.now(),
+    );
   }
 
   void _applySuggestedDescription() {
@@ -111,6 +189,39 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     final assignedToUserId = _assignTarget == _AssignTarget.household ? null : _selectedChildId;
     final description = _descriptionController.text.trim();
     final original = _originalTask;
+    final originalSchedule = _originalSchedule;
+    void done(String message) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      Navigator.of(context).pop();
+    }
+
+    if (originalSchedule != null) {
+      db.updateSchedule(
+        originalSchedule.id,
+        _buildSchedule(
+          id: originalSchedule.id,
+          title: title,
+          description: description,
+          assignedToUserId: assignedToUserId,
+        ),
+      );
+      done('"$title" updated - upcoming days will use the changes.');
+      return;
+    }
+
+    if (original != null && !original.isRecurring && _repeat != null) {
+      // A one-time task turned into a repeating one: the schedule replaces it.
+      db.addSchedule(_buildSchedule(id: '', title: title, description: description, assignedToUserId: assignedToUserId));
+      db.removeTask(original.id);
+      done('"$title" now repeats: $_repeatSummary.');
+      return;
+    }
+
+    if (original == null && _repeat != null) {
+      db.addSchedule(_buildSchedule(id: '', title: title, description: description, assignedToUserId: assignedToUserId));
+      done('"$title" created - repeats: $_repeatSummary.');
+      return;
+    }
 
     if (original != null) {
       final updated = original.copyWith(
@@ -121,7 +232,6 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         clearAssignedToUserId: assignedToUserId == null,
         rewardXp: _xp,
         coinReward: _coins,
-        isRecurring: _isRecurring,
         dueDate: _dueDate,
         clearDueDate: _dueDate == null,
       );
@@ -138,7 +248,6 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
           icon: _selectedIconKey,
           assignedToUserId: assignedToUserId,
           dueDate: _dueDate,
-          isRecurring: _isRecurring,
           rewardXp: _xp,
           coinReward: _coins,
           createdAt: DateTime.now(),
@@ -150,6 +259,40 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     }
 
     Navigator.of(context).pop();
+  }
+
+  /// "Every Mon & Thu" etc. for the current picker state.
+  String get _repeatSummary {
+    if (_repeat == null) return 'Does not repeat';
+    return _buildSchedule(id: '', title: '', description: '').describe();
+  }
+
+  Future<void> _confirmStopRepeating() async {
+    final schedule = _originalSchedule;
+    if (schedule == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Stop Repeating?'),
+        content: Text(
+          '"${schedule.title}" won\'t come back any more. Days that were already '
+          'handed out stay until they\'re done; upcoming ones are removed.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Stop Repeating', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await context.read<DatabaseService>().deleteSchedule(schedule.id);
+    if (mounted) Navigator.of(context).pop();
   }
 
   Future<void> _toggleArchived() async {
@@ -201,9 +344,15 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Task' : 'Create Task'),
+        title: Text(_isEditingSchedule ? 'Edit Repeating Task' : (_isEditing ? 'Edit Task' : 'Create Task')),
         actions: [
-          if (_isEditing)
+          if (_isEditingSchedule)
+            IconButton(
+              tooltip: 'Stop repeating',
+              icon: const Icon(Icons.event_busy_outlined),
+              onPressed: _confirmStopRepeating,
+            ),
+          if (_originalTask != null)
             PopupMenuButton<String>(
               onSelected: (value) {
                 if (value == 'archive') _toggleArchived();
@@ -241,7 +390,18 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
           children: [
-            if (_isEditing && _originalTask!.isArchived) ...[
+            if (_isEditingSchedule) ...[
+              const _InfoBanner(
+                icon: Icons.repeat,
+                text: 'Changes apply from tomorrow on. Today\'s task (if any) keeps its current details.',
+              ),
+              const SizedBox(height: 16),
+            ],
+            if (_isOccurrence) ...[
+              _OccurrenceBanner(task: _originalTask!),
+              const SizedBox(height: 16),
+            ],
+            if (_originalTask != null && _originalTask!.isArchived) ...[
               AppCard(
                 color: Colors.orange.withValues(alpha: 0.08),
                 child: Row(
@@ -339,7 +499,26 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               onChanged: (value) => setState(() => _coins = value),
             ),
             const SizedBox(height: 20),
-            Text('Select a Due Date:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            if (_canChooseRepeat) ...[
+              Text('Repeat:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              )),
+              const SizedBox(height: 8),
+              _RepeatPicker(
+                repeat: _repeat,
+                weekdays: _weekdays,
+                allowNone: !_isEditingSchedule,
+                summary: _repeat == null
+                    ? 'One-time task'
+                    : '$_repeatSummary, starting ${_formatDate(_dueDate ?? _today)}',
+                onRepeatChanged: _setRepeat,
+                onWeekdayToggled: _toggleWeekday,
+              ),
+              const SizedBox(height: 20),
+            ],
+            Text(_repeat != null && _canChooseRepeat ? 'Starts On:' : 'Select a Due Date:',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
@@ -358,45 +537,13 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ),
-                  if (_dueDate != null)
+                  if (_dueDate != null && (_repeat == null || !_canChooseRepeat))
                     IconButton(
                       icon: const Icon(Icons.clear, size: 18),
                       onPressed: () => setState(() => _dueDate = null),
                     )
                   else
                     const Icon(Icons.chevron_right, color: Colors.grey),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            AppCard(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Row(
-                children: [
-                  Icon(Icons.repeat, color: Theme.of(context).colorScheme.primary),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Repeat this task?', style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        )),
-                        Text(
-                          'If selected: This task will repeat when task is complete.',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600,
-                          fontSize: 12,)
-                        ),
-                      ],
-                    ),
-                  ),
-                  Switch(
-                    value: _isRecurring,
-                    activeThumbColor: Colors.white,
-                    activeTrackColor: const Color(0xFF4CAF50),
-                    onChanged: (value) => setState(() => _isRecurring = value),
-                  ),
                 ],
               ),
             ),
@@ -426,7 +573,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
             ],
             const SizedBox(height: 24),
             AppButton(
-              label: _isEditing ? 'Save Changes' : 'Create Task',
+              label: _isEditing ? 'Save Changes' : (_repeat != null ? 'Create Repeating Task' : 'Create Task'),
               icon: _isEditing ? Icons.save_outlined : Icons.add_task,
               onPressed: _canSubmit ? () => _submit(context.read<DatabaseService>()) : null,
             ),
@@ -546,6 +693,133 @@ class _AssignOptionCard extends StatelessWidget {
             selected ? Icons.check_circle : Icons.radio_button_unchecked,
             color: selected ? AppColors.primaryBlue : Colors.grey,
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoBanner extends StatelessWidget {
+  const _InfoBanner({required this.icon, required this.text, this.action});
+
+  final IconData icon;
+  final String text;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.primary;
+    return AppCard(
+      color: color.withValues(alpha: 0.08),
+      child: Row(
+        children: [
+          Icon(icon, color: color),
+          const SizedBox(width: 10),
+          Expanded(child: Text(text, style: Theme.of(context).textTheme.bodyMedium)),
+          if (action != null) action!,
+        ],
+      ),
+    );
+  }
+}
+
+/// Shown when editing one day of a repeating task.
+class _OccurrenceBanner extends StatelessWidget {
+  const _OccurrenceBanner({required this.task});
+
+  final TaskModel task;
+
+  @override
+  Widget build(BuildContext context) {
+    final schedule = context.watch<DatabaseService>().scheduleById(task.scheduleId);
+    final cadence = schedule?.describe() ?? task.repeat?.label ?? 'Repeats';
+    return _InfoBanner(
+      icon: Icons.repeat,
+      text: schedule == null
+          ? 'One day of a repeating task that has since been stopped. Changes here only affect this day.'
+          : '$cadence. Changes here only affect this day.',
+      action: schedule == null
+          ? null
+          : TextButton(
+              onPressed: () => Navigator.of(context).pushReplacementNamed(
+                AppRoutes.scheduleEdit,
+                arguments: schedule.id,
+              ),
+              child: const Text('Edit all'),
+            ),
+    );
+  }
+}
+
+/// "Does not repeat / Every day / … / Monthly" plus weekday chips.
+class _RepeatPicker extends StatelessWidget {
+  const _RepeatPicker({
+    required this.repeat,
+    required this.weekdays,
+    required this.allowNone,
+    required this.summary,
+    required this.onRepeatChanged,
+    required this.onWeekdayToggled,
+  });
+
+  final TaskRepeat? repeat;
+  final Set<int> weekdays;
+  final bool allowNone;
+  final String summary;
+  final ValueChanged<TaskRepeat?> onRepeatChanged;
+  final ValueChanged<int> onWeekdayToggled;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AppCard(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.repeat, color: theme.colorScheme.primary),
+              const SizedBox(width: 10),
+              Expanded(
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<TaskRepeat?>(
+                    isExpanded: true,
+                    value: repeat,
+                    onChanged: (value) {
+                      if (value != null || allowNone) onRepeatChanged(value);
+                    },
+                    items: [
+                      if (allowNone)
+                        const DropdownMenuItem<TaskRepeat?>(value: null, child: Text('Does not repeat')),
+                      for (final r in TaskRepeat.values)
+                        DropdownMenuItem<TaskRepeat?>(value: r, child: Text(r.label)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (repeat != null && repeat!.usesWeekdays) ...[
+            const SizedBox(height: 4),
+            Text('On these days:', style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade600)),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (var day = DateTime.monday; day <= DateTime.sunday; day++)
+                  FilterChip(
+                    label: Text(weekdayShortNames[day]),
+                    selected: weekdays.contains(day),
+                    showCheckmark: false,
+                    onSelected: (_) => onWeekdayToggled(day),
+                  ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 6),
+          Text(summary, style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade600, fontSize: 12)),
         ],
       ),
     );

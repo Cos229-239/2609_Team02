@@ -363,7 +363,7 @@ class _TaskRow extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '${task.isRecurring ? 'Daily Task' : 'One-time Task'} • ${_dueLabel(task.dueDate)}',
+                  '${task.repeatLabel} • ${_dueLabel(task.dueDate)}',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontSize: 12,
                     color: Colors.grey.shade500,
@@ -523,7 +523,7 @@ class _HistoryRow extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  task.isRecurring ? 'Daily Task' : 'One-time Task',
+                  task.repeatLabel,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontSize: 12,
                     color: Colors.grey.shade500,

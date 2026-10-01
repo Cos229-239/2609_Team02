@@ -23,7 +23,7 @@ void main() {
     });
 
     test('new pool tasks and redemptions open the second tab', () {
-      for (final type in ['task_available', 'reward_redeemed']) {
+      for (final type in ['task_available', 'reward_redeemed', 'daily_digest']) {
         final route = NotificationService.routeFor({'type': type, 'taskId': 't1'});
         expect(route?.name, AppRoutes.family, reason: type);
         expect(route?.replaceStack, isTrue, reason: type);
