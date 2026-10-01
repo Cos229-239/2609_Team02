@@ -11,6 +11,10 @@
  *
  * Which notifications to send is decided by the pure functions in
  * ./notifications/plan.ts; this file only does the Firestore/FCM I/O.
+ *
+ * Delivery is at-most-once: Firestore triggers can fire more than once for
+ * the same change, and scheduled sweeps can overlap, so every send is
+ * "claimed" in Firestore first (see claimEvent / claimDueReminder).
  */
 import { setGlobalOptions } from 'firebase-functions/v2';
 import {
@@ -20,7 +24,13 @@ import {
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { logger } from 'firebase-functions';
 import { initializeApp } from 'firebase-admin/app';
-import { getFirestore, Timestamp, type DocumentData } from 'firebase-admin/firestore';
+import {
+  FieldValue,
+  getFirestore,
+  Timestamp,
+  type DocumentData,
+  type DocumentReference,
+} from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 
 import { buildMessage, type MessageContext } from './notifications/messages';
@@ -43,6 +53,15 @@ setGlobalOptions({ maxInstances: 10 });
 const db = getFirestore();
 
 const TASK_PATH = 'households/{householdId}/tasks/{taskId}';
+/**
+ * One marker doc per handled trigger event, so a redelivered event is not
+ * sent twice. Admin-only (no client rules match it). Enable a Firestore TTL
+ * policy on `expiresAt` for this collection group to purge old markers.
+ */
+const PROCESSED_EVENTS = 'notificationEvents';
+const PROCESSED_EVENT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+/** gRPC status for "document already exists". */
+const ALREADY_EXISTS = 6;
 const REDEMPTION_PATH = 'households/{householdId}/redemptions/{redemptionId}';
 
 /** FCM error codes meaning "this token is dead — forget it". */
@@ -207,6 +226,54 @@ async function taskContext(
   };
 }
 
+/**
+ * Records that trigger event [eventId] is being handled. Returns false if it
+ * was already claimed — i.e. this is a duplicate delivery and must not send.
+ */
+async function claimEvent(eventId: string, source: string): Promise<boolean> {
+  try {
+    await db.collection(PROCESSED_EVENTS).doc(eventId).create({
+      source,
+      createdAt: FieldValue.serverTimestamp(),
+      expiresAt: Timestamp.fromMillis(Date.now() + PROCESSED_EVENT_TTL_MS),
+    });
+    return true;
+  } catch (err) {
+    if ((err as { code?: unknown }).code === ALREADY_EXISTS) {
+      logger.info('Duplicate event delivery skipped', { eventId, source });
+      return false;
+    }
+    throw err;
+  }
+}
+
+const LOG_FIELD = { task_due: 'dueFor', task_overdue: 'overdueFor' } as const;
+type DueKind = keyof typeof LOG_FIELD;
+
+/**
+ * Atomically re-checks a task and, if it still needs [kind] for its current
+ * due date, records that in `notificationLog` before anything is sent. Two
+ * overlapping sweeps can both see the task, but only one transaction wins,
+ * so the reminder goes out once. Returns the claimed task, or null.
+ */
+async function claimDueReminder(
+  ref: DocumentReference,
+  kind: DueKind,
+  now: Date,
+): Promise<{ raw: DocumentData; task: TaskData; previous: number | null } | null> {
+  return db.runTransaction(async (tx) => {
+    const fresh = await tx.get(ref);
+    const raw = fresh.data();
+    if (!raw) return null;
+    const task = toTaskData(raw);
+    const log = (raw.notificationLog ?? {}) as DueNotificationLog;
+    if (!task.dueDate || planDueReminder(task, now, log) !== kind) return null;
+
+    tx.update(ref, { [`notificationLog.${LOG_FIELD[kind]}`]: task.dueDate.getTime() });
+    return { raw, task, previous: log[LOG_FIELD[kind]] ?? null };
+  });
+}
+
 // --- Triggers ----------------------------------------------------------------
 
 /** New task: "new quest available" (pool) or "new quest assigned". */
@@ -217,6 +284,7 @@ export const notifyOnTaskCreated = onDocumentCreatedWithAuthContext(TASK_PATH, a
   const plans = planTaskCreated(toTaskData(raw), event.authId);
   logger.info('Task created', { taskId: event.params.taskId, actor: event.authId, plans: plans.map((p) => p.kind) });
   if (plans.length === 0) return;
+  if (!(await claimEvent(event.id, 'notifyOnTaskCreated'))) return;
 
   const users = new UserCache();
   const ctx = await taskContext(raw, event.authId, users);
@@ -234,6 +302,7 @@ export const notifyOnTaskUpdated = onDocumentUpdatedWithAuthContext(TASK_PATH, a
     logger.info('Task updated', { taskId: event.params.taskId, actor: event.authId, plans: plans.map((p) => p.kind) });
   }
   if (plans.length === 0) return;
+  if (!(await claimEvent(event.id, 'notifyOnTaskUpdated'))) return;
 
   const users = new UserCache();
   const ctx = await taskContext(after, event.authId, users);
@@ -244,6 +313,7 @@ export const notifyOnTaskUpdated = onDocumentUpdatedWithAuthContext(TASK_PATH, a
 export const notifyOnRewardRedeemed = onDocumentCreatedWithAuthContext(REDEMPTION_PATH, async (event) => {
   const raw = event.data?.data();
   if (!raw) return;
+  if (!(await claimEvent(event.id, 'notifyOnRewardRedeemed'))) return;
 
   const users = new UserCache();
   const child = await users.get(raw.childId as string | undefined);
@@ -266,6 +336,10 @@ export const notifyOnRewardRedeemed = onDocumentCreatedWithAuthContext(REDEMPTIO
  * Every 15 minutes: "due today" and "past due" reminders for assigned,
  * still-pending tasks. Each reminder is sent once per due date — recorded
  * in the task's `notificationLog` so editing the due date re-arms it.
+ *
+ * The log entry is claimed in a transaction *before* sending, so overlapping
+ * sweeps (a slow run, or a duplicate scheduler delivery) can't both send. If
+ * the send then fails, the claim is rolled back so the next sweep retries.
  */
 export const sendDueReminders = onSchedule({ schedule: 'every 15 minutes', timeZone: 'UTC' }, async () => {
   const now = new Date();
@@ -280,26 +354,31 @@ export const sendDueReminders = onSchedule({ schedule: 'every 15 minutes', timeZ
   const users = new UserCache();
   for (const doc of snap.docs) {
     const raw = doc.data();
-    const task = toTaskData(raw);
-    const log = (raw.notificationLog ?? {}) as DueNotificationLog;
-    const kind = planDueReminder(task, now, log);
+    const kind = planDueReminder(toTaskData(raw), now, (raw.notificationLog ?? {}) as DueNotificationLog);
     const householdId = doc.ref.parent.parent?.id;
-    if (!kind || !householdId || !task.dueDate || !task.assignedToUserId) continue;
+    if (!kind || !householdId) continue;
 
+    let claim: Awaited<ReturnType<typeof claimDueReminder>> = null;
     try {
-      const ctx = await taskContext(raw, undefined, users);
+      claim = await claimDueReminder(doc.ref, kind, now);
+      if (!claim || !claim.task.assignedToUserId) continue;
+
+      const ctx = await taskContext(claim.raw, undefined, users);
       await dispatch(
-        [{ kind, audience: { type: 'user', userId: task.assignedToUserId }, excludeUserIds: [] }],
+        [{ kind, audience: { type: 'user', userId: claim.task.assignedToUserId }, excludeUserIds: [] }],
         householdId,
         ctx,
         { taskId: doc.id },
         users,
       );
-      await doc.ref.update({
-        [kind === 'task_due' ? 'notificationLog.dueFor' : 'notificationLog.overdueFor']: task.dueDate.getTime(),
-      });
     } catch (err) {
       logger.error('Due reminder failed', { taskId: doc.id, householdId, err });
+      if (claim) {
+        // Release the claim so the next sweep tries again.
+        await doc.ref
+          .update({ [`notificationLog.${LOG_FIELD[kind]}`]: claim.previous })
+          .catch((e) => logger.error('Could not release due-reminder claim', { taskId: doc.id, e }));
+      }
     }
   }
 });

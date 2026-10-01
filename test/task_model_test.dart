@@ -71,4 +71,22 @@ void main() {
       expect(updated.coinReward, 15);
     });
   });
+
+  group('TaskModel.defaultAvailableCatalog', () {
+    test('seeds due dates at local midnight, not the creation time', () {
+      final now = DateTime(2026, 10, 1, 16, 42, 7);
+      final tasks = TaskModel.defaultAvailableCatalog(now);
+      expect(tasks.map((t) => t.dueDate), [
+        DateTime(2026, 10, 2),
+        DateTime(2026, 10, 2),
+        DateTime(2026, 10, 3),
+        DateTime(2026, 10, 4),
+      ]);
+    });
+
+    test('rolls over month ends', () {
+      final tasks = TaskModel.defaultAvailableCatalog(DateTime(2026, 12, 31, 9));
+      expect(tasks.last.dueDate, DateTime(2027, 1, 3));
+    });
+  });
 }

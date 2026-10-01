@@ -103,9 +103,11 @@ export function planRedemptionCreated(actorId?: string): PlannedNotification[] {
 const HOUR_MS = 60 * 60 * 1000;
 
 /**
- * The app's date picker stores `dueDate` as local midnight of the due day,
- * so offsets from it land at a local wall-clock time without the server
- * needing to know each family's time zone.
+ * Every place the app writes `dueDate` (the date picker and the seeded
+ * starter tasks in `TaskModel.defaultAvailableCatalog`) stores local
+ * midnight of the due day, so offsets from it land at a local wall-clock
+ * time without the server needing to know each family's time zone. A
+ * `dueDate` with a time of day shifts its reminders by that much.
  */
 /** "Due today" reminder: 3 PM on the due day (after school). */
 export const DUE_REMINDER_OFFSET_MS = 15 * HOUR_MS;

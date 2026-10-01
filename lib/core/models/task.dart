@@ -136,7 +136,12 @@ class TaskModel {
   }
 
   /// Seed data for a new household's shared task pool.
+  ///
+  /// Due dates are local midnight of the due day, like the ones the date
+  /// picker produces: the push-notification reminders (functions/) are timed
+  /// as offsets from midnight, so a time-of-day here would shift them.
   static List<TaskModel> defaultAvailableCatalog(DateTime now) {
+    DateTime dueIn(int days) => DateTime(now.year, now.month, now.day + days);
     return [
       TaskModel(
         id: 'seed-trash',
@@ -144,7 +149,7 @@ class TaskModel {
         icon: 'trash',
         rewardXp: 25,
         coinReward: 5,
-        dueDate: now.add(const Duration(days: 1)),
+        dueDate: dueIn(1),
         isRecurring: true,
         createdAt: now,
       ),
@@ -154,7 +159,7 @@ class TaskModel {
         icon: 'table',
         rewardXp: 20,
         coinReward: 5,
-        dueDate: now.add(const Duration(days: 1)),
+        dueDate: dueIn(1),
         isRecurring: true,
         createdAt: now,
       ),
@@ -164,7 +169,7 @@ class TaskModel {
         icon: 'pet',
         rewardXp: 15,
         coinReward: 5,
-        dueDate: now.add(const Duration(days: 2)),
+        dueDate: dueIn(2),
         isRecurring: true,
         createdAt: now,
       ),
@@ -174,7 +179,7 @@ class TaskModel {
         icon: 'reading',
         rewardXp: 20,
         coinReward: 5,
-        dueDate: now.add(const Duration(days: 3)),
+        dueDate: dueIn(3),
         createdAt: now,
       ),
     ];

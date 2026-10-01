@@ -61,13 +61,22 @@ flutter pub get
 flutter run
 ```
 
-Firebase config (`lib/firebase_options.dart`, `android/app/google-services.json`, `ios/Runner/GoogleService-Info.plist`) is already in the repo. iOS dependencies are managed through Swift Package Manager (no CocoaPods).
+`lib/firebase_options.dart` is in the repo, but the native Firebase config files (`android/app/google-services.json` and `ios/Runner/GoogleService-Info.plist`) are gitignored. Generate them once per clone (needs access to the `famotive-8c858` Firebase project):
+
+```bash
+dart pub global activate flutterfire_cli
+firebase login
+flutterfire configure --project=famotive-8c858 --platforms=android,ios \
+  --ios-bundle-id=com.famotive --android-package-name=com.famotive --yes
+```
+
+If that changes the app IDs in `lib/firebase_options.dart` or `firebase.json`, don't commit it — it registered new Firebase apps instead of using the existing ones. iOS dependencies are managed through Swift Package Manager (no CocoaPods).
 
 ### Run tests
 
 ```bash
 flutter test                      # app unit/widget tests
-cd functions && npm install && npm test   # Cloud Functions rule tests
+cd functions && npm install && npm test   # Cloud Functions notification-planner unit tests
 ```
 
 ### Deploy backend
