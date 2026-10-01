@@ -17,6 +17,7 @@ class AppUser {
     this.coins = 0,
     this.householdId,
     this.pinnedRewardId,
+    this.pushNotificationsEnabled = true,
   });
 
   final String id;
@@ -40,6 +41,10 @@ class AppUser {
   /// Id of the reward this child has pinned as a goal, or null.
   final String? pinnedRewardId;
 
+  /// Opt-in for push notifications (Settings > Notifications). Read by the
+  /// Cloud Functions in functions/src/index.ts before sending anything.
+  final bool pushNotificationsEnabled;
+
   bool get isParent => role == UserRole.parent;
   bool get isChild => role == UserRole.child;
 
@@ -53,6 +58,7 @@ class AppUser {
     int? coins,
     String? pinnedRewardId,
     bool clearPinnedRewardId = false,
+    bool? pushNotificationsEnabled,
   }) {
     return AppUser(
       id: id,
@@ -66,6 +72,7 @@ class AppUser {
       coins: coins ?? this.coins,
       householdId: householdId,
       pinnedRewardId: clearPinnedRewardId ? null : (pinnedRewardId ?? this.pinnedRewardId),
+      pushNotificationsEnabled: pushNotificationsEnabled ?? this.pushNotificationsEnabled,
     );
   }
 
@@ -86,6 +93,7 @@ class AppUser {
       coins: data['coins'] as int? ?? 0,
       householdId: data['householdId'] as String?,
       pinnedRewardId: data['pinnedRewardId'] as String?,
+      pushNotificationsEnabled: data['pushNotificationsEnabled'] as bool? ?? true,
     );
   }
 
@@ -101,6 +109,7 @@ class AppUser {
       'coins': coins,
       'householdId': householdId,
       'pinnedRewardId': pinnedRewardId,
+      'pushNotificationsEnabled': pushNotificationsEnabled,
     };
   }
 }

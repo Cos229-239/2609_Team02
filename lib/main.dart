@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'app/app.dart';
 import 'core/services/auth_service.dart';
 import 'core/services/deep_link_service.dart';
+import 'core/services/notification_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
@@ -12,6 +13,10 @@ import 'firebase_options.dart';
 /// navigate straight to [ResetPasswordScreen] from outside the widget
 /// tree — see lib/app/app.dart and lib/core/services/deep_link_service.dart.
 final navigatorKey = GlobalKey<NavigatorState>();
+
+/// Lets [NotificationService] show an in-app banner for push notifications
+/// that arrive while the app is in the foreground.
+final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,10 +27,26 @@ void main() async {
   final authService = AuthService();
   await authService.tryRestoreSession();
 
-  runApp(FamotiveApp(authService: authService, navigatorKey: navigatorKey));
+  final notificationService = NotificationService(
+    authService: authService,
+    navigatorKey: navigatorKey,
+    messengerKey: scaffoldMessengerKey,
+  );
+
+  runApp(FamotiveApp(
+    authService: authService,
+    navigatorKey: navigatorKey,
+    scaffoldMessengerKey: scaffoldMessengerKey,
+    notificationService: notificationService,
+  ));
 
   // Started after runApp so DeepLinkService can defer any cold-start link
   // until the Navigator above actually exists (see its _handleUri).
   final deepLinkService = DeepLinkService(navigatorKey: navigatorKey);
   unawaited(deepLinkService.init());
+
+  // Also after runApp, so a notification tap that launched the app can be
+  // routed once the Navigator exists. Registers this device's push token
+  // whenever someone is signed in.
+  unawaited(notificationService.init());
 }

@@ -1,7 +1,7 @@
 name: famotive
 description: "A family task/reward app for kids and parents."
 publish_to: 'none'
-version: 0.1.0+3
+version: 0.1.0+5
 
 environment:
   sdk: ^3.13.2
@@ -24,6 +24,10 @@ dependencies:
   firebase_core: ^4.14.0
   cloud_firestore: ^6.9.0
   firebase_auth: ^6.6.1
+
+  # Push notifications (FCM). Sent by the Cloud Functions in functions/;
+  # see lib/core/services/notification_service.dart.
+  firebase_messaging: ^16.0.0
 
   # Parses the incoming https://famotive.org/__/auth/links deep link
   # (Android App Link / iOS Universal Link) that Firebase Auth's

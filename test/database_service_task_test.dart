@@ -71,6 +71,8 @@ void main() {
 
       expect(updatedTask.data()?['assignedToUserId'], 'child-1');
       expect(updatedTask.data()?['status'], TaskStatus.pending.name);
+      // Lets the push-notification function tell a claim from a parent assignment.
+      expect(updatedTask.data()?['claimedBy'], 'child-1');
     });
 
     test('marks an assigned task as completed', () async {

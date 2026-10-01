@@ -23,6 +23,22 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "node \"$RESOURCE_DIR/node_modules/typescript/bin/tsc\" -p \"$RESOURCE_DIR\""
+      ]
+    }
+  ],
   "hosting": {
     "public": "public",
     "cleanUrls": true,
