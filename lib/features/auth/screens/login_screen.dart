@@ -6,8 +6,10 @@ import '../../../app/routes.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/utils/validators.dart';
+import '../../../shared/utils/legal_links.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../widgets/auth_text_field.dart';
+import '../widgets/social_sign_in_buttons.dart';
 
 /// "Welcome/Login" screen — where users sign into the app.
 class LoginScreen extends StatefulWidget {
@@ -49,13 +51,6 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
-  }
-
-  void _handleGoogleSignIn() {
-    // TODO: wire up real Google sign-in once Firebase Auth is configured.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Google sign-in is not implemented yet.')),
-    );
   }
 
   @override
@@ -149,11 +144,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  AppButton(
-                    label: 'Continue with Google',
-                    variant: AppButtonVariant.secondary,
-                    onPressed: _handleGoogleSignIn,
-                  ),
+                  const SocialSignInButtons(),
+                  const SizedBox(height: 12),
+                  const LegalFooter(),
                   const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,

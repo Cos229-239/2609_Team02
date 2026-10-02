@@ -66,6 +66,20 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- Google sign-in: the OAuth redirect comes back to this app through
+	     its REVERSED_CLIENT_ID (from GoogleService-Info.plist). Update this
+	     if that plist is ever re-downloaded with a new client. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.451691992012-82bm4f26sdhveurbgb8tqj41m300vpoq</string>
+			</array>
+		</dict>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

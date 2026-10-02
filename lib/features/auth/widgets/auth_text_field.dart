@@ -15,6 +15,7 @@ class AuthTextField extends StatefulWidget {
     this.textInputAction = TextInputAction.next,
     this.inputFormatters,
     this.autofillHints,
+    this.enabled = true,
   });
 
   final TextEditingController controller;
@@ -26,6 +27,7 @@ class AuthTextField extends StatefulWidget {
   final TextInputAction textInputAction;
   final List<TextInputFormatter>? inputFormatters;
   final Iterable<String>? autofillHints;
+  final bool enabled;
   @override
   State<AuthTextField> createState() => _AuthTextFieldState();
 }
@@ -43,6 +45,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
       textInputAction: widget.textInputAction,
       inputFormatters: widget.inputFormatters,
       autofillHints: widget.autofillHints,
+      enabled: widget.enabled,
       decoration: InputDecoration(
         hintText: widget.label,
         prefixIcon: widget.icon == null ? null : Icon(widget.icon),

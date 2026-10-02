@@ -65,6 +65,23 @@ covers them.
 
 The morning run deletes the household's tasks whose `createdAt` is more than 60 days old (`TASK_RETENTION_DAYS`, kept in sync with `AppConstants.taskDeleteAfterDays`). The app also hides them and a parent's device sweeps them.
 
+## Account deletion (`deleteAccount` callable)
+
+In-app **Settings → Account Settings → Delete Account**, and **Family → ⋮ → Delete account** on a child (admin only). The app calls it once with `dryRun: true` to show what will happen, re-authenticates the user, then calls it for real. Rules (`src/account/plan.ts`, unit tested):
+
+- Admin of a household that has another parent → blocked until they make someone else admin.
+- Admin and only parent → that household is deleted (`recursiveDelete`: tasks, schedules, rewards, redemptions, join requests), plus child accounts they created that aren't in any other household.
+- Any other household → just removed from `memberIds`; for a child, their tasks, redemptions and repeating tasks there are deleted too.
+- Then `users/{uid}` (with `fcmTokens`), open join requests and the Firebase Auth user are deleted.
+- Deleting someone else: only a child, only by the admin of every household that child is in.
+- Real runs require a sign-in less than 5 minutes old (`auth_time`).
+
+Deploy with `firebase deploy --only functions:deleteAccount`.
+
+If the app gets `UNAUTHENTICATED`, the function's Cloud Run service isn't publicly invokable (the code sets `invoker: 'public'`, but a deploy can fail to apply it). Fix: Google Cloud console → Cloud Run → `deleteaccount` → Security → *Allow public access*, or
+`gcloud run services add-iam-policy-binding deleteaccount --region=us-central1 --member=allUsers --role=roles/run.invoker --project=famotive-8c858`.
+Firebase Auth is still enforced inside the function.
+
 ## Layout
 
 - `src/index.ts` — Firestore triggers, the household morning run, occurrence generation, FCM sending and dead-token cleanup.

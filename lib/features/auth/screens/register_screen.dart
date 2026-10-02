@@ -6,8 +6,10 @@ import '../../../app/routes.dart';
 import '../../../core/models/user.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/utils/validators.dart';
+import '../../../shared/utils/legal_links.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../widgets/auth_text_field.dart';
+import '../widgets/social_sign_in_buttons.dart';
 
 /// Account creation screen, reached from the login screen's "Sign Up"
 /// link (`features/auth/screens/register_screen.dart` per the project
@@ -84,6 +86,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const SocialSignInButtons(),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    const Expanded(child: Divider()),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text('or sign up with email', style: Theme.of(context).textTheme.bodyMedium),
+                    ),
+                    const Expanded(child: Divider()),
+                  ],
+                ),
+                const SizedBox(height: 16),
                 AuthTextField(
                   controller: _nameController,
                   label: 'First and Last Name *',
@@ -177,6 +192,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   isLoading: _isSubmitting,
                   onPressed: _handleRegister,
                 ),
+                const SizedBox(height: 12),
+                const LegalFooter(prefix: 'By creating an account, you agree to our'),
               ],
             ),
           ),

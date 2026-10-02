@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../../app/routes.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/utils/validators.dart';
@@ -113,7 +114,11 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = context.watch<AuthService>().currentUser;
+    final auth = context.watch<AuthService>();
+    final currentUser = auth.currentUser;
+    // Google/Apple-only accounts have no password: their email comes from
+    // the provider and there's no password to change.
+    final hasPassword = auth.hasPasswordLogin;
 
     if (currentUser == null) {
       return const Scaffold(body: Center(child: Text('Not signed in.')));
@@ -193,21 +198,43 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.done,
                   validator: Validators.email,
+                  enabled: hasPassword,
                 ),
+                if (!hasPassword) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Signed in with ${auth.socialProviderName ?? 'Google or Apple'}: your email is managed there.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+                  ),
+                ],
                 const SizedBox(height: AppConstants.spaceLg),
                 AppButton(
                   label: 'Save Changes',
                   isLoading: _isSaving,
                   onPressed: _handleSave,
                 ),
+                if (hasPassword) ...[
+                  const SizedBox(height: AppConstants.spaceLg),
+                  AppCard(
+                    onTap: () => ChangePasswordDialog.show(context),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.lock_outline),
+                        const SizedBox(width: 12),
+                        const Expanded(child: Text('Change Password')),
+                        const Icon(Icons.chevron_right, color: Colors.grey),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: AppConstants.spaceLg),
                 AppCard(
-                  onTap: () => ChangePasswordDialog.show(context),
+                  onTap: () => Navigator.of(context).pushNamed(AppRoutes.deleteAccount),
                   child: Row(
                     children: [
-                      const Icon(Icons.lock_outline),
+                      Icon(Icons.delete_forever_outlined, color: Colors.red.shade700),
                       const SizedBox(width: 12),
-                      const Expanded(child: Text('Change Password')),
+                      Expanded(child: Text('Delete Account', style: TextStyle(color: Colors.red.shade700))),
                       const Icon(Icons.chevron_right, color: Colors.grey),
                     ],
                   ),

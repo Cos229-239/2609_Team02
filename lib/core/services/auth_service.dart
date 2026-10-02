@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../constants/app_constants.dart';
 import '../models/join_request.dart';
@@ -26,18 +28,91 @@ typedef ChildAccountCreator = Future<String> Function({
   required Map<String, dynamic> profile,
 });
 
+/// Shows the Google account picker and returns the chosen account's ID
+/// token, or null if the user backed out. Swapped out in tests.
+typedef GoogleIdTokenProvider = Future<String?> Function();
+
+/// Outcome of [AuthService.signInWithGoogle] / [AuthService.signInWithApple].
+///
+/// Either the account already has a Famotive profile ([user] is set and the
+/// session is live), or it's brand new ([needsSetup]): Firebase is signed in
+/// but there's no `users/{uid}` profile yet, so the app shows
+/// FinishSignUpScreen to pick a role/household and then calls
+/// [AuthService.completeSocialSignUp].
+class SocialSignInResult {
+  const SocialSignInResult.signedIn(AppUser this.user)
+      : suggestedName = null,
+        email = null;
+  const SocialSignInResult.needsSetup({this.suggestedName, this.email}) : user = null;
+
+  final AppUser? user;
+
+  /// Name from the Google/Apple account, to prefill the setup form.
+  final String? suggestedName;
+  final String? email;
+
+  bool get needsSetup => user == null;
+}
+
+/// Calls the `deleteAccount` Cloud Function (functions/src/account/delete.ts)
+/// and returns its result. Swapped out in tests.
+typedef AccountDeletionCall = Future<Map<String, dynamic>> Function(Map<String, dynamic> data);
+
+/// What deleting an account would do, from a `dryRun` of `deleteAccount`.
+class AccountDeletionPreview {
+  AccountDeletionPreview.fromMap(Map<String, dynamic> m)
+      : forbidden = m['forbidden'] as String?,
+        blockers = _strings(m['blockers']),
+        deletedHouseholds = _strings(m['deletedHouseholds']),
+        leftHouseholds = _strings(m['leftHouseholds']),
+        deletedAccounts = _strings(m['deletedAccounts']);
+
+  /// Set if the caller may not delete this account at all.
+  final String? forbidden;
+
+  /// Things to do first (e.g. hand over the admin role).
+  final List<String> blockers;
+
+  /// Households deleted for everyone, with all their tasks and rewards.
+  final List<String> deletedHouseholds;
+
+  /// Households the account is just removed from.
+  final List<String> leftHouseholds;
+
+  /// Other (child) accounts deleted along with this one.
+  final List<String> deletedAccounts;
+
+  bool get canDelete => forbidden == null && blockers.isEmpty;
+
+  static List<String> _strings(Object? v) =>
+      v is List ? v.whereType<String>().toList() : const [];
+}
+
 class AuthService extends ChangeNotifier {
   AuthService({
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
     ChildAccountCreator? childAccountCreator,
+    GoogleIdTokenProvider? googleIdTokenProvider,
+    AccountDeletionCall? accountDeletionCall,
   })  : _auth = auth ?? FirebaseAuth.instance,
         _firestore = firestore ?? FirebaseFirestore.instance,
-        _childAccountCreator = childAccountCreator;
+        _childAccountCreator = childAccountCreator,
+        _googleIdTokenProvider = googleIdTokenProvider,
+        _accountDeletionCall = accountDeletionCall;
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
   final ChildAccountCreator? _childAccountCreator;
+  final GoogleIdTokenProvider? _googleIdTokenProvider;
+  final AccountDeletionCall? _accountDeletionCall;
+
+  /// From the last Apple re-authentication; used to revoke Apple's tokens
+  /// when the account is deleted (Apple requires it).
+  String? _appleAuthorizationCode;
+
+  /// GoogleSignIn.instance.initialize may only be called once per app run.
+  static Future<void>? _googleInit;
 
   AppUser? _currentUser;
 
@@ -157,42 +232,198 @@ class AuthService extends ChangeNotifier {
     } on FirebaseAuthException catch (e) {
       throw Exception(_friendlyAuthError(e));
     }
-    final uid = cred.user!.uid;
-    final code = (inviteCode ?? '').trim();
-    final joining = role == UserRole.child || code.isNotEmpty;
-
     try {
-      // Look the household up first so a bad code fails before anything
-      // is written.
-      final joinRef = joining ? await _householdByInviteCode(code) : null;
-      final householdId = joining ? null : await _createHousehold(name: name);
-
-      final user = AppUser(
-        id: uid,
+      return await _createProfile(
+        uid: cred.user!.uid,
         name: name,
         email: email.trim(),
         role: role,
         phoneNumber: phoneNumber,
-        avatarEmoji: role == UserRole.parent ? '👩' : '🧒',
-        householdId: householdId,
-        pendingHouseholdIds: joinRef == null ? const [] : [joinRef.id],
+        inviteCode: inviteCode,
       );
-      await _firestore.collection('users').doc(uid).set({
-        ...user.toFirestore(),
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-      if (joinRef != null) await _fileJoinRequest(joinRef, user);
-
-      _currentUser = user;
-      _watchProfile(uid);
-      notifyListeners();
-      return user;
     } catch (e) {
       // Roll back the auth account so a failed registration doesn't leave
       // behind a stranded account with no profile/household.
       await cred.user?.delete().catchError((_) {});
       await _auth.signOut();
       rethrow;
+    }
+  }
+
+  /// Writes `users/{uid}` for the signed-in account and either creates its
+  /// household (parent, no code) or files a join request (child, or a code).
+  Future<AppUser> _createProfile({
+    required String uid,
+    required String name,
+    required String email,
+    required UserRole role,
+    String? phoneNumber,
+    String? inviteCode,
+  }) async {
+    final code = (inviteCode ?? '').trim();
+    final joining = role == UserRole.child || code.isNotEmpty;
+
+    // Look the household up first so a bad code fails before anything
+    // is written.
+    final joinRef = joining ? await _householdByInviteCode(code) : null;
+    final householdId = joining ? null : await _createHousehold(name: name);
+
+    final user = AppUser(
+      id: uid,
+      name: name,
+      email: email,
+      role: role,
+      phoneNumber: phoneNumber,
+      avatarEmoji: role == UserRole.parent ? '👩' : '🧒',
+      householdId: householdId,
+      pendingHouseholdIds: joinRef == null ? const [] : [joinRef.id],
+    );
+    await _firestore.collection('users').doc(uid).set({
+      ...user.toFirestore(),
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    if (joinRef != null) await _fileJoinRequest(joinRef, user);
+
+    _currentUser = user;
+    _watchProfile(uid);
+    notifyListeners();
+    return user;
+  }
+
+  // --- Google / Apple sign-in ---------------------------------------------
+
+  /// True if the signed-in account can log in with an email + password
+  /// (false for accounts made with Google/Apple only, which have no
+  /// password to re-enter for changing email or password).
+  bool get hasPasswordLogin =>
+      _auth.currentUser?.providerData.any((p) => p.providerId == 'password') ?? false;
+
+  /// "Google" / "Apple" for accounts without a password, else null.
+  String? get socialProviderName {
+    if (hasPasswordLogin) return null;
+    final ids = _auth.currentUser?.providerData.map((p) => p.providerId) ?? const <String>[];
+    if (ids.contains('apple.com')) return 'Apple';
+    if (ids.contains('google.com')) return 'Google';
+    return null;
+  }
+
+  /// Signs in with Google. Returns null if the user cancelled the picker.
+  /// Works for both new and returning users: see [SocialSignInResult].
+  Future<SocialSignInResult?> signInWithGoogle() async {
+    final idToken = await (_googleIdTokenProvider ?? _nativeGoogleIdToken)();
+    if (idToken == null) return null;
+    return _finishSocialSignIn(
+      () => _auth.signInWithCredential(GoogleAuthProvider.credential(idToken: idToken)),
+    );
+  }
+
+  /// Signs in with Apple (iOS: the native Apple sheet). Returns null if the
+  /// user cancelled. See [SocialSignInResult].
+  Future<SocialSignInResult?> signInWithApple() {
+    final provider = AppleAuthProvider()
+      ..addScope('email')
+      ..addScope('name');
+    return _finishSocialSignIn(() => _auth.signInWithProvider(provider));
+  }
+
+  Future<String?> _nativeGoogleIdToken() async {
+    final google = GoogleSignIn.instance;
+    try {
+      await (_googleInit ??= google.initialize(
+        // iOS needs its OAuth client id; Android needs the project's *web*
+        // client id so the ID token is one Firebase accepts.
+        clientId: defaultTargetPlatform == TargetPlatform.iOS ? AppConstants.googleIosClientId : null,
+        serverClientId: AppConstants.googleServerClientId,
+      ));
+      final account = await google.authenticate();
+      return account.authentication.idToken;
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) return null;
+      debugPrint('Google sign-in failed: ${e.code} ${e.description}');
+      throw Exception('Google sign-in failed. Please try again.');
+    }
+  }
+
+  Future<SocialSignInResult?> _finishSocialSignIn(Future<UserCredential> Function() signIn) async {
+    final UserCredential cred;
+    try {
+      cred = await signIn();
+    } on FirebaseAuthException catch (e) {
+      if (_isCancellation(e)) return null;
+      throw Exception(_friendlyAuthError(e));
+    }
+    final user = cred.user!;
+
+    final profile = await _loadProfile(user.uid);
+    if (profile != null) {
+      _currentUser = profile;
+      _watchProfile(profile.id);
+      notifyListeners();
+      return SocialSignInResult.signedIn(profile);
+    }
+
+    final profileName = cred.additionalUserInfo?.profile?['name'];
+    return SocialSignInResult.needsSetup(
+      suggestedName: (user.displayName?.trim().isNotEmpty ?? false)
+          ? user.displayName!.trim()
+          : (profileName is String ? profileName : null),
+      email: user.email,
+    );
+  }
+
+  static bool _isCancellation(FirebaseAuthException e) {
+    const codes = {'canceled', 'cancelled', 'web-context-canceled', 'user-cancelled', 'popup-closed-by-user'};
+    if (codes.contains(e.code)) return true;
+    // iOS reports a dismissed Apple sheet as AuthorizationError 1001.
+    final message = e.message ?? '';
+    return message.contains('AuthorizationError error 1001') || message.contains('error 1001');
+  }
+
+  /// Finishes signing up a brand-new Google/Apple account (after
+  /// [signInWithGoogle]/[signInWithApple] returned [SocialSignInResult.needsSetup]).
+  /// Same household rules as [register].
+  Future<AppUser> completeSocialSignUp({
+    required String name,
+    UserRole role = UserRole.parent,
+    String? phoneNumber,
+    String? inviteCode,
+  }) async {
+    final fbUser = _auth.currentUser;
+    if (fbUser == null) throw Exception('Your sign-in expired. Please try again.');
+    return _createProfile(
+      uid: fbUser.uid,
+      name: name.trim(),
+      email: fbUser.email ?? '',
+      role: role,
+      phoneNumber: phoneNumber,
+      inviteCode: inviteCode,
+    );
+  }
+
+  /// Backs out of an unfinished Google/Apple sign-up: removes the auth
+  /// account (it has no profile yet) and signs out.
+  Future<void> cancelSocialSignUp() async {
+    final fbUser = _auth.currentUser;
+    if (fbUser != null && _currentUser == null) {
+      try {
+        final snap = await _firestore.collection('users').doc(fbUser.uid).get();
+        if (!snap.exists) await fbUser.delete();
+      } catch (e) {
+        debugPrint('AuthService: could not remove unfinished sign-up: $e');
+      }
+    }
+    await _signOutEverywhere();
+  }
+
+  Future<void> _signOutEverywhere() async {
+    await _auth.signOut();
+    // Forget the Google account so the picker shows again next time.
+    if (_googleInit != null) {
+      try {
+        await GoogleSignIn.instance.signOut();
+      } catch (e) {
+        debugPrint('Google sign-out failed: $e');
+      }
     }
   }
 
@@ -459,6 +690,125 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  // --- Account deletion ---------------------------------------------------
+
+  /// Asks the server what deleting the signed-in account (or, for an admin
+  /// parent, [childId]'s account) would do. Changes nothing.
+  Future<AccountDeletionPreview> previewAccountDeletion({String? childId}) async {
+    _requireUser();
+    final result = await _callDeleteAccount({'dryRun': true, if (childId != null) 'childId': childId});
+    return AccountDeletionPreview.fromMap(result);
+  }
+
+  /// Re-authenticates the signed-in user right before a destructive action
+  /// (the server only deletes accounts for a sign-in less than 5 minutes
+  /// old). Password accounts pass [password]; Google/Apple accounts get
+  /// their provider's sign-in sheet. Returns false if the user cancelled.
+  Future<bool> confirmIdentity({String? password}) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('Not signed in.');
+    final providers = user.providerData.map((p) => p.providerId).toSet();
+    try {
+      if (providers.contains('password')) {
+        if (password == null) return false;
+        await _reauthenticate(password);
+      } else if (providers.contains('apple.com')) {
+        final cred = await user.reauthenticateWithProvider(AppleAuthProvider());
+        _appleAuthorizationCode = cred.additionalUserInfo?.authorizationCode;
+      } else if (providers.contains('google.com')) {
+        final idToken = await (_googleIdTokenProvider ?? _nativeGoogleIdToken)();
+        if (idToken == null) return false;
+        await user.reauthenticateWithCredential(GoogleAuthProvider.credential(idToken: idToken));
+      } else {
+        throw Exception('Please log out and back in, then try again.');
+      }
+    } on FirebaseAuthException catch (e) {
+      if (_isCancellation(e)) return false;
+      throw Exception(_friendlyAuthError(e));
+    }
+    // Make sure the server sees the fresh sign-in time.
+    await _auth.currentUser?.getIdToken(true);
+    return true;
+  }
+
+  /// Permanently deletes the signed-in account (call [confirmIdentity]
+  /// first). If they're the only parent in a household they run, that
+  /// household and the child logins they made for it go too; see
+  /// [previewAccountDeletion]. Signs out afterwards.
+  Future<void> deleteAccount() async {
+    _requireUser();
+
+    // Apple requires revoking its tokens when an account is deleted.
+    final appleCode = _appleAuthorizationCode;
+    _appleAuthorizationCode = null;
+    if (appleCode != null) {
+      try {
+        await _auth.revokeTokenWithAuthorizationCode(appleCode);
+      } catch (e) {
+        debugPrint('AuthService: revoking Apple token failed: $e');
+      }
+    }
+
+    await _callDeleteAccount(const {});
+
+    // The account is gone server-side; clean up this device and sign out.
+    for (final hook in List.of(_beforeLogoutHooks)) {
+      try {
+        await hook();
+      } catch (e) {
+        debugPrint('Before-logout hook failed: $e');
+      }
+    }
+    _stopWatchingProfile();
+    _currentUser = null;
+    try {
+      await _signOutEverywhere();
+    } catch (e) {
+      debugPrint('AuthService: sign-out after deletion failed: $e');
+    }
+    notifyListeners();
+  }
+
+  /// An admin parent permanently deletes one of their children's accounts
+  /// (call [confirmIdentity] first).
+  Future<void> deleteChildAccount(String childId) async {
+    final me = _requireUser();
+    if (!me.isParent) throw Exception('Only parents can delete a child account.');
+    await _callDeleteAccount({'childId': childId});
+  }
+
+  Future<Map<String, dynamic>> _callDeleteAccount(Map<String, dynamic> data) {
+    return (_accountDeletionCall ?? _cloudDeleteAccount)(data);
+  }
+
+  static Future<Map<String, dynamic>> _cloudDeleteAccount(Map<String, dynamic> data) async {
+    try {
+      final result = await FirebaseFunctions.instance.httpsCallable('deleteAccount').call(data);
+      final raw = result.data;
+      return raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
+    } on FirebaseFunctionsException catch (e) {
+      debugPrint('deleteAccount failed: ${e.code} ${e.message}');
+      switch (e.code) {
+        // The deleteAccount Cloud Function isn't deployed (or wrong region).
+        case 'not-found':
+        case 'unimplemented':
+          throw Exception(
+            "Account deletion isn't available right now. Please try again later "
+            'or email support@famotive.org.',
+          );
+        // Usually the function's Cloud Run service isn't publicly invokable
+        // (see functions/README.md), or the sign-in token expired.
+        case 'unauthenticated':
+          throw Exception("Couldn't verify your sign-in with the server. Log out and back in, then try again.");
+        case 'unavailable':
+        case 'deadline-exceeded':
+          throw Exception('Network error: check your connection and try again.');
+        default:
+          throw Exception(e.message ?? 'Something went wrong. Please try again.');
+      }
+    }
+  }
+
   Future<void> logout() async {
     for (final hook in List.of(_beforeLogoutHooks)) {
       try {
@@ -468,7 +818,7 @@ class AuthService extends ChangeNotifier {
       }
     }
     _stopWatchingProfile();
-    await _auth.signOut();
+    await _signOutEverywhere();
     _currentUser = null;
     notifyListeners();
   }
@@ -671,6 +1021,12 @@ class AuthService extends ChangeNotifier {
         return 'Network error: check your connection and try again.';
       case 'requires-recent-login':
         return 'Please log out and back in, then try again.';
+      case 'account-exists-with-different-credential':
+        return 'An account already exists with this email. Log in with your email and password instead.';
+      case 'user-mismatch':
+        return "That's a different account. Use the one you're signed in with.";
+      case 'operation-not-allowed':
+        return "This sign-in method isn't turned on yet.";
       default:
         return e.message ?? 'Something went wrong. Please try again.';
     }

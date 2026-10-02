@@ -76,6 +76,9 @@ import {
 } from './notifications/recurrence';
 
 initializeApp();
+
+// In-app account deletion (callable). See ./account/delete.ts.
+export { deleteAccount } from './account/delete';
 setGlobalOptions({ maxInstances: 10 });
 
 const db = getFirestore();

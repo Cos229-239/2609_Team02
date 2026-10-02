@@ -25,6 +25,15 @@ dependencies:
   cloud_firestore: ^6.9.0
   firebase_auth: ^6.6.1
 
+  # Native Google account picker for "Continue with Google" (the ID token
+  # is handed to Firebase Auth). Apple sign-in needs no extra package: it
+  # goes through firebase_auth's AppleAuthProvider. See
+  # Documents/Social_Sign_In_Setup.md.
+  google_sign_in: ^7.2.0
+
+  # Calls the deleteAccount Cloud Function (in-app account deletion).
+  cloud_functions: ^6.0.0
+
   # Push notifications (FCM). Sent by the Cloud Functions in functions/;
   # see lib/core/services/notification_service.dart.
   firebase_messaging: ^16.0.0

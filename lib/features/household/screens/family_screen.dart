@@ -9,6 +9,7 @@ import '../../../core/models/reward.dart';
 import '../../../core/models/user.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/database_service.dart';
+import '../../profile/widgets/current_password_prompt.dart';
 import '../../rewards/widgets/reward_editor_sheet.dart';
 import '../widgets/add_child_sheet.dart';
 import '../widgets/family_member_card.dart';
@@ -394,7 +395,8 @@ class _JoinRequestsSection extends StatelessWidget {
 }
 
 /// Per-member actions: the admin can remove anyone (but themself) and make
-/// another parent admin; other parents can remove children.
+/// another parent admin; other parents can remove children. The admin can
+/// also permanently delete a child's account.
 class _MemberMenu extends StatelessWidget {
   const _MemberMenu({required this.member, required this.isAdmin, required this.meId, required this.isOwner});
 
@@ -411,13 +413,15 @@ class _MemberMenu extends StatelessWidget {
     final isSelf = member.id == meId;
     final canRemove = !isSelf && !isOwner && (isAdmin || ((me?.isParent ?? false) && member.isChild));
     final canMakeAdmin = isAdmin && !isSelf && member.isParent;
-    if (!canRemove && !canMakeAdmin) return const SizedBox(width: 8);
+    final canDeleteAccount = isAdmin && !isSelf && member.isChild;
+    if (!canRemove && !canMakeAdmin && !canDeleteAccount) return const SizedBox(width: 8);
 
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert, color: Colors.grey),
       onSelected: (value) {
         if (value == 'remove') _confirmRemove(context);
         if (value == 'admin') _confirmMakeAdmin(context);
+        if (value == 'delete') _confirmDeleteAccount(context);
       },
       itemBuilder: (_) => [
         if (canMakeAdmin)
@@ -432,6 +436,15 @@ class _MemberMenu extends StatelessWidget {
               Icon(Icons.person_remove_outlined, size: 20, color: Colors.red),
               SizedBox(width: 10),
               Text('Remove from household', style: TextStyle(color: Colors.red)),
+            ]),
+          ),
+        if (canDeleteAccount)
+          const PopupMenuItem(
+            value: 'delete',
+            child: Row(children: [
+              Icon(Icons.delete_forever_outlined, size: 20, color: Colors.red),
+              SizedBox(width: 10),
+              Text('Delete account', style: TextStyle(color: Colors.red)),
             ]),
           ),
       ],
@@ -466,6 +479,63 @@ class _MemberMenu extends StatelessWidget {
       messenger.showSnackBar(SnackBar(content: Text('${member.name} was removed.')));
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+    }
+  }
+
+  /// Permanently deletes the child's login, profile, tasks and reward
+  /// history (server-side: functions/src/account/delete.ts).
+  Future<void> _confirmDeleteAccount(BuildContext context) async {
+    final auth = context.read<AuthService>();
+    final messenger = ScaffoldMessenger.of(context);
+    void show(Object e) =>
+        messenger.showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+
+    final AccountDeletionPreview preview;
+    try {
+      preview = await auth.previewAccountDeletion(childId: member.id);
+    } catch (e) {
+      show(e);
+      return;
+    }
+    if (!context.mounted) return;
+    if (!preview.canDelete) {
+      show(preview.forbidden ?? preview.blockers.join(' '));
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text("Delete ${member.name}'s account?"),
+        content: Text(
+          "This permanently deletes ${member.name}'s login, profile, XP, coins, tasks and reward "
+          "history. It can't be undone.",
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    String? password;
+    if (auth.hasPasswordLogin) {
+      password = await CurrentPasswordPrompt.show(
+        context,
+        message: "Enter your password to delete ${member.name}'s account.",
+      );
+      if (password == null) return;
+    }
+    try {
+      if (!await auth.confirmIdentity(password: password)) return;
+      await auth.deleteChildAccount(member.id);
+      messenger.showSnackBar(SnackBar(content: Text("${member.name}'s account was deleted.")));
+    } catch (e) {
+      show(e);
     }
   }
 
