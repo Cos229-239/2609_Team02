@@ -13,7 +13,8 @@ import 'auth_service.dart';
 ///
 /// The notifications themselves are sent by Cloud Functions
 /// (functions/src/index.ts) in response to Firestore changes:
-///   - children: new task available / assigned, due today, past due, approved
+///   - children: new task available / assigned, approved, and a 9 AM
+///     (household time) digest of what's due today / overdue
 ///   - parents:  task accepted (claimed), task completed, reward redeemed
 ///
 /// This service only has to:
@@ -43,9 +44,13 @@ class NotificationService {
   final FirebaseMessaging _messaging;
   final FirebaseFirestore _firestore;
 
-  /// The user whose token is currently registered from this device.
+  /// The user this device is being (or has been) registered for. Changes as
+  /// soon as auth changes, so an in-flight registration can tell it is stale.
   String? _registeredUid;
+
+  /// The FCM token saved in Firestore, and the user it was saved under.
   String? _token;
+  String? _tokenUid;
 
   final List<StreamSubscription<dynamic>> _subs = [];
 
@@ -57,10 +62,7 @@ class NotificationService {
     _subs
       ..add(FirebaseMessaging.onMessage.listen(_showForegroundBanner))
       ..add(FirebaseMessaging.onMessageOpenedApp.listen(_openFromNotification))
-      ..add(_messaging.onTokenRefresh.listen((token) {
-        _token = token;
-        unawaited(_saveToken(token));
-      }));
+      ..add(_messaging.onTokenRefresh.listen((token) => unawaited(_onTokenRefresh(token))));
 
     // App was launched by tapping a notification while it was terminated.
     try {
@@ -137,8 +139,20 @@ class NotificationService {
         debugPrint('NotificationService: getToken returned null');
         return false;
       }
+
+      // The permission prompt and APNs wait above can take a while. If
+      // someone logged out (or another user logged in) meanwhile, this
+      // registration is stale: saving now would attach this device to the
+      // wrong account.
+      if (!_isCurrent(user.id)) {
+        debugPrint('NotificationService: auth changed during registration for ${user.id}; skipped');
+        return false;
+      }
+
+      // Recorded before the write so a logout racing it still deletes it.
       _token = token;
-      await _saveToken(token);
+      _tokenUid = user.id;
+      await _saveToken(user.id, token);
       debugPrint('NotificationService: registered device for ${user.id}');
       return true;
     } catch (e) {
@@ -147,27 +161,60 @@ class NotificationService {
     }
   }
 
-  Future<void> _saveToken(String token) async {
-    final uid = _auth.currentUser?.id;
-    if (uid == null) return;
-    await _firestore.collection('users').doc(uid).collection('fcmTokens').doc(token).set({
-      'platform': defaultTargetPlatform.name,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+  /// True while [uid] is both signed in and the user being registered.
+  bool _isCurrent(String uid) => _registeredUid == uid && _auth.currentUser?.id == uid;
+
+  DocumentReference<Map<String, dynamic>> _tokenDoc(String uid, String token) =>
+      _firestore.collection('users').doc(uid).collection('fcmTokens').doc(token);
+
+  Future<void> _saveToken(String uid, String token) => _tokenDoc(uid, token).set({
+        'platform': defaultTargetPlatform.name,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+  /// FCM rotated this device's token: move the registration to the new one,
+  /// for the user it was saved under (never whoever happens to be signed in
+  /// — and nobody, if this device was never registered or has logged out).
+  Future<void> _onTokenRefresh(String token) async {
+    final uid = _tokenUid;
+    final old = _token;
+    if (uid == null || !_isCurrent(uid) || token == old) return;
+    _token = token;
+    try {
+      await _saveToken(uid, token);
+      if (old != null) await _tokenDoc(uid, old).delete();
+    } catch (e) {
+      debugPrint('NotificationService: saving refreshed token failed: $e');
+    }
   }
 
   /// Removes this device's token so it stops receiving the signed-in user's
   /// notifications. Registered as an AuthService before-logout hook.
+  ///
+  /// Never throws: logout must go ahead even when offline, and the FCM token
+  /// is invalidated regardless, so a Firestore record we couldn't delete
+  /// points at a dead token that the server prunes on its next send.
   Future<void> unregisterDevice() async {
-    final uid = _auth.currentUser?.id;
-    final token = _token ?? await _messaging.getToken().catchError((_) => null);
-    if (uid != null && token != null) {
-      await _firestore.collection('users').doc(uid).collection('fcmTokens').doc(token).delete();
-    }
+    final uid = _tokenUid ?? _auth.currentUser?.id;
+    final known = _token;
     _token = null;
+    _tokenUid = null;
     _registeredUid = null;
-    // Invalidate the token itself too, in case the Firestore delete failed.
-    await _messaging.deleteToken().catchError((_) {});
+
+    try {
+      // Not registered this session (e.g. push was off at startup): there may
+      // still be a record from an earlier one under this device's token.
+      final token = known ?? await _messaging.getToken();
+      if (uid != null && token != null) await _tokenDoc(uid, token).delete();
+    } catch (e) {
+      debugPrint('NotificationService: removing token from Firestore failed: $e');
+    } finally {
+      try {
+        await _messaging.deleteToken();
+      } catch (e) {
+        debugPrint('NotificationService: deleteToken failed: $e');
+      }
+    }
   }
 
   // --- Display & navigation ---------------------------------------------------
@@ -231,6 +278,9 @@ class NotificationService {
       // A new pool task: the child's Tasks tab is where it can be claimed.
       // (AppRoutes.family is the 2nd tab: "Family" for parents, "Tasks" for children.)
       case 'task_available':
+        return const NotificationRoute(AppRoutes.family, replaceStack: true);
+      // Morning summary of several tasks: the child's Tasks tab lists them all.
+      case 'daily_digest':
         return const NotificationRoute(AppRoutes.family, replaceStack: true);
       // Parents review redemptions on the Family tab.
       case 'reward_redeemed':

@@ -6,6 +6,7 @@ class Household {
     required this.name,
     required this.memberIds,
     this.inviteCode,
+    this.timezone,
   });
 
   final String id;
@@ -16,6 +17,10 @@ class Household {
   /// they can join this household from the register screen.
   final String? inviteCode;
 
+  /// IANA time zone (e.g. "America/Chicago"). Reminders and repeating tasks
+  /// roll over at 9 AM in this zone. Set from a member's device.
+  final String? timezone;
+
   factory Household.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? const {};
     return Household(
@@ -23,6 +28,7 @@ class Household {
       name: data['name'] as String? ?? '',
       memberIds: List<String>.from(data['memberIds'] as List? ?? const []),
       inviteCode: data['inviteCode'] as String?,
+      timezone: data['timezone'] as String?,
     );
   }
 
@@ -31,6 +37,7 @@ class Household {
       'name': name,
       'memberIds': memberIds,
       'inviteCode': inviteCode,
+      'timezone': timezone,
     };
   }
 }

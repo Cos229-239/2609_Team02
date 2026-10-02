@@ -7,21 +7,33 @@ import '../models/household.dart';
 import '../models/redemption.dart';
 import '../models/reward.dart';
 import '../models/task.dart';
+import '../models/task_schedule.dart';
 import '../models/user.dart';
+import 'time_zone_service.dart';
 
 /// Firestore-backed household data: family members, tasks, rewards and
 /// redemptions, kept in sync via live listeners.
 class DatabaseService extends ChangeNotifier {
-  DatabaseService({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  DatabaseService({
+    FirebaseFirestore? firestore,
+    Future<String?> Function()? deviceTimeZone,
+  }) : _firestore = firestore ?? FirebaseFirestore.instance,
+       _deviceTimeZone = deviceTimeZone ?? TimeZoneService.localTimeZone;
 
   final FirebaseFirestore _firestore;
+  final Future<String?> Function() _deviceTimeZone;
+
+  /// Household we've already tried to fill in a missing time zone for.
+  String? _timeZoneBackfilledFor;
 
   String? _householdId;
 
   Household? household;
   List<AppUser> familyMembers = [];
   List<TaskModel> tasks = [];
+
+  /// Repeating tasks (the rules; their occurrences are in [tasks]).
+  List<TaskSchedule> schedules = [];
   List<Reward> availableRewards = [];
 
   /// Every redemption ever recorded for this household, newest first.
@@ -30,6 +42,7 @@ class DatabaseService extends ChangeNotifier {
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _householdSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _membersSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _tasksSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _schedulesSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _rewardsSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _redemptionsSub;
 
@@ -41,12 +54,14 @@ class DatabaseService extends ChangeNotifier {
     unawaited(_householdSub?.cancel());
     unawaited(_membersSub?.cancel());
     unawaited(_tasksSub?.cancel());
+    unawaited(_schedulesSub?.cancel());
     unawaited(_rewardsSub?.cancel());
     unawaited(_redemptionsSub?.cancel());
 
     household = null;
     familyMembers = [];
     tasks = [];
+    schedules = [];
     availableRewards = [];
     redemptions = [];
     notifyListeners();
@@ -58,6 +73,8 @@ class DatabaseService extends ChangeNotifier {
     _householdSub = householdRef.snapshots().listen((snap) {
       household = snap.exists ? Household.fromFirestore(snap) : null;
       notifyListeners();
+      final h = household;
+      if (h != null && h.timezone == null) unawaited(_backfillTimeZone(h.id));
     });
 
     _membersSub = _firestore
@@ -71,6 +88,12 @@ class DatabaseService extends ChangeNotifier {
 
     _tasksSub = householdRef.collection('tasks').snapshots().listen((snap) {
       tasks = snap.docs.map(TaskModel.fromFirestore).toList();
+      notifyListeners();
+    });
+
+    _schedulesSub = householdRef.collection('taskSchedules').snapshots().listen((snap) {
+      schedules = snap.docs.map(TaskSchedule.fromFirestore).whereType<TaskSchedule>().toList()
+        ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
       notifyListeners();
     });
 
@@ -95,9 +118,24 @@ class DatabaseService extends ChangeNotifier {
     _householdSub?.cancel();
     _membersSub?.cancel();
     _tasksSub?.cancel();
+    _schedulesSub?.cancel();
     _rewardsSub?.cancel();
     _redemptionsSub?.cancel();
     super.dispose();
+  }
+
+  /// Households created before time zones existed get this device's zone
+  /// (once per binding), which starts their 9 AM reminders.
+  Future<void> _backfillTimeZone(String householdId) async {
+    if (_timeZoneBackfilledFor == householdId) return;
+    _timeZoneBackfilledFor = householdId;
+    final tz = await _deviceTimeZone();
+    if (tz == null || householdId != _householdId) return;
+    try {
+      await _firestore.collection('households').doc(householdId).update({'timezone': tz});
+    } catch (e) {
+      debugPrint('DatabaseService: could not set household time zone: $e');
+    }
   }
 
   // --- Queries ---------------------------------------------------------
@@ -120,9 +158,10 @@ class DatabaseService extends ChangeNotifier {
     return null;
   }
 
-  /// Tasks that aren't archived: see [TaskModel.isArchived].
+  /// Tasks that aren't archived ([TaskModel.isArchived]) and aren't a
+  /// repeating task's not-yet-due occurrence ([TaskModel.isUpcoming]).
   List<TaskModel> get activeTasks =>
-      tasks.where((t) => !t.isArchived).toList(growable: false);
+      tasks.where((t) => !t.isArchived && !t.isUpcoming).toList(growable: false);
 
   /// Manually archived or aged-out tasks.
   List<TaskModel> get archivedTasks =>
@@ -173,6 +212,36 @@ class DatabaseService extends ChangeNotifier {
   /// Overwrites every editable field of an existing task.
   Future<void> updateTask(String taskId, TaskModel task) async {
     await _tasksCollection.doc(taskId).update(task.toFirestore());
+  }
+
+  // --- Mutations: repeating tasks ----------------------------------------
+
+  CollectionReference<Map<String, dynamic>> get _schedulesCollection =>
+      _firestore.collection('households').doc(_householdId).collection('taskSchedules');
+
+  /// Creates a repeating task. The server generates its occurrences.
+  Future<String> addSchedule(TaskSchedule schedule) async {
+    final ref = await _schedulesCollection.add(schedule.toFirestore());
+    return ref.id;
+  }
+
+  /// Edits a repeating task. Occurrences after today that haven't been
+  /// started are regenerated by the server; today's is left alone.
+  Future<void> updateSchedule(String scheduleId, TaskSchedule schedule) async {
+    await _schedulesCollection.doc(scheduleId).update(schedule.toFirestore());
+  }
+
+  /// Stops a repeating task. Already-created occurrences up to today stay.
+  Future<void> deleteSchedule(String scheduleId) async {
+    await _schedulesCollection.doc(scheduleId).delete();
+  }
+
+  TaskSchedule? scheduleById(String? id) {
+    if (id == null) return null;
+    for (final s in schedules) {
+      if (s.id == id) return s;
+    }
+    return null;
   }
 
   /// Permanently removes a task (parent-only action from the edit screen).

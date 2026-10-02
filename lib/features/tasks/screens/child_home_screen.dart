@@ -344,7 +344,7 @@ class _ChildTaskRow extends StatelessWidget {
                 Text(task.title, style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600)),
                 Text(
-                  '${task.isRecurring ? 'Daily Task' : 'One-time Task'} • ${_dueLabel(task.dueDate)}',
+                  '${task.repeatLabel} • ${_dueLabel(task.dueDate)}',
                   style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
                 ),
               ],

@@ -12,6 +12,8 @@ export interface MessageContext {
   rewardTitle?: string;
   rewardIcon?: string;
   coinCost?: number;
+  /** Morning digest contents (titles of each group). */
+  digest?: { due: string[]; overdue: string[]; pool: string[] };
 }
 
 export interface MessageContent {
@@ -26,6 +28,16 @@ function rewardSuffix(ctx: MessageContext): string {
   if (ctx.rewardXp) parts.push(`+${ctx.rewardXp} XP`);
   if (ctx.coinReward) parts.push(`+${ctx.coinReward} coins`);
   return parts.length ? ` (${parts.join(', ')})` : '';
+}
+
+const countOf = (n: number) => `${n} quest${n === 1 ? '' : 's'}`;
+
+/** "A, B and 2 more" from task titles (blank titles skipped). */
+function listTitles(titles: string[], max = 2): string {
+  const t = titles.map((x) => x.trim()).filter(Boolean);
+  if (t.length === 0) return 'check your list';
+  if (t.length <= max) return t.join(' and ');
+  return `${t.slice(0, max).join(', ')} and ${t.length - max} more`;
 }
 
 /** Kid-friendly (child) / at-a-glance (parent) notification copy. */
@@ -56,6 +68,17 @@ export function buildMessage(kind: NotificationKind, ctx: MessageContext): Messa
         title: 'Quest overdue ⌛',
         body: `${task} is past due — finish it to still earn your rewards.`,
       };
+    case 'daily_digest': {
+      const d = ctx.digest ?? { due: [], overdue: [], pool: [] };
+      const parts: string[] = [];
+      if (d.due.length) parts.push(`${countOf(d.due.length)} due today: ${listTitles(d.due)}`);
+      if (d.overdue.length) parts.push(`${d.overdue.length} overdue from yesterday`);
+      if (d.pool.length) parts.push(`${d.pool.length} up for grabs`);
+      return {
+        title: "Today's quests 🗺️",
+        body: parts.length ? `${parts.join(' · ')}.` : 'Check your quests for today.',
+      };
+    }
     case 'task_approved': {
       const earned: string[] = [];
       if (ctx.rewardXp) earned.push(`+${ctx.rewardXp} XP`);

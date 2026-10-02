@@ -7,7 +7,9 @@ import 'package:flutter/foundation.dart';
 import '../constants/app_constants.dart';
 import '../models/reward.dart';
 import '../models/task.dart';
+import '../models/task_schedule.dart';
 import '../models/user.dart';
+import 'time_zone_service.dart';
 
 /// Handles sign-in/sign-up/session state against Firebase Auth, with each
 /// user's profile (name, role, xp, householdId, ...) stored in Firestore
@@ -143,10 +145,13 @@ class AuthService extends ChangeNotifier {
   Future<String> _createHousehold({required String name}) async {
     final householdRef = _firestore.collection('households').doc();
     final inviteCode = await _generateUniqueInviteCode();
+    final timezone = await TimeZoneService.localTimeZone();
     await householdRef.set({
       'name': "$name's Family",
       'inviteCode': inviteCode,
       'memberIds': [_auth.currentUser!.uid],
+      // Drives the 9 AM reminders / repeating tasks (see Household.timezone).
+      if (timezone != null) 'timezone': timezone,
       'createdAt': FieldValue.serverTimestamp(),
     });
 
@@ -155,9 +160,14 @@ class AuthService extends ChangeNotifier {
     for (final reward in Reward.defaultCatalog) {
       batch.set(rewardsRef.doc(), reward.toFirestore());
     }
+    final now = DateTime.now();
     final tasksRef = householdRef.collection('tasks');
-    for (final task in TaskModel.defaultAvailableCatalog(DateTime.now())) {
+    for (final task in TaskModel.defaultAvailableCatalog(now)) {
       batch.set(tasksRef.doc(), task.toFirestore());
+    }
+    final schedulesRef = householdRef.collection('taskSchedules');
+    for (final schedule in TaskSchedule.defaultCatalog(now)) {
+      batch.set(schedulesRef.doc(), schedule.toFirestore());
     }
     await batch.commit();
 

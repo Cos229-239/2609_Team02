@@ -38,6 +38,7 @@ class AppRoutes {
   static const String taskCreate = '/tasks/create';
   static const String taskCompletion = '/tasks/completion';
   static const String taskEdit = '/tasks/edit';
+  static const String scheduleEdit = '/tasks/repeating/edit';
 
   // Settings sub-screens, pushed from the Settings tab.
   static const String accountSettings = '/settings/account';
@@ -91,6 +92,9 @@ class AppRoutes {
       case taskEdit:
         final taskId = args as String;
         return _page(CreateTaskScreen(taskId: taskId), settings);
+      case scheduleEdit:
+        final scheduleId = args as String;
+        return _page(CreateTaskScreen(scheduleId: scheduleId), settings);
 
       case accountSettings:
         return _page(const AccountSettingsScreen(), settings);

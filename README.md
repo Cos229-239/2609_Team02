@@ -14,7 +14,8 @@ Parent assigns → Child completes → Parent approves → Child earns XP + coin
 
 - Create a household on sign-up and invite kids with a household invite code
 - Create, edit, reassign, archive and delete tasks — assigned to a child or left in a shared pool for any child to claim
-- Pick a task icon and get an auto-suggested description; set XP and coin rewards, due dates and recurrence
+- Pick a task icon and get an auto-suggested description; set XP and coin rewards and due dates
+- Repeating tasks: every day, every other day, weekly or every other week on chosen weekdays, or monthly — each day's task is completed and approved on its own
 - Review tasks grouped by status (pending, awaiting approval, approved) and approve completed work
 - Manage the reward store (screen time, activities, treats, badges, …) and see redemptions
 - Family and Progress tabs to track each child
@@ -29,7 +30,7 @@ Parent assigns → Child completes → Parent approves → Child earns XP + coin
 
 - Email/password auth with in-app password reset and email change via deep links (`famotive.org/__/auth/links`)
 - Account settings, avatar picker, notification settings, Help & Support
-- Push notifications (FCM) for new/assigned tasks, due-today and overdue reminders, completions, approvals and redemptions — see [functions/README.md](functions/README.md)
+- Push notifications (FCM) for new/assigned tasks, a 9 AM (family time zone) digest of what's due and overdue, completions, approvals and redemptions — see [functions/README.md](functions/README.md)
 
 ## Tech Stack
 
@@ -61,13 +62,22 @@ flutter pub get
 flutter run
 ```
 
-Firebase config (`lib/firebase_options.dart`, `android/app/google-services.json`, `ios/Runner/GoogleService-Info.plist`) is already in the repo. iOS dependencies are managed through Swift Package Manager (no CocoaPods).
+`lib/firebase_options.dart` is in the repo, but the native Firebase config files (`android/app/google-services.json` and `ios/Runner/GoogleService-Info.plist`) are gitignored. Generate them once per clone (needs access to the `famotive-8c858` Firebase project):
+
+```bash
+dart pub global activate flutterfire_cli
+firebase login
+flutterfire configure --project=famotive-8c858 --platforms=android,ios \
+  --ios-bundle-id=com.famotive --android-package-name=com.famotive --yes
+```
+
+If that changes the app IDs in `lib/firebase_options.dart` or `firebase.json`, don't commit it — it registered new Firebase apps instead of using the existing ones. iOS dependencies are managed through Swift Package Manager (no CocoaPods).
 
 ### Run tests
 
 ```bash
 flutter test                      # app unit/widget tests
-cd functions && npm install && npm test   # Cloud Functions rule tests
+cd functions && npm install && npm test   # Cloud Functions unit tests (notification rules, repeat/time-zone math)
 ```
 
 ### Deploy backend
@@ -106,8 +116,8 @@ Push notifications need the Blaze plan and an APNs key for iOS — the one-time 
 │       ├── screens/              # route_not_found_screen.dart
 │       └── widgets/              # app_button, app_card, loading_indicator,
 │                                 # number_stepper
-├── functions/                    # Cloud Functions (push notifications)
-│   └── src/                      # index.ts, notifications/{plan,messages}.ts
+├── functions/                    # Cloud Functions (push notifications, repeating tasks)
+│   └── src/                      # index.ts, notifications/{plan,messages,recurrence}.ts
 ├── test/                         # widget, model and database service tests
 ├── android/  ios/
 ├── Documents/                    # team onboarding guides (Flutter, Git, Trello)
