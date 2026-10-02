@@ -13,6 +13,14 @@
 	     connected as this Firebase project's Hosting custom domain with
 	     this app's Apple Team ID registered, or iOS will never verify the
 	     domain and will fall back to opening Safari instead. -->
+	<!-- Push notifications (Firebase Cloud Messaging via APNs). Also add
+	     the "Push Notifications" capability in Xcode (Signing &
+	     Capabilities) so the provisioning profile includes it, and upload
+	     an APNs auth key in the Firebase console — see
+	     functions/README.md. Xcode switches this to "production" when
+	     archiving for TestFlight/App Store. -->
+	<key>aps-environment</key>
+	<string>development</string>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>applinks:famotive.org</string>

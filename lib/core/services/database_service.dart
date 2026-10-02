@@ -222,7 +222,10 @@ class DatabaseService extends ChangeNotifier {
       // Prevent an already-claimed task from being reassigned to another child.
       if (task.assignedToUserId != null) return;
 
-      transaction.update(taskRef, {'assignedToUserId': childId});
+      // `claimedBy` lets the push-notification Cloud Function tell a child
+      // claiming a task ("accepted", notify parents) apart from a parent
+      // assigning it (notify the child).
+      transaction.update(taskRef, {'assignedToUserId': childId, 'claimedBy': childId});
     });
   }
 

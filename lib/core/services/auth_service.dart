@@ -22,6 +22,13 @@ class AuthService extends ChangeNotifier {
 
   AppUser? _currentUser;
 
+  /// Run (best-effort) while still signed in, right before [logout] signs
+  /// out — e.g. NotificationService removing this device's push token,
+  /// which Firestore rules only allow its signed-in owner to do.
+  final List<Future<void> Function()> _beforeLogoutHooks = [];
+
+  void addBeforeLogoutHook(Future<void> Function() hook) => _beforeLogoutHooks.add(hook);
+
   AppUser? get currentUser => _currentUser;
   bool get isLoggedIn => _currentUser != null;
 
@@ -180,6 +187,13 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    for (final hook in List.of(_beforeLogoutHooks)) {
+      try {
+        await hook();
+      } catch (e) {
+        debugPrint('Before-logout hook failed: $e');
+      }
+    }
     await _auth.signOut();
     _currentUser = null;
     notifyListeners();
@@ -207,6 +221,8 @@ class AuthService extends ChangeNotifier {
       xp: user.xp,
       coins: user.coins,
       householdId: user.householdId,
+      pinnedRewardId: user.pinnedRewardId,
+      pushNotificationsEnabled: user.pushNotificationsEnabled,
     );
 
     await _firestore.collection('users').doc(user.id).update({
@@ -217,6 +233,18 @@ class AuthService extends ChangeNotifier {
     });
 
     _currentUser = updated;
+    notifyListeners();
+  }
+
+  /// Turns push notifications on/off for the signed-in user (all devices).
+  Future<void> setPushNotificationsEnabled(bool enabled) async {
+    final user = _currentUser;
+    if (user == null) throw Exception('Not signed in.');
+
+    await _firestore.collection('users').doc(user.id).update({
+      'pushNotificationsEnabled': enabled,
+    });
+    _currentUser = user.copyWith(pushNotificationsEnabled: enabled);
     notifyListeners();
   }
 

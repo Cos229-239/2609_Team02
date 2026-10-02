@@ -2,6 +2,7 @@ rules_version = '2';
 
 // Data model:
 //   users/{uid}                       - profile: name, email, role, xp, coins, householdId, ...
+//   users/{uid}/fcmTokens/{token}     - push-notification device tokens (owner only)
 //   households/{householdId}          - name, inviteCode, memberIds
 //   households/{householdId}/tasks/{taskId}
 //   households/{householdId}/rewards/{rewardId}
@@ -37,6 +38,13 @@ service cloud.firestore {
       allow update: if isSignedIn() &&
         (request.auth.uid == userId || isParentInSameHousehold(userId));
       allow delete: if false;
+
+      // Push-notification device tokens (one doc per device, id = FCM
+      // token). Private to their owner; Cloud Functions read them with
+      // admin privileges. See lib/core/services/notification_service.dart.
+      match /fcmTokens/{token} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
     }
 
     match /households/{householdId} {

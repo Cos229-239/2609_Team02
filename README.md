@@ -1,149 +1,125 @@
 # Famotive
 
-A Flutter mobile application designed to help families stay organized, connected, and motivated.
+> **Together. Support. Grow.**
+
+Famotive is a Flutter app for iOS and Android that turns household chores into quests. Parents create and assign tasks, kids complete them to earn XP and coins, parents approve the work, and kids spend their coins in a family reward store.
+
+```text
+Parent assigns → Child completes → Parent approves → Child earns XP + coins → Child redeems rewards
+```
+
+## Features
+
+**For parents**
+
+- Create a household on sign-up and invite kids with a household invite code
+- Create, edit, reassign, archive and delete tasks — assigned to a child or left in a shared pool for any child to claim
+- Pick a task icon and get an auto-suggested description; set XP and coin rewards, due dates and recurrence
+- Review tasks grouped by status (pending, awaiting approval, approved) and approve completed work
+- Manage the reward store (screen time, activities, treats, badges, …) and see redemptions
+- Family and Progress tabs to track each child
+
+**For kids**
+
+- Simplified Home / Tasks / Rewards experience
+- Claim tasks from the shared pool, mark tasks complete, and see what's awaiting approval
+- Earn XP (level up every 500 XP) and coins; pin a reward to work toward and redeem it
+
+**Account & app**
+
+- Email/password auth with in-app password reset and email change via deep links (`famotive.org/__/auth/links`)
+- Account settings, avatar picker, notification settings, Help & Support
+- Push notifications (FCM) for new/assigned tasks, due-today and overdue reminders, completions, approvals and redemptions — see [functions/README.md](functions/README.md)
+
+## Tech Stack
+
+| Layer | Tools |
+|---|---|
+| App | Flutter / Dart (SDK ^3.13), Material, `provider` for state |
+| Backend | Firebase Auth, Cloud Firestore (rules + indexes in repo), Firebase Cloud Messaging |
+| Server | Cloud Functions for Firebase (TypeScript, Node 22) in `functions/` |
+| Other | `app_links` (deep links), `url_launcher`, `intl` |
+| Testing | `flutter_test`, `fake_cloud_firestore`, `firebase_auth_mocks`, `node --test` |
+
+Firebase project: `famotive-8c858`.
 
 ## Getting Started
 
 ### Prerequisites
 
-Make sure you have the following installed:
+- [Flutter](https://docs.flutter.dev/get-started/install) (includes Dart)
+- Xcode (iOS) and/or Android Studio (Android)
+- VS Code (recommended) and Git
+- For backend work: Node 22 and the [Firebase CLI](https://firebase.google.com/docs/cli)
 
-- [Flutter](https://docs.flutter.dev/get-started/install)
-- Dart (included with Flutter)
-- Android Studio or Xcode (for Compiling Mobile App)
-- VSCode
-- Git
-
-### Setup
-
-Clone the repository:
+### Run the app
 
 ```bash
 git clone <repository-url>
-cd <repository>
-```
-
-Install dependencies:
-
-```bash
+cd 2609_Team02
 flutter pub get
-```
-
-Run the application:
-
-```bash
 flutter run
 ```
+
+Firebase config (`lib/firebase_options.dart`, `android/app/google-services.json`, `ios/Runner/GoogleService-Info.plist`) is already in the repo. iOS dependencies are managed through Swift Package Manager (no CocoaPods).
+
+### Run tests
+
+```bash
+flutter test                      # app unit/widget tests
+cd functions && npm install && npm test   # Cloud Functions rule tests
+```
+
+### Deploy backend
+
+```bash
+firebase deploy --only firestore:rules,firestore:indexes,functions
+```
+
+Push notifications need the Blaze plan and an APNs key for iOS — the one-time setup is in [functions/README.md](functions/README.md).
 
 ## Project Structure
 
 ```text
-Famotive/
-│
-├── android/
-├── ios/
-│
-├── assets/
-│   ├── images/
-│   ├── icons/
-│   └── fonts/
-│
+2609_Team02/
 ├── lib/
-│   │
 │   ├── main.dart
-│   │
-│   ├── app/
-│   │   ├── app.dart
-│   │   ├── routes.dart
-│   │   └── theme.dart
-│   │
+│   ├── firebase_options.dart
+│   ├── app/                      # app.dart, routes.dart, theme.dart
 │   ├── core/
-│   │   ├── config/
-│   │   │   └── app_config.dart
-│   │   │
-│   │   ├── constants/
-│   │   │   └── app_constants.dart
-│   │   │
-│   │   ├── models/
-│   │   │   ├── user.dart
-│   │   │   ├── household.dart
-│   │   │   ├── task.dart
-│   │   │   └── reward.dart
-│   │   │
-│   │   ├── services/
-│   │   │   ├── api_service.dart
-│   │   │   ├── auth_service.dart
-│   │   │   └── database_service.dart
-│   │   │
-│   │   └── utils/
-│   │       └── validators.dart
-│   │
+│   │   ├── constants/            # app_constants.dart, task_icons.dart
+│   │   ├── models/               # user, household, task, reward, redemption
+│   │   ├── services/             # auth, database (Firestore), notification,
+│   │   │                         # deep_link, description_suggester
+│   │   └── utils/                # validators.dart
 │   ├── features/
-│   │   │
-│   │   ├── auth/
-│   │   │   ├── screens/
-│   │   │   │   ├── login_screen.dart
-│   │   │   │   └── register_screen.dart
-│   │   │   └── widgets/
-│   │   │       └── auth_text_field.dart
-│   │   │
-│   │   ├── household/
-│   │   │   ├── screens/
-│   │   │   │   ├── family_screen.dart
-│   │   │   │   └── household_home_screen.dart
-│   │   │   ├── services/
-│   │   │   │   └── household_service.dart
-│   │   │   └── widgets/
-│   │   │       └── family_member_card.dart
-│   │   │
-│   │   ├── tasks/
-│   │   │   ├── screens/
-│   │   │   │   ├── task_list_screen.dart
-│   │   │   │   ├── task_detail_screen.dart
-│   │   │   │   ├── create_task_screen.dart
-│   │   │   │   └── task_completion_screen.dart
-│   │   │   ├── services/
-│   │   │   │   └── task_service.dart
-│   │   │   └── widgets/
-│   │   │       └── task_tile.dart
-│   │   │
-│   │   ├── rewards/
-│   │   │   ├── screens/
-│   │   │   │   ├── progress_screen.dart
-│   │   │   │   └── reward_choose_screen.dart
-│   │   │   ├── services/
-│   │   │   │   └── reward_service.dart
-│   │   │   └── widgets/
-│   │   │       └── reward_tile.dart
-│   │   │
-│   │   └── profile/
-│   │       ├── screens/
-│   │       │   └── profile_screen.dart
-│   │       └── widgets/
-│   │           └── profile_menu_tile.dart
-│   │
+│   │   ├── auth/                 # login, register, forgot/reset password,
+│   │   │                         # confirm email change
+│   │   ├── household/            # parent home, family screen, member cards
+│   │   ├── tasks/                # task list/detail/create/completion,
+│   │   │                         # child home/tasks/rewards screens, task_tile
+│   │   ├── rewards/              # progress screen, reward editor/progress tiles
+│   │   └── profile/              # settings, account & notification settings,
+│   │                             # avatar picker, password dialogs
 │   └── shared/
-│       ├── layouts/
-│       │   └── main_tab_shell.dart
-│       │
-│       └── widgets/
-│       │   ├── app_button.dart
-│       │   ├── app_card.dart
-│       │   └── loading_indicator.dart
-│
-├── test/
-│   ├── app_smoke_test.dart
-│   ├── core/
-│   └── features/
-│
-├── pubspec.yaml
-├── README.md
-└── .gitignore
+│       ├── layouts/              # main_tab_shell.dart (role-based bottom nav)
+│       ├── screens/              # route_not_found_screen.dart
+│       └── widgets/              # app_button, app_card, loading_indicator,
+│                                 # number_stepper
+├── functions/                    # Cloud Functions (push notifications)
+│   └── src/                      # index.ts, notifications/{plan,messages}.ts
+├── test/                         # widget, model and database service tests
+├── android/  ios/
+├── Documents/                    # team onboarding guides (Flutter, Git, Trello)
+├── firebase.json
+├── firestore.rules
+├── firestore.indexes.json
+└── pubspec.yaml
 ```
 
-## Development
+## Development Workflow
 
-Create a feature branch from `dev`:
+Branch from `dev`:
 
 ```bash
 git switch dev
@@ -151,7 +127,7 @@ git pull
 git switch -c feature/<feature-name>
 ```
 
-After completing your work, commit and push your branch:
+Commit, push, and open a pull request into `dev`:
 
 ```bash
 git add .
@@ -159,17 +135,15 @@ git commit -m "Add <feature>"
 git push -u origin feature/<feature-name>
 ```
 
-Then open a pull request into `dev`.
+Bug fixes should come with a regression test (see `test/` for examples).
 
-## Tech Stack
+## Docs
 
-- **Flutter**
-- **Dart**
-- **Firebase** — Authentication and backend services
-
-## What am I looking at?
-
-There is an onboarding guide located in [Documents/Flutter.md](Documents/Flutter.md)
+- [Documents/Flutter.md](Documents/Flutter.md) — Flutter onboarding for this codebase (layout, Provider, navigation, theming, recipes)
+- [Documents/Authentication_and_Tasks.md](Documents/Authentication_and_Tasks.md)
+- [Documents/GIT_01_Clone_and_Branch.md](Documents/GIT_01_Clone_and_Branch.md) and the other `GIT_*` guides
+- [Documents/Trello_Walkthrough.md](Documents/Trello_Walkthrough.md)
+- [functions/README.md](functions/README.md) — push notification setup, deploy and manual test checklist
 
 ## Team
 
