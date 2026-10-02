@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import { buildMessage } from './messages';
 import {
   planDigest,
+  planJoinRequested,
+  planMembersAdded,
   planMorning,
   planRedemptionCreated,
   planTaskCreated,
@@ -192,4 +194,29 @@ test('message copy mentions names, task and rewards', () => {
     const m = buildMessage(k, {});
     assert.ok(m.title.length > 0 && m.body.length > 0, k);
   }
+});
+
+// --- Household membership -------------------------------------------------------
+
+test('a join request notifies only the household admin', () => {
+  assert.deepEqual(planJoinRequested(PARENT, KID), [
+    { kind: 'join_requested', audience: { type: 'user', userId: PARENT }, excludeUserIds: [] },
+  ]);
+  assert.deepEqual(planJoinRequested(null, KID), []);
+  assert.deepEqual(planJoinRequested(KID, KID), []);
+});
+
+test('newly added members are welcomed, but not whoever added them', () => {
+  assert.deepEqual(planMembersAdded([PARENT], [PARENT, KID, KID2], PARENT), [
+    { kind: 'household_joined', audience: { type: 'users', userIds: [KID, KID2] }, excludeUserIds: [] },
+  ]);
+  assert.deepEqual(planMembersAdded([PARENT, KID], [PARENT], PARENT), []);
+  assert.deepEqual(planMembersAdded([PARENT], [PARENT], PARENT), []);
+});
+
+test('membership copy names the household and requester', () => {
+  const req = buildMessage('join_requested', { requesterName: 'Sam', householdName: 'The Smiths' });
+  assert.match(req.body, /Sam asked to join The Smiths/);
+  const joined = buildMessage('household_joined', { householdName: 'The Smiths' });
+  assert.match(joined.body, /The Smiths/);
 });

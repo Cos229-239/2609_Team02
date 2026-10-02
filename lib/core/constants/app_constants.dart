@@ -58,6 +58,15 @@ class AppConstants {
   static const int defaultTaskCoins = 10;
   static const int levelUpXpThreshold = 500;
 
-  // See `TaskModel.isAgedOut`.
-  static const int taskArchiveAfterDays = 60;
+  // Data retention (privacy): every task is deleted this many days after it
+  // was created — by the server's daily run, and hidden/swept by the app in
+  // the meantime. See `TaskModel.isAgedOut`.
+  static const int taskDeleteAfterDays = 60;
+
+  /// Older name for [taskDeleteAfterDays].
+  static const int taskArchiveAfterDays = taskDeleteAfterDays;
+
+  // Approved ("done") tasks stay in task lists this many days after they
+  // were approved, then drop out of view. See `TaskModel.isStaleDone`.
+  static const int doneTaskVisibleDays = 7;
 }

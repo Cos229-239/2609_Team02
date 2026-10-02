@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../app/routes.dart';
 import '../../../core/constants/task_icons.dart';
 import '../../../core/models/task.dart';
+import '../../../core/services/auth_service.dart';
 import '../../../core/services/database_service.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
@@ -30,6 +31,7 @@ class TaskDetailScreen extends StatelessWidget {
       return Scaffold(appBar: AppBar(), body: const Center(child: Text('Task not found.')));
     }
     final resolvedTask = task;
+    final isParent = context.watch<AuthService>().currentUser?.isParent ?? false;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Task Details')),
@@ -81,7 +83,16 @@ class TaskDetailScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 22),
-              if (task.status == TaskStatus.pending)
+              if (isParent && task.status == TaskStatus.pending)
+                AppButton(
+                  label: 'Edit Task',
+                  icon: Icons.edit_outlined,
+                  onPressed: () => Navigator.of(context)
+                      .pushReplacementNamed(AppRoutes.taskEdit, arguments: resolvedTask.id),
+                )
+              else if (!isParent && task.status == TaskStatus.completed)
+                const Center(child: Text('⏳ Waiting for a parent to approve'))
+              else if (task.status == TaskStatus.pending)
                 AppButton(
                   label: 'Mark as Complete',
                   variant: AppButtonVariant.success,

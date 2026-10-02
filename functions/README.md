@@ -55,6 +55,16 @@ one removes not-yet-started occurrences after today and regenerates.
 Generated occurrences don't send the "new quest" push — the morning digest
 covers them.
 
+## Households & membership
+
+- Membership is `households/{id}.memberIds`; a user can be in several households, and `users/{uid}.householdId` is only the one they're viewing. Recipients are always resolved from the household's `memberIds`, so a child in two households hears about tasks from both.
+- `notifyOnJoinRequested`: someone entered the invite code (`households/{id}/joinRequests/{uid}`) → push to the household admin (`ownerId`) only.
+- `notifyOnMembersAdded`: someone was added to `memberIds` (admin approved them, or a parent created a child account) → "You're in!" to the new member.
+
+## Data retention
+
+The morning run deletes the household's tasks whose `createdAt` is more than 60 days old (`TASK_RETENTION_DAYS`, kept in sync with `AppConstants.taskDeleteAfterDays`). The app also hides them and a parent's device sweeps them.
+
 ## Layout
 
 - `src/index.ts` — Firestore triggers, the household morning run, occurrence generation, FCM sending and dead-token cleanup.

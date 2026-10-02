@@ -28,12 +28,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _confirmPasswordController = TextEditingController();
   final _inviteCodeController = TextEditingController();
   UserRole _role = UserRole.parent;
+
+  /// Parents only: join an existing household (with its invite code)
+  /// instead of starting a new one.
+  bool _joinExisting = false;
   bool _isSubmitting = false;
+
+  bool get _usesInviteCode => _role == UserRole.child || _joinExisting;
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _inviteCodeController.dispose();
@@ -51,7 +58,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             password: _passwordController.text,
             role: _role,
             phoneNumber: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-            inviteCode: _role == UserRole.child ? _inviteCodeController.text.trim() : null,
+            inviteCode: _usesInviteCode ? _inviteCodeController.text.trim() : null,
           );
       if (!mounted) return;
       Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.home, (route) => false);
@@ -130,7 +137,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   selected: {_role},
                   onSelectionChanged: (selection) => setState(() => _role = selection.first),
                 ),
-                if (_role == UserRole.child) ...[
+                if (_role == UserRole.parent) ...[
+                  const SizedBox(height: 12),
+                  SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment(value: false, label: Text('Start a household'), icon: Icon(Icons.add_home_outlined)),
+                      ButtonSegment(value: true, label: Text('Join one'), icon: Icon(Icons.group_add_outlined)),
+                    ],
+                    selected: {_joinExisting},
+                    onSelectionChanged: (selection) => setState(() => _joinExisting = selection.first),
+                  ),
+                  if (!_joinExisting) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      "You'll be the household's admin: you approve anyone who asks to join.",
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+                    ),
+                  ],
+                ],
+                if (_usesInviteCode) ...[
                   const SizedBox(height: 12),
                   AuthTextField(
                     controller: _inviteCodeController,
@@ -141,7 +166,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Ask a parent in your household for their invite code.',
+                    "Ask a parent in your household for their invite code. The household's "
+                    'admin approves your request before you can see it.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
                   ),
                 ],

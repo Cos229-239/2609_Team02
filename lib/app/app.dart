@@ -46,7 +46,13 @@ class FamotiveApp extends StatelessWidget {
         Provider<NotificationService?>.value(value: notificationService),
         ChangeNotifierProxyProvider<AuthService, DatabaseService>(
           create: (_) => DatabaseService(),
-          update: (_, auth, db) => db!..bindHousehold(auth.currentUser?.householdId),
+          update: (_, auth, db) => db!
+            // Keep the active household valid (e.g. after being removed from
+            // one) and tidy up join requests once they're answered.
+            ..onActiveHouseholdMissing = ((id) => _quietly(auth.switchHousehold(id)))
+            ..onPendingRequestResolved = ((id, {required approved}) =>
+                _quietly(auth.forgetPendingHousehold(id, approved: approved)))
+            ..bindSession(auth.currentUser),
         ),
       ],
       child: MaterialApp(
@@ -64,4 +70,8 @@ class FamotiveApp extends StatelessWidget {
       ),
     );
   }
+}
+
+void _quietly(Future<void> future) {
+  future.catchError((Object e) => debugPrint('Household sync failed: $e'));
 }

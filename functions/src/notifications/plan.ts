@@ -15,12 +15,17 @@ export type NotificationKind =
   // To parents
   | 'task_accepted' // a child claimed a task from the pool
   | 'task_completed' // a child marked a task done (awaiting approval)
-  | 'reward_redeemed'; // a child redeemed a reward from the store
+  | 'reward_redeemed' // a child redeemed a reward from the store
+  // Household membership
+  | 'join_requested' // to the admin: someone entered the invite code
+  | 'household_joined'; // to the new member: the admin let them in
 
 export type Audience =
   | { type: 'user'; userId: string }
   | { type: 'children' }
-  | { type: 'parents' };
+  | { type: 'parents' }
+  /** Every member, regardless of role (used with explicit user lists). */
+  | { type: 'users'; userIds: string[] };
 
 export interface PlannedNotification {
   kind: NotificationKind;
@@ -97,6 +102,22 @@ export function planTaskUpdated(
   }
 
   return out;
+}
+
+/** Someone filed a join request: only the admin can act on it. */
+export function planJoinRequested(ownerId: string | null | undefined, requesterId: string): PlannedNotification[] {
+  if (!ownerId || ownerId === requesterId) return [];
+  return [{ kind: 'join_requested', audience: { type: 'user', userId: ownerId }, excludeUserIds: [] }];
+}
+
+/**
+ * memberIds changed: welcome whoever was added (by the admin approving
+ * them, or a parent creating a child account), except whoever did it.
+ */
+export function planMembersAdded(before: string[], after: string[], actorId?: string): PlannedNotification[] {
+  const added = after.filter((id) => !before.includes(id) && id !== actorId);
+  if (added.length === 0) return [];
+  return [{ kind: 'household_joined', audience: { type: 'users', userIds: added }, excludeUserIds: [] }];
 }
 
 /** A redemption document was created. */

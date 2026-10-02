@@ -7,6 +7,7 @@ import '../../../core/constants/task_icons.dart';
 import '../../../core/models/task.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/database_service.dart';
+import '../widgets/task_swipe.dart';
 
 enum _ChildTasksView { tasks, history }
 
@@ -59,7 +60,15 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
           view: _view,
           onChanged: (view) => setState(() => _view = view),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
+        Text(
+          _view == _ChildTasksView.tasks
+              ? 'Tip: swipe a task right to claim or complete it.'
+              : 'Tasks approved in the last ${AppConstants.doneTaskVisibleDays} days.',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+        ),
+        const SizedBox(height: 8),
         if (_view == _ChildTasksView.tasks) ...[
           _SectionHeader(
             icon: Icons.check_circle,
@@ -77,6 +86,7 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
             for (final task in activeTasks) ...[
               _TaskRow(
                 task: task,
+                childId: child.id,
                 trailing: ElevatedButton(
                   onPressed: () =>
                       context.read<DatabaseService>().completeTask(task.id),
@@ -109,6 +119,7 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
             for (final task in awaitingApproval) ...[
               _TaskRow(
                 task: task,
+                childId: child.id,
                 trailing: const _StatusPill(
                   label: 'Awaiting Approval',
                   color: Colors.orange,
@@ -134,6 +145,7 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
             for (final task in availableTasks) ...[
               _TaskRow(
                 task: task,
+                childId: child.id,
                 isAvailable: true,
                 trailing: ElevatedButton(
                   onPressed: () => context.read<DatabaseService>().claimTask(
@@ -316,15 +328,26 @@ class _TaskRow extends StatelessWidget {
   const _TaskRow({
     required this.task,
     required this.trailing,
+    this.childId,
     this.isAvailable = false,
   });
 
   final TaskModel task;
   final Widget trailing;
+
+  /// Enables swipe actions (claim / complete / undo) for this child.
+  final String? childId;
   final bool isAvailable;
 
   @override
   Widget build(BuildContext context) {
+    final id = childId;
+    final row = _buildRow(context);
+    if (id == null) return row;
+    return ChildTaskSwipe(task: task, childId: id, child: row);
+  }
+
+  Widget _buildRow(BuildContext context) {
     final theme = Theme.of(context);
 
     return Container(

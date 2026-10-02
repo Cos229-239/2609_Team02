@@ -77,6 +77,11 @@ class ProfileScreen extends StatelessWidget {
                 onTap: () => Navigator.of(context).pushNamed(AppRoutes.accountSettings),
               ),
               ProfileMenuTile(
+                icon: Icons.home_work_outlined,
+                label: 'Households',
+                onTap: () => Navigator.of(context).pushNamed(AppRoutes.households),
+              ),
+              ProfileMenuTile(
                 icon: Icons.notifications_none,
                 label: 'Notifications',
                 onTap: () => Navigator.of(context).pushNamed(AppRoutes.notificationSettings),

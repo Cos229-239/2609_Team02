@@ -7,10 +7,16 @@ import '../../../shared/widgets/app_card.dart';
 /// Reusable row showing one family member's avatar, name/role and XP:
 /// used on both the household home screen and the family screen.
 class FamilyMemberCard extends StatelessWidget {
-  const FamilyMemberCard({super.key, required this.user, this.onTap});
+  const FamilyMemberCard({super.key, required this.user, this.onTap, this.badge, this.trailing});
 
   final AppUser user;
   final VoidCallback? onTap;
+
+  /// Small label next to the name, e.g. "Admin" or "You".
+  final String? badge;
+
+  /// Extra control at the end of the row (e.g. a member-actions menu).
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -31,10 +37,31 @@ class FamilyMemberCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(user.name, style: theme.textTheme.titleMedium?.copyWith(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600
-                )),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(user.name, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleMedium?.copyWith(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600
+                      )),
+                    ),
+                    if (badge != null) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(badge!, style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.primary,
+                        )),
+                      ),
+                    ],
+                  ],
+                ),
                 const SizedBox(height: 2),
                 Text(
                   user.isParent ? 'Parent' : 'Age ${user.age ?? '-'}',
@@ -81,6 +108,7 @@ class FamilyMemberCard extends StatelessWidget {
               size: 26,
             ),
           ],
+          if (trailing != null) trailing!,
         ],
       ),
     );

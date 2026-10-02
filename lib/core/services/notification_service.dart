@@ -246,9 +246,23 @@ class NotificationService {
       );
   }
 
-  void _openFromNotification(RemoteMessage message) {
+  Future<void> _openFromNotification(RemoteMessage message) async {
     final route = routeFor(message.data);
     if (route == null) return;
+
+    // Notifications come from every household the user is in: show the one
+    // this is about first.
+    final householdId = message.data['householdId'] as String?;
+    if (householdId != null &&
+        householdId.isNotEmpty &&
+        _auth.isLoggedIn &&
+        _auth.currentUser?.householdId != householdId) {
+      try {
+        await _auth.switchHousehold(householdId);
+      } catch (e) {
+        debugPrint('NotificationService: could not switch household: $e');
+      }
+    }
 
     void navigate() {
       final navigator = _navigatorKey.currentState;
@@ -285,6 +299,12 @@ class NotificationService {
       // Parents review redemptions on the Family tab.
       case 'reward_redeemed':
         return const NotificationRoute(AppRoutes.family, replaceStack: true);
+      // Someone asked to join: the admin approves on the Family tab.
+      case 'join_requested':
+        return const NotificationRoute(AppRoutes.family, replaceStack: true);
+      // Let into a household.
+      case 'household_joined':
+        return const NotificationRoute(AppRoutes.home, replaceStack: true);
       case 'task_assigned':
       case 'task_due':
       case 'task_overdue':

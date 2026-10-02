@@ -12,18 +12,25 @@ Parent assigns → Child completes → Parent approves → Child earns XP + coin
 
 **For parents**
 
-- Create a household on sign-up and invite kids with a household invite code
+- Create a household on sign-up (you become its **admin**), or sign up and join another family's household with its invite code
+- Belong to several households (e.g. two homes) and switch between them from the app bar
+- Add a child account right from the Family tab — the login email is pre-filled as your email + the child's name (`you+ava@example.com`) for kids without an email
+- Invite other adults or existing kids with the invite code; the admin must **approve every join request** (scam protection)
+- Admin removes members and can hand the admin role to another parent; parents can remove children
 - Create, edit, reassign, archive and delete tasks — assigned to a child or left in a shared pool for any child to claim
 - Pick a task icon and get an auto-suggested description; set XP and coin rewards and due dates
 - Repeating tasks: every day, every other day, weekly or every other week on chosen weekdays, or monthly — each day's task is completed and approved on its own
 - Review tasks grouped by status (pending, awaiting approval, approved) and approve completed work
+- Swipe a task right to approve it (or archive it), left to delete it
+- Approved tasks stay visible for 7 days; every task is deleted 60 days after it was created (data privacy)
 - Manage the reward store (screen time, activities, treats, badges, …) and see redemptions
 - Family and Progress tabs to track each child
 
 **For kids**
 
 - Simplified Home / Tasks / Rewards experience
-- Claim tasks from the shared pool, mark tasks complete, and see what's awaiting approval
+- Claim tasks from the shared pool, mark tasks complete, and see what's awaiting approval — or just swipe a task right
+- XP and coins belong to the child's account, so they carry across every household the child is in
 - Earn XP (level up every 500 XP) and coins; pin a reward to work toward and redeem it
 
 **Account & app**
@@ -105,7 +112,9 @@ Push notifications need the Blaze plan and an APNs key for iOS — the one-time 
 │   ├── features/
 │   │   ├── auth/                 # login, register, forgot/reset password,
 │   │   │                         # confirm email change
-│   │   ├── household/            # parent home, family screen, member cards
+│   │   ├── household/            # parent home, family screen (members, join
+│   │   │                         # requests, add child), households screen,
+│   │   │                         # household switcher
 │   │   ├── tasks/                # task list/detail/create/completion,
 │   │   │                         # child home/tasks/rewards screens, task_tile
 │   │   ├── rewards/              # progress screen, reward editor/progress tiles

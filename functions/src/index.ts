@@ -11,6 +11,14 @@
  * `{scheduleId}_{YYYYMMDD}`), a day ahead, so each is completed and approved
  * on its own. Calendar math lives in ./notifications/recurrence.ts.
  *
+ * Households: membership is `households/{id}.memberIds` (a user can be in
+ * several). Notifications go to members of the household the change
+ * happened in. Join requests (`households/{id}/joinRequests/{uid}`) notify the
+ * household's admin; whoever gets added to memberIds is welcomed.
+ *
+ * Data retention: the morning run deletes a household's tasks once they're
+ * more than TASK_RETENTION_DAYS old.
+ *
  * Device tokens live at `users/{uid}/fcmTokens/{token}` (written by the
  * app's NotificationService). A user can opt out with
  * `users/{uid}.pushNotificationsEnabled = false` (Settings > Notifications).
@@ -27,6 +35,7 @@ import {
   onDocumentCreatedWithAuthContext,
   onDocumentUpdatedWithAuthContext,
   onDocumentWritten,
+  onDocumentWrittenWithAuthContext,
 } from 'firebase-functions/v2/firestore';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { logger } from 'firebase-functions';
@@ -43,6 +52,8 @@ import { getMessaging } from 'firebase-admin/messaging';
 import { buildMessage, type MessageContext } from './notifications/messages';
 import {
   planDigest,
+  planJoinRequested,
+  planMembersAdded,
   planMorning,
   planRedemptionCreated,
   planTaskCreated,
@@ -82,6 +93,9 @@ const ALREADY_EXISTS = 6;
 const REDEMPTION_PATH = 'households/{householdId}/redemptions/{redemptionId}';
 const HOUSEHOLD_PATH = 'households/{householdId}';
 const SCHEDULE_PATH = 'households/{householdId}/taskSchedules/{scheduleId}';
+const JOIN_REQUEST_PATH = 'households/{householdId}/joinRequests/{userId}';
+/** Tasks are deleted this many days after they were created (privacy). Keep in sync with AppConstants.taskDeleteAfterDays. */
+const TASK_RETENTION_DAYS = 60;
 /** Schedule fields only the server writes; changing them isn't an edit. */
 const SCHEDULE_SERVER_FIELDS = ['generatedThrough'];
 /** How far back the morning run looks for tasks (to archive missed occurrences). */
@@ -98,8 +112,16 @@ const STALE_TOKEN_CODES = new Set([
 interface UserDoc {
   name?: string;
   role?: string;
+  /** The household the user is currently viewing; membership is the household's memberIds. */
   householdId?: string | null;
   pushNotificationsEnabled?: boolean;
+}
+
+/** A household's member ids (empty if it doesn't exist). */
+async function householdMemberIds(householdId: string): Promise<string[]> {
+  const snap = await db.collection('households').doc(householdId).get();
+  const ids = snap.data()?.memberIds;
+  return Array.isArray(ids) ? ids.filter((x): x is string => typeof x === 'string') : [];
 }
 
 function toTaskData(data: DocumentData | undefined): TaskData {
@@ -147,27 +169,25 @@ async function resolveRecipients(
   excludeUserIds: string[],
   users: UserCache,
 ): Promise<string[]> {
-  let ids: string[];
-
+  // Only ever notify members of the household the change happened in.
+  const members = await householdMemberIds(householdId);
+  let candidates: string[];
   if (audience.type === 'user') {
-    const user = await users.get(audience.userId);
-    // Only notify members of the household the change happened in.
-    ids = user && user.householdId === householdId && user.pushNotificationsEnabled !== false
-      ? [audience.userId]
-      : [];
+    candidates = [audience.userId];
+  } else if (audience.type === 'users') {
+    candidates = audience.userIds;
   } else {
-    const role = audience.type === 'parents' ? 'parent' : 'child';
-    const snap = await db
-      .collection('users')
-      .where('householdId', '==', householdId)
-      .where('role', '==', role)
-      .get();
-    ids = snap.docs
-      .filter((d) => (d.data() as UserDoc).pushNotificationsEnabled !== false)
-      .map((d) => d.id);
+    candidates = members;
   }
+  candidates = candidates.filter((id) => members.includes(id) && !excludeUserIds.includes(id));
 
-  return ids.filter((id) => !excludeUserIds.includes(id));
+  const wantedRole = audience.type === 'parents' ? 'parent' : audience.type === 'children' ? 'child' : null;
+  const docs = await Promise.all(candidates.map((id) => users.get(id)));
+  return candidates.filter((_, i) => {
+    const user = docs[i];
+    if (!user || user.pushNotificationsEnabled === false) return false;
+    return wantedRole === null || user.role === wantedRole;
+  });
 }
 
 /** Sends one notification to every registered device of [userIds]. */
@@ -376,6 +396,20 @@ function withoutServerFields(data: DocumentData | undefined): string {
   return stableJson(copy);
 }
 
+// --- Data retention ------------------------------------------------------------
+
+/** Deletes tasks created more than TASK_RETENTION_DAYS ago. Returns how many. */
+async function purgeOldTasks(householdRef: DocumentReference, now: Date): Promise<number> {
+  const cutoff = Timestamp.fromMillis(now.getTime() - TASK_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+  const old = await householdRef.collection('tasks').where('createdAt', '<', cutoff).get();
+  for (let i = 0; i < old.docs.length; i += 400) {
+    const batch = db.batch();
+    old.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+  return old.size;
+}
+
 // --- Morning run ---------------------------------------------------------------
 
 /**
@@ -395,6 +429,13 @@ async function runMorning(householdRef: DocumentReference, tz: string, now: Date
     } catch (err) {
       logger.error('Generating occurrences failed', { schedule: s.ref.path, err });
     }
+  }
+
+  try {
+    const purged = await purgeOldTasks(householdRef, now);
+    if (purged) logger.info('Deleted old tasks', { householdId, purged });
+  } catch (err) {
+    logger.error('Deleting old tasks failed', { householdId, err });
   }
 
   const snap = await householdRef
@@ -543,6 +584,39 @@ export const runHouseholdMornings = onSchedule({ schedule: 'every 30 minutes', t
       logger.error('Morning run failed', { householdId: doc.id, err });
     }
   }
+});
+
+/** Someone entered the invite code: tell the household's admin. */
+export const notifyOnJoinRequested = onDocumentCreatedWithAuthContext(JOIN_REQUEST_PATH, async (event) => {
+  const raw = event.data?.data();
+  if (!raw) return;
+  const household = (await db.collection('households').doc(event.params.householdId).get()).data();
+  const plans = planJoinRequested(household?.ownerId ?? null, event.params.userId);
+  if (plans.length === 0) return;
+  if (!(await claimEvent(event.id, 'notifyOnJoinRequested'))) return;
+
+  const ctx: MessageContext = { requesterName: raw.name, householdName: household?.name };
+  await dispatch(plans, event.params.householdId, ctx, { requesterId: event.params.userId }, new UserCache());
+});
+
+/**
+ * Someone was added to a household (the admin approved their join request,
+ * or a parent created a child account): welcome them. A brand-new
+ * household's creator isn't welcomed.
+ */
+export const notifyOnMembersAdded = onDocumentWrittenWithAuthContext(HOUSEHOLD_PATH, async (event) => {
+  const before = event.data?.before.data();
+  const after = event.data?.after.data();
+  if (!before || !after) return;
+
+  const plans = planMembersAdded(
+    Array.isArray(before.memberIds) ? before.memberIds : [],
+    Array.isArray(after.memberIds) ? after.memberIds : [],
+    event.authId,
+  );
+  if (plans.length === 0) return;
+  if (!(await claimEvent(event.id, 'notifyOnMembersAdded'))) return;
+  await dispatch(plans, event.params.householdId, { householdName: after.name }, {}, new UserCache());
 });
 
 /** Keeps `nextRunAt` in step with the household's time zone. */
