@@ -12,6 +12,9 @@ export interface MessageContext {
   rewardTitle?: string;
   rewardIcon?: string;
   coinCost?: number;
+  householdName?: string;
+  /** Who asked to join (join_requested). */
+  requesterName?: string;
   /** Morning digest contents (titles of each group). */
   digest?: { due: string[]; overdue: string[]; pool: string[] };
 }
@@ -99,6 +102,16 @@ export function buildMessage(kind: NotificationKind, ctx: MessageContext): Messa
       return {
         title: `${child} completed a task ✅`,
         body: `${task} is ready for your approval.`,
+      };
+    case 'join_requested':
+      return {
+        title: 'Someone wants to join 👋',
+        body: `${ctx.requesterName?.trim() || 'Someone'} asked to join ${ctx.householdName?.trim() || 'your household'}. Only approve people you know.`,
+      };
+    case 'household_joined':
+      return {
+        title: "You're in! 🏡",
+        body: `Welcome to ${ctx.householdName?.trim() || 'your new household'} — your quests are waiting.`,
       };
     case 'reward_redeemed': {
       const reward = `${ctx.rewardIcon ? `${ctx.rewardIcon} ` : ''}${ctx.rewardTitle?.trim() || 'a reward'}`;

@@ -5,6 +5,7 @@ import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
 import '../features/auth/screens/reset_password_screen.dart';
 import '../features/auth/screens/confirm_email_change_screen.dart';
+import '../features/household/screens/households_screen.dart';
 import '../features/profile/screens/account_settings_screen.dart';
 import '../features/profile/screens/notifications_settings_screen.dart';
 import '../features/tasks/screens/create_task_screen.dart';
@@ -43,6 +44,7 @@ class AppRoutes {
   // Settings sub-screens, pushed from the Settings tab.
   static const String accountSettings = '/settings/account';
   static const String notificationSettings = '/settings/notifications';
+  static const String households = '/settings/households';
 
  
   static const Set<String> _safeInitialRoutes = {
@@ -100,6 +102,8 @@ class AppRoutes {
         return _page(const AccountSettingsScreen(), settings);
       case notificationSettings:
         return _page(const NotificationsSettingsScreen(), settings);
+      case households:
+        return _page(const HouseholdsScreen(), settings);
 
       default:
         final (authMode, authOobCode) = _authActionFrom(settings.name);

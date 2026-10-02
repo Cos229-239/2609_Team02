@@ -6,6 +6,7 @@ import '../../../app/routes.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/services/database_service.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../widgets/task_swipe.dart';
 import '../widgets/task_tile.dart';
 
 /// "Children's view of tasks assigned": shows one child's tasks and
@@ -127,7 +128,8 @@ class TaskListScreen extends StatelessWidget {
                   ?.copyWith(fontSize: 20, fontWeight: FontWeight.w600),
             ),
             Text(
-              'Complete your tasks to earn more rewards!',
+              'Swipe right to approve, left to delete. Approved tasks show '
+              'for ${AppConstants.doneTaskVisibleDays} days.',
               style: Theme.of(context).textTheme.bodyMedium
                   ?.copyWith(color: Colors.grey.shade600, fontSize: 14),
             ),
@@ -170,11 +172,14 @@ class TaskListScreen extends StatelessWidget {
                     ),
 
               for (final task in assignedTasks) ...[
-                TaskTile(
+                ParentTaskSwipe(
                   task: task,
-                  onTap: () =>
-                      Navigator.of(context)
-                          .pushNamed(AppRoutes.taskDetail, arguments: task.id),
+                  child: TaskTile(
+                    task: task,
+                    onTap: () =>
+                        Navigator.of(context)
+                            .pushNamed(AppRoutes.taskDetail, arguments: task.id),
+                  ),
                 ),
                 const SizedBox(height: 8),
               ],
@@ -212,11 +217,14 @@ class TaskListScreen extends StatelessWidget {
                   ),
 
               for (final task in awaitingApprovalTasks) ...[
-                TaskTile(
+                ParentTaskSwipe(
                   task: task,
-                  onTap: () =>
-                      Navigator.of(context)
-                          .pushNamed(AppRoutes.taskDetail, arguments: task.id),
+                  child: TaskTile(
+                    task: task,
+                    onTap: () =>
+                        Navigator.of(context)
+                            .pushNamed(AppRoutes.taskDetail, arguments: task.id),
+                  ),
                 ),
                 const SizedBox(height: 8),
               ],
@@ -242,11 +250,14 @@ class TaskListScreen extends StatelessWidget {
 ),
               const SizedBox(height: 8),
               for (final task in approvedTasks) ...[
-                TaskTile(
+                ParentTaskSwipe(
                   task: task,
-                  onTap: () =>
-                      Navigator.of(context)
-                          .pushNamed(AppRoutes.taskDetail, arguments: task.id),
+                  child: TaskTile(
+                    task: task,
+                    onTap: () =>
+                        Navigator.of(context)
+                            .pushNamed(AppRoutes.taskDetail, arguments: task.id),
+                  ),
                 ),
                 const SizedBox(height: 8),
               ],

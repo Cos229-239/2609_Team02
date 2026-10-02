@@ -18,6 +18,8 @@ class AppUser {
     this.householdId,
     this.pinnedRewardId,
     this.pushNotificationsEnabled = true,
+    this.pendingHouseholdIds = const [],
+    this.createdByParentId,
   });
 
   final String id;
@@ -36,7 +38,18 @@ class AppUser {
   /// Spendable currency, earned from tasks and spent on rewards.
   final int coins;
 
+  /// The household this user is currently looking at (their "active"
+  /// household). Membership itself lives in `households/{id}.memberIds`,
+  /// and a user can belong to several; XP and coins stay on this profile,
+  /// so they carry across every household.
   final String? householdId;
+
+  /// Households this user asked to join with an invite code and that the
+  /// household's admin hasn't approved yet.
+  final List<String> pendingHouseholdIds;
+
+  /// Set on child accounts a parent created from inside the app.
+  final String? createdByParentId;
 
   /// Id of the reward this child has pinned as a goal, or null.
   final String? pinnedRewardId;
@@ -59,6 +72,9 @@ class AppUser {
     String? pinnedRewardId,
     bool clearPinnedRewardId = false,
     bool? pushNotificationsEnabled,
+    String? householdId,
+    bool clearHouseholdId = false,
+    List<String>? pendingHouseholdIds,
   }) {
     return AppUser(
       id: id,
@@ -70,9 +86,11 @@ class AppUser {
       age: age ?? this.age,
       xp: xp ?? this.xp,
       coins: coins ?? this.coins,
-      householdId: householdId,
+      householdId: clearHouseholdId ? null : (householdId ?? this.householdId),
       pinnedRewardId: clearPinnedRewardId ? null : (pinnedRewardId ?? this.pinnedRewardId),
       pushNotificationsEnabled: pushNotificationsEnabled ?? this.pushNotificationsEnabled,
+      pendingHouseholdIds: pendingHouseholdIds ?? this.pendingHouseholdIds,
+      createdByParentId: createdByParentId,
     );
   }
 
@@ -94,6 +112,8 @@ class AppUser {
       householdId: data['householdId'] as String?,
       pinnedRewardId: data['pinnedRewardId'] as String?,
       pushNotificationsEnabled: data['pushNotificationsEnabled'] as bool? ?? true,
+      pendingHouseholdIds: List<String>.from(data['pendingHouseholdIds'] as List? ?? const []),
+      createdByParentId: data['createdByParentId'] as String?,
     );
   }
 
@@ -110,6 +130,8 @@ class AppUser {
       'householdId': householdId,
       'pinnedRewardId': pinnedRewardId,
       'pushNotificationsEnabled': pushNotificationsEnabled,
+      'pendingHouseholdIds': pendingHouseholdIds,
+      if (createdByParentId != null) 'createdByParentId': createdByParentId,
     };
   }
 }

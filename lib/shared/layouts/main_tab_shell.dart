@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../../core/services/auth_service.dart';
 import '../../features/household/screens/family_screen.dart';
+import '../../features/household/screens/no_household_screen.dart';
+import '../../features/household/widgets/household_switcher.dart';
 import '../../features/household/screens/household_home_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/rewards/screens/progress_screen.dart';
@@ -78,6 +80,19 @@ class _MainTabShellState extends State<MainTabShell> {
     final isChild = currentUser?.isChild ?? false;
     final tabBodies = isChild ? _childTabBodies : _parentTabBodies;
 
+    // Not in any household yet (e.g. waiting for the admin to approve a
+    // join request): no tabs, just the "join / waiting" screen.
+    if (currentUser != null && currentUser.householdId == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Famotive', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+          centerTitle: true,
+          automaticallyImplyLeading: false,
+        ),
+        body: const SafeArea(child: NoHouseholdScreen()),
+      );
+    }
+
     return Scaffold(
       // This shell is always the root of a signed-in session (see
       // FamotiveApp.onGenerateInitialRoutes) and its 4 tabs are switched
@@ -87,10 +102,8 @@ class _MainTabShellState extends State<MainTabShell> {
       // if this shell is ever reached with something still under it on
       // the stack.
       appBar: AppBar(
-        title: const Text(
-          'Famotive',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-        ),
+        // Active household's name; tap to switch households.
+        title: const HouseholdSwitcher(),
         centerTitle: true,
         automaticallyImplyLeading: false,
       ),

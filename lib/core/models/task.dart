@@ -22,6 +22,8 @@ class TaskModel {
     this.dueDate,
     this.createdAt,
     this.archived = false,
+    this.completedAt,
+    this.approvedAt,
   });
 
   final String id;
@@ -51,8 +53,16 @@ class TaskModel {
   /// Local midnight of the due day.
   final DateTime? dueDate;
 
-  /// Used to auto-archive stale tasks: see [isArchived].
+  /// Tasks are deleted [AppConstants.taskDeleteAfterDays] after this: see
+  /// [isAgedOut].
   final DateTime? createdAt;
+
+  /// When the child marked it done (status went to `completed`).
+  final DateTime? completedAt;
+
+  /// When a parent approved it. Approved tasks drop out of task lists
+  /// [AppConstants.doneTaskVisibleDays] after this: see [isStaleDone].
+  final DateTime? approvedAt;
 
   /// Manually archived by a parent, independent of [isAgedOut].
   final bool archived;
@@ -78,12 +88,28 @@ class TaskModel {
   /// True when nobody has claimed this task yet.
   bool get isAvailable => assignedToUserId == null;
 
-  /// True once older than [AppConstants.taskArchiveAfterDays] days.
+  /// True once older than [AppConstants.taskDeleteAfterDays] days. Such
+  /// tasks are hidden everywhere and deleted (server daily run, plus a sweep
+  /// from a parent's device) for data privacy.
   bool get isAgedOut {
-    final created = createdAt;
+    final created = createdAt ?? dueDate;
     if (created == null) return false;
     return DateTime.now().difference(created).inDays >
-        AppConstants.taskArchiveAfterDays;
+        AppConstants.taskDeleteAfterDays;
+  }
+
+  /// Best guess at when this task was finished, for tasks saved before
+  /// [approvedAt]/[completedAt] existed.
+  DateTime? get finishedAt => approvedAt ?? completedAt ?? dueDate ?? createdAt;
+
+  /// An approved task finished more than [AppConstants.doneTaskVisibleDays]
+  /// days ago: no longer shown in task lists (XP/coins are kept, of course).
+  bool get isStaleDone {
+    if (status != TaskStatus.approved) return false;
+    final at = finishedAt;
+    if (at == null) return false;
+    return DateTime.now().difference(at) >
+        const Duration(days: AppConstants.doneTaskVisibleDays);
   }
 
   /// Archived manually or aged out: see [archived] and [isAgedOut].
@@ -102,6 +128,10 @@ class TaskModel {
     bool clearDueDate = false,
     DateTime? createdAt,
     bool? archived,
+    DateTime? completedAt,
+    bool clearCompletedAt = false,
+    DateTime? approvedAt,
+    bool clearApprovedAt = false,
   }) {
     return TaskModel(
       id: id,
@@ -119,6 +149,8 @@ class TaskModel {
       dueDate: clearDueDate ? null : (dueDate ?? this.dueDate),
       createdAt: createdAt ?? this.createdAt,
       archived: archived ?? this.archived,
+      completedAt: clearCompletedAt ? null : (completedAt ?? this.completedAt),
+      approvedAt: clearApprovedAt ? null : (approvedAt ?? this.approvedAt),
     );
   }
 
@@ -141,6 +173,8 @@ class TaskModel {
       dueDate: (data['dueDate'] as Timestamp?)?.toDate(),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
       archived: data['archived'] as bool? ?? false,
+      completedAt: (data['completedAt'] as Timestamp?)?.toDate(),
+      approvedAt: (data['approvedAt'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -158,6 +192,8 @@ class TaskModel {
       'dueDate': dueDate == null ? null : Timestamp.fromDate(dueDate!),
       'createdAt': createdAt == null ? null : Timestamp.fromDate(createdAt!),
       'archived': archived,
+      'completedAt': completedAt == null ? null : Timestamp.fromDate(completedAt!),
+      'approvedAt': approvedAt == null ? null : Timestamp.fromDate(approvedAt!),
     };
   }
 

@@ -8,6 +8,7 @@ import '../../../core/constants/task_icons.dart';
 import '../../../core/models/task.dart';
 import '../../../core/models/user.dart';
 import '../../../core/services/database_service.dart';
+import '../../tasks/widgets/task_swipe.dart';
 import '../../../shared/widgets/app_card.dart';
 
 /// Distinct from `null` (dialog dismissed without a choice).
@@ -132,8 +133,10 @@ children: [
         )),
         const SizedBox(height: 4),
         Text(
-          'Overdue/Pending tasks can be edited. Tasks already awaiting '
-          'approval, completed or archived get quick actions instead.',
+          'Tap a task to edit it. Swipe right to approve (or archive), '
+          'swipe left to delete. Completed tasks show for '
+          '${AppConstants.doneTaskVisibleDays} days; all tasks are deleted '
+          'after ${AppConstants.taskDeleteAfterDays} days.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
         ),
         const SizedBox(height: 12),
@@ -256,12 +259,15 @@ class _TaskSection extends StatelessWidget {
 
           for (final task in tasks) ...[
             const SizedBox(height:12),
-            _TaskProgressRow(
+            ParentTaskSwipe(
               task: task,
-              assignee: _assigneeFor(task),
-              db: db,
-              actions: actions,
-              archivedDisplay: archivedDisplay,
+              child: _TaskProgressRow(
+                task: task,
+                assignee: _assigneeFor(task),
+                db: db,
+                actions: actions,
+                archivedDisplay: archivedDisplay,
+              ),
             ),
             const SizedBox(height: 1),
           ],
