@@ -157,6 +157,15 @@ service cloud.firestore {
         allow read, write: if isMemberOf(householdId);
       }
 
+        // Cooperative household goals and their contribution records.
+        match /goals/{goalId} {
+          allow read, write: if isMemberOf(householdId);
+
+        match /contributions/{activityId} {
+          allow read, write: if isMemberOf(householdId);
+        }
+      }
+
       match /rewards/{rewardId} {
         allow read, write: if isMemberOf(householdId);
       }

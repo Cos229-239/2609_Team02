@@ -599,6 +599,29 @@ Parent role
 
 This prevents a parent who is not a member of a household from managing that household's goals.
 
+### Goal Progress Security Boundary
+
+Goal configuration and goal progress are separate security concerns.
+
+Goal creation and management should remain restricted to authenticated parent
+members of the household. Children may read applicable goals but should not be
+able to create or redefine goal configuration.
+
+Goal progress and contribution records are updated by `GoalService`. During
+PR1, Firestore rules enforce household isolation for these records using the
+existing `isMemberOf(householdId)` authorization model.
+
+These rules do not independently prove that a contribution originated from a
+legitimate Famotive activity. In particular, Firestore security rules alone do
+not verify that a contribution corresponds to an approved task or that its XP
+or coin amount matches the task that produced it.
+
+Authoritative task-to-goal activity generation will be addressed during PR2
+when approved task activity is integrated with `GoalService`. Stronger
+tamper-resistance may require moving activity-derived goal updates to trusted
+server-side processing rather than relying exclusively on client-originated
+Firestore writes.
+
 Goal progress should not rely on arbitrary client modification of `currentProgress`. Progress changes should correspond to persisted qualifying contributions.
 
 Exact Firestore write permissions may evolve as goal activity integration is implemented. The goal architecture should preserve the ability to move activity processing to trusted server-side logic in the future without changing the domain model.
