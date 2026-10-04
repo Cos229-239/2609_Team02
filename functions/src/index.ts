@@ -79,6 +79,8 @@ initializeApp();
 
 // In-app account deletion (callable). See ./account/delete.ts.
 export { deleteAccount } from './account/delete';
+// Task proof photo retention.
+export { cleanUpTaskPhotos, purgeExpiredTaskPhotos } from './photos/cleanup';
 setGlobalOptions({ maxInstances: 10 });
 
 const db = getFirestore();
@@ -344,6 +346,7 @@ async function generateOccurrences(
         icon: data.icon ?? null,
         rewardXp: data.rewardXp ?? null,
         coinReward: data.coinReward ?? null,
+        requiresPhoto: data.requiresPhoto === true,
         assignedToUserId: data.assignedToUserId ?? null,
         status: 'pending',
         archived: false,

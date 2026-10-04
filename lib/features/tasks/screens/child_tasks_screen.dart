@@ -8,6 +8,7 @@ import '../../../core/models/task.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/database_service.dart';
 import '../widgets/task_swipe.dart';
+import '../task_completion_flow.dart';
 
 enum _ChildTasksView { tasks, history }
 
@@ -88,8 +89,7 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
                 task: task,
                 childId: child.id,
                 trailing: ElevatedButton(
-                  onPressed: () =>
-                      context.read<DatabaseService>().completeTask(task.id),
+                  onPressed: () => startTaskCompletion(context, task),
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size(0, 28),
                     padding: const EdgeInsets.symmetric(

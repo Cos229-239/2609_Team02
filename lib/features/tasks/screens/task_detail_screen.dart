@@ -8,6 +8,8 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/services/database_service.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../task_completion_flow.dart';
+import '../widgets/task_proof_card.dart';
 
 /// Detail view for a single task, with the primary "mark complete" action
 /// that drives the sample flow into the celebration screen.
@@ -38,8 +40,7 @@ class TaskDetailScreen extends StatelessWidget {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: ListView(
             children: [
               AppCard(
                 child: Column(
@@ -79,9 +80,28 @@ class TaskDetailScreen extends StatelessWidget {
                         ],
                       ],
                     ),
+                    if (task.requiresPhoto) ...[
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Icon(Icons.photo_camera_outlined, size: 18, color: Colors.grey.shade700),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Photo proof required',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
+              if (isParent && task.proof != null && task.status != TaskStatus.pending) ...[
+                const SizedBox(height: 16),
+                TaskProofCard(proof: task.proof!),
+              ],
               const SizedBox(height: 22),
               if (isParent && task.status == TaskStatus.pending)
                 AppButton(
@@ -94,32 +114,56 @@ class TaskDetailScreen extends StatelessWidget {
                 const Center(child: Text('⏳ Waiting for a parent to approve'))
               else if (task.status == TaskStatus.pending)
                 AppButton(
-                  label: 'Mark as Complete',
+                  label: task.requiresPhoto ? 'Take Photo to Finish' : 'Mark as Complete',
                   variant: AppButtonVariant.success,
-                  icon: Icons.check_circle_outline,
-                  onPressed: () {
-                    context.read<DatabaseService>().completeTask(resolvedTask.id);
-                    Navigator.of(context)
-                        .pushReplacementNamed(AppRoutes.taskCompletion, arguments: resolvedTask.id);
-                  },
+                  icon: task.requiresPhoto ? Icons.photo_camera : Icons.check_circle_outline,
+                  onPressed: () => startTaskCompletion(context, resolvedTask, celebrate: true),
                 )
-              else if (task.status == TaskStatus.completed)
+              else if (task.status == TaskStatus.completed) ...[
                 AppButton(
-                  label: 'Approve Task',
-                onPressed: () async {
-                  await context.read<DatabaseService>().approveTask(resolvedTask.id);
-
-                if (context.mounted) {
-                Navigator.of(context).pop();
-                }
-                },
-                )
-              else
+                  label: task.proofNeedsReview ? 'Approve Anyway' : 'Approve Task',
+                  icon: Icons.check_circle_outline,
+                  variant: AppButtonVariant.success,
+                  onPressed: () async {
+                    await context.read<DatabaseService>().approveTask(resolvedTask.id);
+                    if (context.mounted) Navigator.of(context).pop();
+                  },
+                ),
+                const SizedBox(height: 8),
+                AppButton(
+                  label: 'Send Back to Redo',
+                  icon: Icons.undo,
+                  variant: AppButtonVariant.secondary,
+                  onPressed: () => _confirmSendBack(context, resolvedTask),
+                ),
+              ] else
                 const Center(child: Text('✅ Completed & approved')),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _confirmSendBack(BuildContext context, TaskModel task) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Send Back?'),
+        content: Text(
+          '"${task.title}" goes back to the to-do list'
+          '${task.proof != null ? ' and the photo is deleted' : ''}. No rewards are given.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('Send Back')),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    await context.read<DatabaseService>().uncompleteTask(task.id);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('"${task.title}" sent back to redo.')));
+    Navigator.of(context).pop();
   }
 }

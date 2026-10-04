@@ -1,0 +1,25 @@
+rules_version = '2';
+
+// Task proof photos: households/{householdId}/taskPhotos/{taskId}/{file}
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isMember(householdId) {
+      return request.auth != null &&
+        firestore.get(/databases/(default)/documents/households/$(householdId))
+          .data.memberIds.hasAny([request.auth.uid]);
+    }
+
+    match /households/{householdId}/taskPhotos/{taskId}/{fileName} {
+      allow read: if isMember(householdId);
+      allow create: if isMember(householdId) &&
+        request.resource.size < 8 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
+      allow update, delete: if false;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

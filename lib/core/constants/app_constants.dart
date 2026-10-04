@@ -83,4 +83,6 @@ class AppConstants {
   // Approved ("done") tasks stay in task lists this many days after they
   // were approved, then drop out of view. See `TaskModel.isStaleDone`.
   static const int doneTaskVisibleDays = 7;
+
+  static const int taskPhotoRetentionDays = 7;
 }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../app/theme.dart';
 import '../../../core/models/task.dart';
 import '../../../core/services/database_service.dart';
+import '../task_completion_flow.dart';
 
 /// One swipe direction's action: the colored background that's revealed
 /// and what happens when the swipe goes past the threshold.
@@ -188,13 +189,11 @@ class _SwipeBackground extends StatelessWidget {
     case TaskStatus.pending:
       return (
         startToEnd: TaskSwipeAction(
-          label: 'Complete',
-          icon: Icons.check_circle,
+          label: task.requiresPhoto ? 'Add Photo' : 'Complete',
+          icon: task.requiresPhoto ? Icons.photo_camera : Icons.check_circle,
           color: AppColors.growthGreen,
-          onTriggered: () async {
-            await db().completeTask(task.id);
-            return true;
-          },
+          // Photo-proof tasks open the camera flow instead.
+          onTriggered: () => startTaskCompletion(context, task),
         ),
         endToStart: null,
       );

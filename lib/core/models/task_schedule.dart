@@ -64,6 +64,7 @@ class TaskSchedule {
     this.assignedToUserId,
     this.weekdays = const [],
     this.createdAt,
+    this.requiresPhoto = false,
   });
 
   final String id;
@@ -85,6 +86,8 @@ class TaskSchedule {
   final DateTime startDate;
 
   final DateTime? createdAt;
+
+  final bool requiresPhoto;
 
   /// Weekdays it actually repeats on: weekly with none picked uses the start day.
   List<int> get effectiveWeekdays {
@@ -131,6 +134,7 @@ class TaskSchedule {
     TaskRepeat? repeat,
     List<int>? weekdays,
     DateTime? startDate,
+    bool? requiresPhoto,
   }) {
     return TaskSchedule(
       id: id,
@@ -144,6 +148,7 @@ class TaskSchedule {
       weekdays: weekdays ?? this.weekdays,
       startDate: startDate ?? this.startDate,
       createdAt: createdAt,
+      requiresPhoto: requiresPhoto ?? this.requiresPhoto,
     );
   }
 
@@ -165,6 +170,7 @@ class TaskSchedule {
       weekdays: List<int>.from((data['weekdays'] as List? ?? const []).whereType<int>()),
       startDate: start,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+      requiresPhoto: data['requiresPhoto'] as bool? ?? false,
     );
   }
 
@@ -181,6 +187,7 @@ class TaskSchedule {
       'weekdays': repeat.usesWeekdays ? effectiveWeekdays : <int>[],
       'startDate': dayKey(startDate),
       'createdAt': createdAt == null ? null : Timestamp.fromDate(createdAt!),
+      'requiresPhoto': requiresPhoto,
     };
   }
 

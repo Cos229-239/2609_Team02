@@ -3,11 +3,13 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
+import '../constants/app_constants.dart';
 import '../models/household.dart';
 import '../models/join_request.dart';
 import '../models/redemption.dart';
 import '../models/reward.dart';
 import '../models/task.dart';
+import '../models/task_proof.dart';
 import '../models/task_schedule.dart';
 import '../models/user.dart';
 import 'time_zone_service.dart';
@@ -383,6 +385,8 @@ class DatabaseService extends ChangeNotifier {
 
   // --- Queries ---------------------------------------------------------
 
+  String? get activeHouseholdId => _householdId;
+
   List<AppUser> get children =>
       familyMembers.where((m) => m.isChild).toList(growable: false);
 
@@ -466,6 +470,7 @@ class DatabaseService extends ChangeNotifier {
         'completedAt': null,
         'approvedAt': null,
         'claimedBy': FieldValue.delete(),
+        'proof': FieldValue.delete(),
       };
 
   TaskModel? taskById(String id) {
@@ -545,6 +550,35 @@ class DatabaseService extends ChangeNotifier {
     });
   }
 
+  Future<void> submitTaskProof(
+    String taskId, {
+    required String photoPath,
+    required TaskScanResult scan,
+    DateTime? now,
+  }) async {
+    final taskRef = _tasksCollection.doc(taskId);
+    final at = now ?? DateTime.now();
+    final proof = TaskProof(
+      photoPath: photoPath,
+      submittedAt: at,
+      deleteAt: at.add(const Duration(days: AppConstants.taskPhotoRetentionDays)),
+      scan: scan,
+    );
+    await _firestore.runTransaction((transaction) async {
+      final snap = await transaction.get(taskRef);
+      if (!snap.exists) throw Exception('This task no longer exists.');
+      final task = TaskModel.fromFirestore(snap);
+      if (task.status != TaskStatus.pending) {
+        throw Exception('This task was already marked done.');
+      }
+      transaction.update(taskRef, {
+        'status': TaskStatus.completed.name,
+        'completedAt': Timestamp.fromDate(at),
+        'proof': proof.toMap(),
+      });
+    });
+  }
+
   Future<void> uncompleteTask(String taskId) async {
     final taskRef = _tasksCollection.doc(taskId);
 
@@ -557,7 +591,11 @@ class DatabaseService extends ChangeNotifier {
       // Only tasks awaiting approval can be marked incomplete again.
       if (task.status != TaskStatus.completed) return;
 
-      transaction.update(taskRef, {'status': TaskStatus.pending.name, 'completedAt': null});
+      transaction.update(taskRef, {
+        'status': TaskStatus.pending.name,
+        'completedAt': null,
+        'proof': FieldValue.delete(),
+      });
     });
   }
 
@@ -584,6 +622,7 @@ class DatabaseService extends ChangeNotifier {
         'status': TaskStatus.pending.name,
         'completedAt': null,
         'approvedAt': null,
+        'proof': FieldValue.delete(),
       });
     });
   }
@@ -599,9 +638,10 @@ class DatabaseService extends ChangeNotifier {
 
       if (task.status != TaskStatus.completed) return;
 
-      final approval = {
+      final approval = <String, Object?>{
         'status': TaskStatus.approved.name,
         'approvedAt': Timestamp.fromDate(DateTime.now()),
+        if (task.proof?.verdict.needsReview ?? false) 'proof.parentOverride': true,
       };
       final assignedTo = task.assignedToUserId;
       if (assignedTo == null) {

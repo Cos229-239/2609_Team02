@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Famotive uses the camera so kids can take a photo showing a finished task. The photo is checked on this device and shared only with their parents.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Famotive can use a photo from your library as proof that a task is finished. It is shared only with your family's parents.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

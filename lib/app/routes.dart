@@ -14,6 +14,7 @@ import '../features/profile/screens/notifications_settings_screen.dart';
 import '../features/tasks/screens/create_task_screen.dart';
 import '../features/tasks/screens/task_completion_screen.dart';
 import '../features/tasks/screens/task_detail_screen.dart';
+import '../features/tasks/screens/task_proof_screen.dart';
 import '../features/tasks/screens/task_list_screen.dart';
 import '../shared/layouts/main_tab_shell.dart';
 import '../shared/screens/route_not_found_screen.dart';
@@ -43,6 +44,7 @@ class AppRoutes {
   static const String taskDetail = '/tasks/detail';
   static const String taskCreate = '/tasks/create';
   static const String taskCompletion = '/tasks/completion';
+  static const String taskProof = '/tasks/proof';
   static const String taskEdit = '/tasks/edit';
   static const String scheduleEdit = '/tasks/repeating/edit';
 
@@ -52,7 +54,6 @@ class AppRoutes {
   static const String notificationSettings = '/settings/notifications';
   static const String households = '/settings/households';
 
- 
   static const Set<String> _safeInitialRoutes = {
     login, register, forgotPassword, home, family, progress, settings,
   };
@@ -103,6 +104,9 @@ class AppRoutes {
       case taskCompletion:
         final taskId = args as String;
         return _page(TaskCompletionScreen(taskId: taskId), settings);
+      case taskProof:
+        final taskId = args as String;
+        return _page(TaskProofScreen(taskId: taskId), settings);
       case taskEdit:
         final taskId = args as String;
         return _page(CreateTaskScreen(taskId: taskId), settings);

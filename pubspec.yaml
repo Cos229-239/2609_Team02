@@ -1,7 +1,7 @@
 name: famotive
 description: "A family task/reward app for kids and parents."
 publish_to: 'none'
-version: 0.1.1+6
+version: 0.1.1+7
 
 environment:
   sdk: ^3.13.2
@@ -17,7 +17,7 @@ dependencies:
   # "database" of households, tasks and rewards used during early development.
   provider: ^6.1.2
 
-  # Date formatting/parsing for due dates, streaks and recurring tasks.
+  # Date formatting/parsing for due dates, streaks and recurring tasks.fli
   intl: ^0.20.3
 
   # Firebase core for initializing the Firebase SDK.
@@ -46,6 +46,10 @@ dependencies:
 
   # Opens the mailto: link for Help & Support (Settings screen).
   url_launcher: ^6.3.1
+
+  # Task photo proof.
+  image_picker: ^1.1.2
+  firebase_storage: ^13.0.0
 
 dev_dependencies:
   flutter_test:
