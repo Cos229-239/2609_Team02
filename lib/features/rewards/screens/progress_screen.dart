@@ -231,7 +231,7 @@ class _TaskSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(14),
@@ -242,7 +242,7 @@ class _TaskSection extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(child: Text(title, style: Theme.of(context).textTheme.titleMedium)),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 2),
                 decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(999)),
                 child: Text('${tasks.length}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
               ),
@@ -371,7 +371,7 @@ class _TaskProgressRow extends StatelessWidget {
           ? () => Navigator.of(context).pushNamed(AppRoutes.taskEdit, arguments: task.id)
           : null,
       padding: const EdgeInsets.symmetric(
-        horizontal: 12,
+        horizontal: 16,
         vertical: 8,
       ), 
       child: Row(

@@ -566,7 +566,7 @@ class _RewardManagementRow extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface.withValues(alpha: 0.65),
         borderRadius: BorderRadius.circular(12),

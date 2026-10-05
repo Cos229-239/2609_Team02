@@ -136,8 +136,12 @@ class HouseholdHomeScreen extends StatelessWidget {
           const SizedBox(height: 12),
           for (final schedule in db.schedules) ...[
             AppCard(
-              onTap: () => Navigator.of(context).pushNamed(AppRoutes.scheduleEdit, arguments: schedule.id),
-              child: Row(
+                padding: EdgeInsets.symmetric(
+                  horizontal: 16, 
+                  vertical: 8,
+                ),
+                onTap: () => Navigator.of(context).pushNamed(AppRoutes.scheduleEdit, arguments: schedule.id),
+                child: Row(
                 children: [
                   Icon(Icons.repeat, color: Theme.of(context).colorScheme.primary),
                   const SizedBox(width: 12),
