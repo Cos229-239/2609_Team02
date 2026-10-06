@@ -86,7 +86,7 @@ void main() {
       () async {
         await seedHousehold();
         await firestore.collection('households').doc('household-2').set({
-          'name': 'Grandma',
+          'name': 'Grandparents House',
           'memberIds': ['child-1'],
           'ownerId': 'grandma',
         });
@@ -94,7 +94,7 @@ void main() {
         db.bindSession(child);
         await pumpEventQueue();
 
-        expect(db.myHouseholds.map((h) => h.name), ['Grandma', 'The Pats']);
+        expect(db.myHouseholds.map((h) => h.name), ['Grandparents House', 'The Pats']);
         expect(db.familyMembers.map((m) => m.id), ['parent-1', 'child-1']);
         expect(db.household?.isAdmin('parent-1'), isTrue);
       },
