@@ -634,7 +634,8 @@ class DatabaseService extends ChangeNotifier {
     });
   }
 
-  /// Parent approves a completed task: grants XP and coins to the child.
+    /// Parent approves a completed task, grants XP and coins to the child,
+    /// and records the approval toward eligible household goals.
   Future<void> approveTask(String taskId) async {
     final taskRef = _tasksCollection.doc(taskId);
 
