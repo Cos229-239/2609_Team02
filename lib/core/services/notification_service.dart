@@ -28,13 +28,11 @@ import 'auth_service.dart';
 class NotificationService {
   NotificationService({
     required AuthService authService,
-    required GlobalKey<NavigatorState> navigatorKey,
-    required GlobalKey<ScaffoldMessengerState> messengerKey,
+    required this._navigatorKey,
+    required this._messengerKey,
     FirebaseMessaging? messaging,
     FirebaseFirestore? firestore,
   })  : _auth = authService,
-        _navigatorKey = navigatorKey,
-        _messengerKey = messengerKey,
         _messaging = messaging ?? FirebaseMessaging.instance,
         _firestore = firestore ?? FirebaseFirestore.instance;
 

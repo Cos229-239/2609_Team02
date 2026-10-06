@@ -108,7 +108,7 @@ class FamilyMemberCard extends StatelessWidget {
               size: 26,
             ),
           ],
-          if (trailing != null) trailing!,
+          ?trailing,
         ],
       ),
     );

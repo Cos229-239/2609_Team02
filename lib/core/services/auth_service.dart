@@ -440,7 +440,7 @@ class AuthService extends ChangeNotifier {
       'ownerId': uid,
       'memberIds': [uid],
       // Drives the 9 AM reminders / repeating tasks (see Household.timezone).
-      if (timezone != null) 'timezone': timezone,
+      'timezone': ?timezone,
       'createdAt': FieldValue.serverTimestamp(),
     });
 
