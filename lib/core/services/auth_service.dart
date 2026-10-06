@@ -30,10 +30,9 @@ class AuthService extends ChangeNotifier {
   AuthService({
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
-    ChildAccountCreator? childAccountCreator,
+    this._childAccountCreator,
   })  : _auth = auth ?? FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance,
-        _childAccountCreator = childAccountCreator;
+        _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
@@ -209,7 +208,7 @@ class AuthService extends ChangeNotifier {
       'ownerId': uid,
       'memberIds': [uid],
       // Drives the 9 AM reminders / repeating tasks (see Household.timezone).
-      if (timezone != null) 'timezone': timezone,
+      'timezone': ?timezone,
       'createdAt': FieldValue.serverTimestamp(),
     });
 

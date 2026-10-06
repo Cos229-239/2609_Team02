@@ -716,7 +716,7 @@ class _InfoBanner extends StatelessWidget {
           Icon(icon, color: color),
           const SizedBox(width: 10),
           Expanded(child: Text(text, style: Theme.of(context).textTheme.bodyMedium)),
-          if (action != null) action!,
+          ?action,
         ],
       ),
     );
