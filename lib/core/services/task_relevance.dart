@@ -203,6 +203,9 @@ class TaskRelevance {
         score: 0,
         labels: labels.take(8).toList(),
         keywords: keywordWords,
+        // Keep the screen warning: pixel/depth checks can flag a screen even
+        // when the labeler returns nothing usable.
+        flags: flags,
         engine: engine,
         scannedAt: at,
       );

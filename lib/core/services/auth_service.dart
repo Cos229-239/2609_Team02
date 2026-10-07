@@ -362,13 +362,24 @@ class AuthService extends ChangeNotifier {
       return SocialSignInResult.signedIn(profile);
     }
 
-    final profileName = cred.additionalUserInfo?.profile?['name'];
+    final displayName = user.displayName?.trim() ?? '';
     return SocialSignInResult.needsSetup(
-      suggestedName: (user.displayName?.trim().isNotEmpty ?? false)
-          ? user.displayName!.trim()
-          : (profileName is String ? profileName : null),
+      suggestedName: displayName.isNotEmpty ? displayName : _providerProfileName(cred),
       email: user.email,
     );
+  }
+
+  /// The name the provider sent with the sign-in, if any. Only read when the
+  /// Firebase user has no display name (e.g. Apple after the first sign-in);
+  /// optional, so a credential that can't supply it just means no prefill.
+  static String? _providerProfileName(UserCredential cred) {
+    try {
+      final name = cred.additionalUserInfo?.profile?['name'];
+      return name is String && name.trim().isNotEmpty ? name.trim() : null;
+    } catch (e) {
+      debugPrint('AuthService: no provider profile name: $e');
+      return null;
+    }
   }
 
   static bool _isCancellation(FirebaseAuthException e) {

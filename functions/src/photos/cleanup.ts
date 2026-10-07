@@ -34,9 +34,21 @@ export const purgeExpiredTaskPhotos = onSchedule({ schedule: 'every 6 hours', ti
   const db = getFirestore();
   const now = Timestamp.now();
   let total = 0;
+  let failed = 0;
+  // Page with a cursor instead of re-running the same query: a document
+  // that fails stays due, and re-querying from the top would hand back the
+  // same failing batch forever. Failures are left for the next scheduled run.
+  let cursor: FirebaseFirestore.QueryDocumentSnapshot | undefined;
   for (;;) {
-    const due = await db.collectionGroup('tasks').where('proof.deleteAt', '<=', now).limit(PURGE_BATCH).get();
+    let query = db
+      .collectionGroup('tasks')
+      .where('proof.deleteAt', '<=', now)
+      .orderBy('proof.deleteAt')
+      .limit(PURGE_BATCH);
+    if (cursor) query = query.startAfter(cursor);
+    const due = await query.get();
     if (due.empty) break;
+    cursor = due.docs[due.docs.length - 1];
     for (const doc of due.docs) {
       const householdId = doc.ref.parent.parent?.id;
       if (!householdId) continue;
@@ -50,10 +62,11 @@ export const purgeExpiredTaskPhotos = onSchedule({ schedule: 'every 6 hours', ti
         });
         total++;
       } catch (err) {
+        failed++;
         logger.error('Deleting expired task photo failed', { path: doc.ref.path, err });
       }
     }
     if (due.size < PURGE_BATCH) break;
   }
-  if (total) logger.info('Deleted expired task photos', { total });
+  if (total || failed) logger.info('Expired task photo cleanup', { deleted: total, failed });
 });

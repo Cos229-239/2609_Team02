@@ -17,7 +17,7 @@ dependencies:
   # "database" of households, tasks and rewards used during early development.
   provider: ^6.1.2
 
-  # Date formatting/parsing for due dates, streaks and recurring tasks.fli
+  # Date formatting/parsing for due dates, streaks and recurring tasks.
   intl: ^0.20.3
 
   # Firebase core for initializing the Firebase SDK.

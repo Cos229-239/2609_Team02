@@ -10,8 +10,16 @@ service firebase.storage {
           .data.memberIds.hasAny([request.auth.uid]);
     }
 
+    // Only parents review proof photos (the app shows them only to parents),
+    // so children can't open each other's photos.
+    function isParentMember(householdId) {
+      return isMember(householdId) &&
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid))
+          .data.role == 'parent';
+    }
+
     match /households/{householdId}/taskPhotos/{taskId}/{fileName} {
-      allow read: if isMember(householdId);
+      allow read: if isParentMember(householdId);
       allow create: if isMember(householdId) &&
         request.resource.size < 8 * 1024 * 1024 &&
         request.resource.contentType.matches('image/.*');

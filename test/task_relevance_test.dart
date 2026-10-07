@@ -188,6 +188,16 @@ void main() {
       expect(weak.verdict, ScanVerdict.match);
     });
 
+    test('a screen warning survives when nothing is recognized', () {
+      final result = TaskRelevance.evaluate(
+        keywords: TaskRelevance.extractKeywords(title: 'Make the bed', iconKey: 'bed'),
+        labels: const [],
+        screenLikelihood: 0.6,
+      );
+      expect(result.verdict, ScanVerdict.unclassified);
+      expect(result.isPhotoOfScreen, isTrue);
+    });
+
     test('screens are fine when the task is about one', () {
       final result = TaskRelevance.evaluate(
         keywords: TaskRelevance.extractKeywords(title: 'Dust the computer desk'),

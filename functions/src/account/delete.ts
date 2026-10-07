@@ -52,10 +52,29 @@ async function leaveHousehold(ref: DocumentReference, uid: string, isChild: bool
   await ref.update({ memberIds: FieldValue.arrayRemove(uid) });
 }
 
-/** Deletes one user's profile, its subcollections, open join requests and login. */
-async function deleteUser(uid: string): Promise<void> {
+async function deleteLogin(uid: string): Promise<void> {
+  try {
+    await getAuth().deleteUser(uid);
+  } catch (err) {
+    if ((err as { code?: string }).code !== 'auth/user-not-found') throw err;
+  }
+}
+
+/**
+ * Deletes one user's profile, its subcollections, open join requests and
+ * login. Every step is idempotent, so a failed run can simply be retried.
+ *
+ * Ordering keeps a retry able to find what's left:
+ * - A dependent child (`loginLast: false`) loses its login first: while its
+ *   profile still exists, a retry by the parent still sees the child and
+ *   deletes it again.
+ * - The caller's own account (`loginLast: true`) keeps its login until
+ *   everything else is gone, so the caller can still sign in and retry.
+ */
+async function deleteUser(uid: string, { loginLast }: { loginLast: boolean }): Promise<void> {
   const db = getFirestore();
   const userRef = db.collection('users').doc(uid);
+  if (!loginLast) await deleteLogin(uid);
   const pending = (await userRef.get()).data()?.pendingHouseholdIds;
   if (Array.isArray(pending)) {
     await Promise.all(
@@ -65,11 +84,7 @@ async function deleteUser(uid: string): Promise<void> {
     );
   }
   await db.recursiveDelete(userRef); // includes fcmTokens
-  try {
-    await getAuth().deleteUser(uid);
-  } catch (err) {
-    if ((err as { code?: string }).code !== 'auth/user-not-found') throw err;
-  }
+  if (loginLast) await deleteLogin(uid);
 }
 
 // `invoker: 'public'` lets the app reach the Cloud Run service at all;
@@ -107,13 +122,22 @@ export const deleteAccount = onCall({ invoker: 'public' }, async (request) => {
   if (dryRun) return { ...summary, deleted: false };
 
   if (plan.forbidden) throw new HttpsError('permission-denied', plan.forbidden);
-  if (plan.blockers.length) throw new HttpsError('failed-precondition', plan.blockers.join(' '));
+  if (plan.blockers.length) throw new HttpsError('failed-precondition', plan.blockers.map((b) => b.reason).join(' '));
 
   const authTime = Number(request.auth?.token.auth_time ?? 0);
   if (Date.now() / 1000 - authTime > RECENT_LOGIN_SECONDS) {
     throw new HttpsError('failed-precondition', 'Please confirm it\'s you again, then retry.', { reason: 'requires-recent-login' });
   }
 
+  // Dependents first, the target last. The children going with the target
+  // are found through the households about to be deleted, so they must be
+  // gone before those households are; and the target's own login goes last
+  // so that if anything fails part-way the caller can sign in and retry
+  // (every step below is safe to repeat).
+  const [, ...dependentIds] = plan.deleteUserIds;
+  for (const uid of dependentIds) {
+    await deleteUser(uid, { loginLast: false });
+  }
   const targetIsChild = members.get(targetId)?.role === 'child';
   for (const h of plan.leaveHouseholds) {
     await leaveHousehold(db.collection('households').doc(h.id), targetId, targetIsChild);
@@ -121,9 +145,10 @@ export const deleteAccount = onCall({ invoker: 'public' }, async (request) => {
   for (const h of plan.deleteHouseholds) {
     await db.recursiveDelete(db.collection('households').doc(h.id));
   }
-  for (const uid of plan.deleteUserIds) {
-    await deleteUser(uid);
-  }
+  // An admin deleting a child: the child can't sign in to retry anyway, so
+  // drop its login first (see [deleteUser]); deleting yourself keeps the
+  // login until last.
+  await deleteUser(targetId, { loginLast: actorId === targetId });
 
   logger.info('Account deleted', {
     actorId,
