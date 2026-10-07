@@ -103,13 +103,25 @@ class TaskDetailScreen extends StatelessWidget {
                 TaskProofCard(proof: task.proof!),
               ],
               const SizedBox(height: 22),
-              if (isParent && task.status == TaskStatus.pending)
+              if (isParent && task.status == TaskStatus.pending) ...[
+                // Pool tasks have no child to reward, so they're only editable.
+                if (!task.isAvailable) ...[
+                  AppButton(
+                    label: 'Mark as Complete',
+                    icon: Icons.check_circle_outline,
+                    variant: AppButtonVariant.success,
+                    onPressed: () => _parentComplete(context, resolvedTask),
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 AppButton(
                   label: 'Edit Task',
                   icon: Icons.edit_outlined,
+                  variant: task.isAvailable ? AppButtonVariant.primary : AppButtonVariant.secondary,
                   onPressed: () => Navigator.of(context)
                       .pushReplacementNamed(AppRoutes.taskEdit, arguments: resolvedTask.id),
-                )
+                ),
+              ]
               else if (!isParent && task.status == TaskStatus.completed)
                 const Center(child: Text('⏳ Waiting for a parent to approve'))
               else if (task.status == TaskStatus.pending)
@@ -143,6 +155,16 @@ class TaskDetailScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// A parent finishing a task themselves needs no separate approval: it's
+  /// approved and rewarded in one step (photo proof is skipped too).
+  Future<void> _parentComplete(BuildContext context, TaskModel task) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    await context.read<DatabaseService>().parentCompleteTask(task.id);
+    messenger.showSnackBar(SnackBar(content: Text('"${task.title}" completed - rewards granted!')));
+    if (navigator.mounted) navigator.pop();
   }
 
   Future<void> _confirmSendBack(BuildContext context, TaskModel task) async {
