@@ -101,8 +101,8 @@ class HouseholdHomeScreen extends StatelessWidget {
         ],
         if (needsApproval.isNotEmpty) ...[
           const SizedBox(height: 32),
-          Text('Needs Approval', style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontSize: 20,
+          Text('Needs Approval:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontSize: 22,
             fontWeight: FontWeight.w600,
           )),
           const SizedBox(height: 4),
@@ -124,8 +124,8 @@ class HouseholdHomeScreen extends StatelessWidget {
         ],
         if (db.schedules.isNotEmpty) ...[
           const SizedBox(height: 32),
-          Text('Repeating Tasks', style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontSize: 20,
+          Text('Repeating Tasks:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontSize: 22,
             fontWeight: FontWeight.w600,
           )),
           const SizedBox(height: 4),
@@ -136,8 +136,12 @@ class HouseholdHomeScreen extends StatelessWidget {
           const SizedBox(height: 12),
           for (final schedule in db.schedules) ...[
             AppCard(
-              onTap: () => Navigator.of(context).pushNamed(AppRoutes.scheduleEdit, arguments: schedule.id),
-              child: Row(
+                padding: EdgeInsets.symmetric(
+                  horizontal: 16, 
+                  vertical: 8,
+                ),
+                onTap: () => Navigator.of(context).pushNamed(AppRoutes.scheduleEdit, arguments: schedule.id),
+                child: Row(
                 children: [
                   Icon(Icons.repeat, color: Theme.of(context).colorScheme.primary),
                   const SizedBox(width: 12),
@@ -161,8 +165,8 @@ class HouseholdHomeScreen extends StatelessWidget {
           ],
         ],
         const SizedBox(height: 32),
-        Text('Your Family', style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          fontSize: 20,
+        Text('Your Family:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          fontSize: 22,
           fontWeight: FontWeight.w600,
         )),
         const SizedBox(height: 14),

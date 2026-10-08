@@ -54,7 +54,7 @@ class ProfileScreen extends StatelessWidget {
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
                       )),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 6),
                       Text(
                         user.email,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),

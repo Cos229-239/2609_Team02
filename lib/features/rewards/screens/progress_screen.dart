@@ -149,7 +149,7 @@ children: [
           emptyLabel: 'Nothing overdue - nice work!',
           actions: _RowActions.edit,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 20),
         _TaskSection(
           icon: Icons.schedule,
           title: 'Pending',
@@ -160,7 +160,7 @@ children: [
           actions: _RowActions.edit,
         ),
 
-        const SizedBox(height: 12),
+        const SizedBox(height: 28),
         _TaskSection(
         icon: Icons.hourglass_bottom,
         title: 'Awaiting Approval',
@@ -170,7 +170,7 @@ children: [
         emptyLabel: 'No tasks waiting for approval.',
         actions: _RowActions.approveOrReassign,
 ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 28),
         _TaskSection(
           icon: Icons.check_circle_outline,
           title: 'Completed',
@@ -180,7 +180,7 @@ children: [
           emptyLabel: 'Nothing completed yet.',
           actions: _RowActions.duplicateOnly,
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 28),
         _TaskSection(
           icon: Icons.archive_outlined,
           title: 'Archived',
@@ -231,7 +231,7 @@ class _TaskSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(14),
@@ -242,7 +242,7 @@ class _TaskSection extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(child: Text(title, style: Theme.of(context).textTheme.titleMedium)),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 2),
                 decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(999)),
                 child: Text('${tasks.length}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
               ),
@@ -255,7 +255,7 @@ class _TaskSection extends StatelessWidget {
             child: Text(emptyLabel, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600)),
           )
         else ...[
-          const SizedBox(height: 18),
+          const SizedBox(height: 2),
 
           for (final task in tasks) ...[
             const SizedBox(height:12),
@@ -371,7 +371,7 @@ class _TaskProgressRow extends StatelessWidget {
           ? () => Navigator.of(context).pushNamed(AppRoutes.taskEdit, arguments: task.id)
           : null,
       padding: const EdgeInsets.symmetric(
-        horizontal: 12,
+        horizontal: 16,
         vertical: 8,
       ), 
       child: Row(

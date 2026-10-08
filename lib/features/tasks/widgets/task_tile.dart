@@ -102,7 +102,7 @@ class TaskTile extends StatelessWidget {
                 alignment: Alignment.centerRight,
                 child: Transform.translate(
                   offset: Offset(
-                    task.status == TaskStatus.completed ? 32 : 0,
+                    task.status == TaskStatus.completed ? 48 : 0,
                     0,
                   ),
                   child: _StatusBadge(status: task.status),

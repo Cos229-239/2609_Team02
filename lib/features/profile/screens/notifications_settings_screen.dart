@@ -79,23 +79,36 @@ class _NotificationsSettingsScreenState extends State<NotificationsSettingsScree
                     title: const Text('Push Notifications'),
                     subtitle: Text(isParent
                         ? 'Alerts when your kids accept or finish tasks and redeem rewards'
-                        : 'Alerts for new tasks, due dates and approvals'),
+                        : 'Alerts for new tasks, due dates and approvals',
+                        style: const TextStyle(fontSize: 11),
+                        ),
+                  
                     value: pushEnabled,
+                    activeThumbColor: Colors.white,
+                    activeTrackColor: Colors.green,
                     onChanged: _savingPush || user == null ? null : _setPush,
                   ),
                   const Divider(height: 1),
                   SwitchListTile(
                     secondary: const Icon(Icons.mail_outline),
                     title: const Text('Email Notifications'),
-                    subtitle: const Text('Task approvals, reminders and family updates'),
+                    subtitle: const Text('Task approvals, reminders and family updates',
+                    style: const TextStyle(fontSize: 11),
+                    ),
                     value: _emailNotifications,
+                    activeThumbColor: Colors.white,
+                    activeTrackColor: Colors.green,
                     onChanged: (value) => setState(() => _emailNotifications = value),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: AppConstants.spaceMd),
-            Text("You'll get a push notification when:", style: Theme.of(context).textTheme.titleSmall),
+            Text("You'll get a push notification when:", style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+              ),
+            ),
             const SizedBox(height: AppConstants.spaceXs),
             for (final event in pushEvents)
               Padding(
