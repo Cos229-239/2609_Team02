@@ -8,6 +8,7 @@ class Household {
     this.ownerId,
     this.inviteCode,
     this.timezone,
+    this.premiumUntil,
   });
 
   final String id;
@@ -33,6 +34,13 @@ class Household {
   /// roll over at 9 AM in this zone. Set from a member's device.
   final String? timezone;
 
+  /// When the admin's Famotive Premium ends (null = no Premium). Kept by the
+  /// server from the admin's subscription; never written by the app.
+  final DateTime? premiumUntil;
+
+  /// Premium features (photo proof) are on: the admin has Premium.
+  bool get hasPremium => premiumUntil != null && premiumUntil!.isAfter(DateTime.now());
+
   bool isAdmin(String? userId) => userId != null && ownerId == userId;
 
   bool hasMember(String? userId) => userId != null && memberIds.contains(userId);
@@ -46,6 +54,7 @@ class Household {
       ownerId: data['ownerId'] as String?,
       inviteCode: data['inviteCode'] as String?,
       timezone: data['timezone'] as String?,
+      premiumUntil: (data['premiumUntil'] as Timestamp?)?.toDate(),
     );
   }
 

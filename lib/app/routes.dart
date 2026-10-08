@@ -8,6 +8,7 @@ import '../features/auth/screens/register_screen.dart';
 import '../features/auth/screens/reset_password_screen.dart';
 import '../features/auth/screens/confirm_email_change_screen.dart';
 import '../features/household/screens/households_screen.dart';
+import '../features/premium/screens/premium_screen.dart';
 import '../features/profile/screens/account_settings_screen.dart';
 import '../features/profile/screens/delete_account_screen.dart';
 import '../features/profile/screens/notifications_settings_screen.dart';
@@ -53,6 +54,7 @@ class AppRoutes {
   static const String deleteAccount = '/settings/account/delete';
   static const String notificationSettings = '/settings/notifications';
   static const String households = '/settings/households';
+  static const String premium = '/settings/premium';
 
   static const Set<String> _safeInitialRoutes = {
     login, register, forgotPassword, home, family, progress, settings,
@@ -122,6 +124,8 @@ class AppRoutes {
         return _page(const NotificationsSettingsScreen(), settings);
       case households:
         return _page(const HouseholdsScreen(), settings);
+      case premium:
+        return _page(const PremiumScreen(), settings);
 
       default:
         final (authMode, authOobCode) = _authActionFrom(settings.name);

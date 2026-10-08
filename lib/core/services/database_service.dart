@@ -356,8 +356,9 @@ class DatabaseService extends ChangeNotifier {
     if (_ownerBackfillTried ||
         user == null ||
         !user.isParent ||
-        h.memberIds.isEmpty)
+        h.memberIds.isEmpty) {
       return;
+    }
     _ownerBackfillTried = true;
     try {
       await _firestore.collection('households').doc(h.id).update({
@@ -425,6 +426,16 @@ class DatabaseService extends ChangeNotifier {
   // --- Queries ---------------------------------------------------------
 
   String? get activeHouseholdId => _householdId;
+
+  /// Premium features (photo proof) are on in the active household: its
+  /// admin has Famotive Premium.
+  bool get householdHasPremium => household?.hasPremium ?? false;
+
+  /// Whether finishing [task] needs a photo right now. A task can ask for
+  /// photo proof, but it only applies while the household has Premium
+  /// (the Firestore rules agree: without Premium it can be finished without
+  /// one).
+  bool needsPhoto(TaskModel task) => task.requiresPhoto && householdHasPremium;
 
   List<AppUser> get children =>
       familyMembers.where((m) => m.isChild).toList(growable: false);

@@ -106,6 +106,15 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                   "This can't be undone. Backups are purged within 90 days.",
                   style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
                 ),
+                if ((user?.premium.isActive ?? false) && (user?.premium.willRenew ?? false)) ...[
+                  const SizedBox(height: 8),
+                  _Bullet(
+                    "Deleting your account doesn't cancel your Premium subscription. Cancel it in your "
+                    "${user?.premium.platform == 'android' ? 'Google Play' : 'App Store'} account settings "
+                    "first so you aren't charged again.",
+                    danger: true,
+                  ),
+                ],
                 TextButton(
                   style: TextButton.styleFrom(padding: EdgeInsets.zero, alignment: Alignment.centerLeft),
                   onPressed: () => LegalLinks.openPrivacy(context),

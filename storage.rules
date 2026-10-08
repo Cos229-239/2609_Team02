@@ -10,6 +10,14 @@ service firebase.storage {
           .data.memberIds.hasAny([request.auth.uid]);
     }
 
+    // Photo proof is a Premium feature (households/{id}.premiumUntil is
+    // kept by the server; see functions/src/premium).
+    function hasPremium(householdId) {
+      let until = firestore.get(/databases/(default)/documents/households/$(householdId))
+        .data.get('premiumUntil', null);
+      return until is timestamp && until > request.time;
+    }
+
     // Only parents review proof photos (the app shows them only to parents),
     // so children can't open each other's photos.
     function isParentMember(householdId) {
@@ -20,7 +28,7 @@ service firebase.storage {
 
     match /households/{householdId}/taskPhotos/{taskId}/{fileName} {
       allow read: if isParentMember(householdId);
-      allow create: if isMember(householdId) &&
+      allow create: if isMember(householdId) && hasPremium(householdId) &&
         request.resource.size < 8 * 1024 * 1024 &&
         request.resource.contentType.matches('image/.*');
       allow update, delete: if false;

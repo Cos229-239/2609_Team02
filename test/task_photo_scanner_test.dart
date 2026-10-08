@@ -5,10 +5,10 @@ import 'package:famotive/core/models/task_proof.dart';
 import 'package:famotive/core/services/task_photo_scanner.dart';
 
 class _FakeLabeler implements ImageLabeler {
-  _FakeLabeler(this.labels, {this.cosine = const {}, this.screen});
+  _FakeLabeler(this.labels, {this.screen});
 
   final List<ScanLabel>? labels;
-  final Map<String, Map<String, double>> cosine;
+  final Map<String, Map<String, double>> cosine = const {};
   final double? screen;
   List<String>? askedLabels;
 
