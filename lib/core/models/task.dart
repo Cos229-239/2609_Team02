@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../constants/app_constants.dart';
 import '../constants/task_icons.dart';
+import 'task_proof.dart';
 import 'task_schedule.dart';
 
 /// Lifecycle of an assigned chore/quest.
@@ -24,6 +25,8 @@ class TaskModel {
     this.archived = false,
     this.completedAt,
     this.approvedAt,
+    this.requiresPhoto = false,
+    this.proof,
   });
 
   final String id;
@@ -66,6 +69,13 @@ class TaskModel {
 
   /// Manually archived by a parent, independent of [isAgedOut].
   final bool archived;
+
+  final bool requiresPhoto;
+
+  final TaskProof? proof;
+
+  bool get proofNeedsReview =>
+      status == TaskStatus.completed && proof != null && proof!.verdict.needsReview;
 
   /// One occurrence of a repeating task (see [TaskSchedule]).
   bool get isRecurring => scheduleId != null;
@@ -132,6 +142,7 @@ class TaskModel {
     bool clearCompletedAt = false,
     DateTime? approvedAt,
     bool clearApprovedAt = false,
+    bool? requiresPhoto,
   }) {
     return TaskModel(
       id: id,
@@ -151,6 +162,8 @@ class TaskModel {
       archived: archived ?? this.archived,
       completedAt: clearCompletedAt ? null : (completedAt ?? this.completedAt),
       approvedAt: clearApprovedAt ? null : (approvedAt ?? this.approvedAt),
+      requiresPhoto: requiresPhoto ?? this.requiresPhoto,
+      proof: proof,
     );
   }
 
@@ -175,6 +188,8 @@ class TaskModel {
       archived: data['archived'] as bool? ?? false,
       completedAt: (data['completedAt'] as Timestamp?)?.toDate(),
       approvedAt: (data['approvedAt'] as Timestamp?)?.toDate(),
+      requiresPhoto: data['requiresPhoto'] as bool? ?? false,
+      proof: TaskProof.fromMap(data['proof']),
     );
   }
 
@@ -194,6 +209,7 @@ class TaskModel {
       'archived': archived,
       'completedAt': completedAt == null ? null : Timestamp.fromDate(completedAt!),
       'approvedAt': approvedAt == null ? null : Timestamp.fromDate(approvedAt!),
+      'requiresPhoto': requiresPhoto,
     };
   }
 

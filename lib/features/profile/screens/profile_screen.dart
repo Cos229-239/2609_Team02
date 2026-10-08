@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../shared/utils/legal_links.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../widgets/profile_menu_tile.dart';
 
@@ -89,6 +90,16 @@ class ProfileScreen extends StatelessWidget {
                 icon: Icons.help_outline,
                 label: 'Help & Support',
                 onTap: () => _launchSupportEmail(context),
+              ),
+              ProfileMenuTile(
+                icon: Icons.description_outlined,
+                label: 'Terms & Conditions',
+                onTap: () => LegalLinks.openTerms(context),
+              ),
+              ProfileMenuTile(
+                icon: Icons.privacy_tip_outlined,
+                label: 'Privacy Policy',
+                onTap: () => LegalLinks.openPrivacy(context),
               ),
             ],
           ),

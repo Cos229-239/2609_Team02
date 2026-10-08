@@ -21,6 +21,13 @@
 	     archiving for TestFlight/App Store. -->
 	<key>aps-environment</key>
 	<string>development</string>
+	<!-- Sign in with Apple. Also tick "Sign in with Apple" under Signing &
+	     Capabilities in Xcode so the App ID / provisioning profile gets it
+	     — see Documents/Social_Sign_In_Setup.md. -->
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>applinks:famotive.org</string>

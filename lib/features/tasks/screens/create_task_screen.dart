@@ -50,6 +50,8 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   Set<int> _weekdays = {};
   late int _xp;
   late int _coins;
+
+  bool _requiresPhoto = false;
   // Set in initState: widget isn't accessible from field initializers.
   late _AssignTarget _assignTarget;
   String? _selectedChildId;
@@ -94,6 +96,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     _weekdays = {...?schedule?.effectiveWeekdays};
     _xp = schedule?.rewardXp ?? existing?.rewardXp ?? AppConstants.defaultTaskXp;
     _coins = schedule?.coinReward ?? existing?.coinReward ?? AppConstants.defaultTaskCoins;
+    _requiresPhoto = schedule?.requiresPhoto ?? existing?.requiresPhoto ?? false;
     _selectedChildId = schedule != null
         ? schedule.assignedToUserId
         : (existing?.assignedToUserId ?? widget.initialChildId);
@@ -168,6 +171,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
       weekdays: _repeat!.usesWeekdays ? (_weekdays.toList()..sort()) : const [],
       startDate: _dueDate ?? _today,
       createdAt: _originalSchedule?.createdAt ?? DateTime.now(),
+      requiresPhoto: _requiresPhoto,
     );
   }
 
@@ -234,6 +238,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         coinReward: _coins,
         dueDate: _dueDate,
         clearDueDate: _dueDate == null,
+        requiresPhoto: _requiresPhoto,
       );
       db.updateTask(original.id, updated);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -251,6 +256,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
           rewardXp: _xp,
           coinReward: _coins,
           createdAt: DateTime.now(),
+          requiresPhoto: _requiresPhoto,
         ),
       );
       ScaffoldMessenger.of(context).showSnackBar(
@@ -497,6 +503,24 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               step: 5,
               max: 1000,
               onChanged: (value) => setState(() => _coins = value),
+            ),
+            const SizedBox(height: 12),
+            AppCard(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              child: SwitchListTile.adaptive(
+                key: const ValueKey('requires-photo-switch'),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                secondary: const Icon(Icons.photo_camera_outlined),
+                title: const Text('Require Photo Proof'),
+                subtitle: Text(
+                  'Your child takes a photo when done. It is checked on their device for a match '
+                  'with this task, and you review it before approving. Photos are deleted after '
+                  '${AppConstants.taskPhotoRetentionDays} days.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+                ),
+                value: _requiresPhoto,
+                onChanged: (value) => setState(() => _requiresPhoto = value),
+              ),
             ),
             const SizedBox(height: 20),
             if (_canChooseRepeat) ...[

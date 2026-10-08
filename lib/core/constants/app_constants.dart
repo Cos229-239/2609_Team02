@@ -13,9 +13,23 @@ class AppConstants {
   static const String emailChangeContinueUrl =
       'https://famotive.org/email-change-complete';
 
+  // Legal pages on the website (opened in an in-app browser).
+  static const String termsUrl = 'https://famotive.org/terms-and-conditions.html';
+  static const String privacyUrl = 'https://famotive.org/privacy-policy.html';
+  static const String deleteDataUrl = 'https://famotive.org/delete-my-data.html';
+
   // App identifiers
   static const String androidPackageName = 'com.famotive';
   static const String iosBundleId = 'com.famotive';
+
+  // Google sign-in OAuth clients (Firebase project famotive-8c858). The web
+  // client (client_type 3 in android/app/google-services.json) is what
+  // Android's ID tokens are issued for; iOS uses its own client
+  // (CLIENT_ID in ios/Runner/GoogleService-Info.plist).
+  static const String googleServerClientId =
+      '451691992012-uvikp2kfa7eloo3hvdodaa71ndm8auk7.apps.googleusercontent.com';
+  static const String googleIosClientId =
+      '451691992012-82bm4f26sdhveurbgb8tqj41m300vpoq.apps.googleusercontent.com';
 
   // Spacing scale (multiples of 4dp)
   static const double spaceXs = 4;
@@ -69,4 +83,6 @@ class AppConstants {
   // Approved ("done") tasks stay in task lists this many days after they
   // were approved, then drop out of view. See `TaskModel.isStaleDone`.
   static const int doneTaskVisibleDays = 7;
+
+  static const int taskPhotoRetentionDays = 7;
 }

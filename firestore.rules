@@ -147,8 +147,64 @@ service cloud.firestore {
           householdData(householdId).get('ownerId', null) == request.auth.uid);
       }
 
+      // Tasks. Parents may change anything. Everyone else (children) is
+      // limited to the to-do flow, so photo proof can't be skipped and the
+      // photo (which the cleanup function deletes whenever `proof` goes
+      // away) can't be removed except by taking back their own submission:
+      // - can't approve, or change whether a photo is required;
+      // - pending -> completed on a photo task needs a proof photo stored
+      //   under this task's folder;
+      // - `proof` only changes on submit (pending -> completed) or when the
+      //   assignee takes back a submission (completed -> pending, proof
+      //   removed);
+      // - can't delete tasks.
       match /tasks/{taskId} {
-        allow read, write: if isMemberOf(householdId);
+        function isParentMember() {
+          return isMemberOf(householdId) && isParent();
+        }
+        function taskChanged() {
+          return request.resource.data.diff(resource.data).affectedKeys();
+        }
+        function statusOf(data) {
+          return data.get('status', 'pending');
+        }
+        function hasOwnProofPhoto(data) {
+          let proof = data.get('proof', null);
+          return proof is map && proof.get('photoPath', null) is string &&
+            proof.photoPath.matches(
+            'households/' + householdId + '/taskPhotos/' + taskId + '/[^/]+');
+        }
+        function isSubmitting() {
+          return statusOf(resource.data) == 'pending' &&
+            statusOf(request.resource.data) == 'completed';
+        }
+        function isTakingBack() {
+          return statusOf(resource.data) == 'completed' &&
+            statusOf(request.resource.data) == 'pending' &&
+            resource.data.get('assignedToUserId', null) == request.auth.uid &&
+            !('proof' in request.resource.data);
+        }
+        function photoRequirementMet() {
+          return !isSubmitting() ||
+            resource.data.get('requiresPhoto', false) != true ||
+            hasOwnProofPhoto(request.resource.data);
+        }
+        function proofChangeAllowed() {
+          return !taskChanged().hasAny(['proof']) ||
+            (isSubmitting() && hasOwnProofPhoto(request.resource.data)) ||
+            isTakingBack();
+        }
+        function childUpdateAllowed() {
+          return !taskChanged().hasAny(['requiresPhoto']) &&
+            statusOf(request.resource.data) != 'approved' &&
+            photoRequirementMet() &&
+            proofChangeAllowed();
+        }
+
+        allow read, create: if isMemberOf(householdId);
+        allow update: if isParentMember() ||
+          (isMemberOf(householdId) && childUpdateAllowed());
+        allow delete: if isParentMember();
       }
 
       // Repeating-task schedules. The server (Cloud Functions) turns each

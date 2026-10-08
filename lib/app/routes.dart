@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/services/auth_service.dart' show SocialSignInResult;
+import '../features/auth/screens/finish_sign_up_screen.dart';
 import '../features/auth/screens/forgot_password_screen.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
@@ -7,10 +9,12 @@ import '../features/auth/screens/reset_password_screen.dart';
 import '../features/auth/screens/confirm_email_change_screen.dart';
 import '../features/household/screens/households_screen.dart';
 import '../features/profile/screens/account_settings_screen.dart';
+import '../features/profile/screens/delete_account_screen.dart';
 import '../features/profile/screens/notifications_settings_screen.dart';
 import '../features/tasks/screens/create_task_screen.dart';
 import '../features/tasks/screens/task_completion_screen.dart';
 import '../features/tasks/screens/task_detail_screen.dart';
+import '../features/tasks/screens/task_proof_screen.dart';
 import '../features/tasks/screens/task_list_screen.dart';
 import '../shared/layouts/main_tab_shell.dart';
 import '../shared/screens/route_not_found_screen.dart';
@@ -21,6 +25,8 @@ class AppRoutes {
 
   static const String login = '/login';
   static const String register = '/register';
+  /// First-time Google/Apple sign-in: pick role + household.
+  static const String finishSignUp = '/finish-sign-up';
   static const String forgotPassword = '/forgot-password';
   static const String resetPassword = '/reset-password';
   static const String confirmEmailChange = '/confirm-email-change';
@@ -38,15 +44,16 @@ class AppRoutes {
   static const String taskDetail = '/tasks/detail';
   static const String taskCreate = '/tasks/create';
   static const String taskCompletion = '/tasks/completion';
+  static const String taskProof = '/tasks/proof';
   static const String taskEdit = '/tasks/edit';
   static const String scheduleEdit = '/tasks/repeating/edit';
 
   // Settings sub-screens, pushed from the Settings tab.
   static const String accountSettings = '/settings/account';
+  static const String deleteAccount = '/settings/account/delete';
   static const String notificationSettings = '/settings/notifications';
   static const String households = '/settings/households';
 
- 
   static const Set<String> _safeInitialRoutes = {
     login, register, forgotPassword, home, family, progress, settings,
   };
@@ -61,6 +68,12 @@ class AppRoutes {
         return _page(const LoginScreen(), settings);
       case register:
         return _page(const RegisterScreen(), settings);
+      case finishSignUp:
+        final result = args as SocialSignInResult?;
+        return _page(
+          FinishSignUpScreen(suggestedName: result?.suggestedName, email: result?.email),
+          settings,
+        );
       case forgotPassword:
         return _page(const ForgotPasswordScreen(), settings);
       case resetPassword:
@@ -91,6 +104,9 @@ class AppRoutes {
       case taskCompletion:
         final taskId = args as String;
         return _page(TaskCompletionScreen(taskId: taskId), settings);
+      case taskProof:
+        final taskId = args as String;
+        return _page(TaskProofScreen(taskId: taskId), settings);
       case taskEdit:
         final taskId = args as String;
         return _page(CreateTaskScreen(taskId: taskId), settings);
@@ -100,6 +116,8 @@ class AppRoutes {
 
       case accountSettings:
         return _page(const AccountSettingsScreen(), settings);
+      case deleteAccount:
+        return _page(const DeleteAccountScreen(), settings);
       case notificationSettings:
         return _page(const NotificationsSettingsScreen(), settings);
       case households:

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/task_icons.dart';
 import '../../../core/models/task.dart';
+import '../../../core/models/task_proof.dart';
 import '../../../shared/widgets/app_card.dart';
 
 /// One row representing a task: icon, title, XP reward and a status
@@ -43,12 +44,22 @@ class TaskTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  task.title,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        task.title,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    if (task.requiresPhoto || task.proof != null) ...[
+                      const SizedBox(width: 4),
+                      _PhotoIndicator(task: task),
+                    ],
+                  ],
                 ),
                 if (task.description.isNotEmpty)
                   Text(
@@ -155,6 +166,32 @@ class _StatusBadge extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _PhotoIndicator extends StatelessWidget {
+  const _PhotoIndicator({required this.task});
+
+  final TaskModel task;
+
+  @override
+  Widget build(BuildContext context) {
+    final proof = task.proof;
+    final (Color color, String tip) = switch (proof?.verdict) {
+      null => (Colors.grey.shade500, 'Photo proof required'),
+      ScanVerdict.match => (Colors.green.shade600, 'Photo looks like a match'),
+      ScanVerdict.noMatch => (Colors.red.shade600, "Photo doesn't look related - check it"),
+      final ScanVerdict v => (Colors.orange.shade700, '${v.label} - check the photo'),
+    };
+    return Tooltip(
+      message: tip,
+      child: Icon(
+        Icons.photo_camera_outlined,
+        key: const ValueKey('task-photo-indicator'),
+        size: 14,
+        color: color,
+      ),
     );
   }
 }

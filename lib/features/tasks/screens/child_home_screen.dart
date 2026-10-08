@@ -7,6 +7,7 @@ import '../../../core/models/task.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/database_service.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../task_completion_flow.dart';
 
 /// "Home" tab for a signed-in child: today's progress and task list.
 /// Children can't create, edit or assign tasks; that's parent-only.
@@ -80,12 +81,11 @@ class ChildHomeScreen extends StatelessWidget {
           for (final task in tasks) ...[
             _ChildTaskRow(
               task: task,
-              onComplete: () => context.read<DatabaseService>().completeTask(task.id),
+              onComplete: () => startTaskCompletion(context, task),
             ),
             const SizedBox(height: 8),
           ],
           const SizedBox(height: 8),
-
 
         if (remaining > 0) ...[
           const SizedBox(height: 20),
@@ -194,7 +194,6 @@ Positioned(
     color: AppColors.growthGreen,
   ),
 ),
-    
     
     Text(
       '${(progress * 100).round()}%',
