@@ -1,5 +1,9 @@
 import 'dart:async';
 
+import 'package:famotive/core/models/goal.dart';
+import 'package:famotive/core/models/goal_contribution.dart';
+import 'package:famotive/core/services/goal_service.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
@@ -43,7 +47,8 @@ class DatabaseService extends ChangeNotifier {
   /// Called when a pending join request was answered: approved (the user is
   /// now a member) or declined/withdrawn. Wired to
   /// AuthService.forgetPendingHousehold.
-  void Function(String householdId, {required bool approved})? onPendingRequestResolved;
+  void Function(String householdId, {required bool approved})?
+  onPendingRequestResolved;
 
   /// Every household the signed-in user is a member of, by name.
   List<Household> myHouseholds = [];
@@ -69,7 +74,8 @@ class DatabaseService extends ChangeNotifier {
   List<Redemption> redemptions = [];
 
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _myHouseholdsSub;
-  final Map<String, StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>> _pendingSubs = {};
+  final Map<String, StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>>
+  _pendingSubs = {};
   final Map<String, JoinRequest> _pendingById = {};
   String? _sessionUserId;
   String? _pendingUserId;
@@ -78,7 +84,8 @@ class DatabaseService extends ChangeNotifier {
 
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _householdSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _joinRequestsSub;
-  final Map<String, StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>> _memberSubs = {};
+  final Map<String, StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>>
+  _memberSubs = {};
   final Map<String, AppUser> _membersById = {};
   bool _ownerBackfillTried = false;
   bool _purgeTried = false;
@@ -115,7 +122,9 @@ class DatabaseService extends ChangeNotifier {
         .snapshots()
         .listen((snap) {
           myHouseholds = snap.docs.map(Household.fromFirestore).toList()
-            ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+            ..sort(
+              (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+            );
           membershipsLoaded = true;
           notifyListeners();
           _checkActiveHousehold();
@@ -186,7 +195,9 @@ class DatabaseService extends ChangeNotifier {
 
   void _publishPending() {
     myPendingRequests = _pendingById.values.toList()
-      ..sort((a, b) => (a.householdName ?? '').compareTo(b.householdName ?? ''));
+      ..sort(
+        (a, b) => (a.householdName ?? '').compareTo(b.householdName ?? ''),
+      );
     notifyListeners();
   }
 
@@ -244,11 +255,18 @@ class DatabaseService extends ChangeNotifier {
       if (h != null && h.ownerId == null) unawaited(_backfillOwner(h));
     }, onError: _logError('household'));
 
-    _joinRequestsSub = householdRef.collection('joinRequests').snapshots().listen((snap) {
-      joinRequests = snap.docs.map(JoinRequest.fromFirestore).toList()
-        ..sort((a, b) => (a.requestedAt ?? DateTime(0)).compareTo(b.requestedAt ?? DateTime(0)));
-      notifyListeners();
-    }, onError: _logError('join requests'));
+    _joinRequestsSub = householdRef
+        .collection('joinRequests')
+        .snapshots()
+        .listen((snap) {
+          joinRequests = snap.docs.map(JoinRequest.fromFirestore).toList()
+            ..sort(
+              (a, b) => (a.requestedAt ?? DateTime(0)).compareTo(
+                b.requestedAt ?? DateTime(0),
+              ),
+            );
+          notifyListeners();
+        }, onError: _logError('join requests'));
 
     _tasksSub = householdRef.collection('tasks').snapshots().listen((snap) {
       tasks = snap.docs.map(TaskModel.fromFirestore).toList();
@@ -256,26 +274,35 @@ class DatabaseService extends ChangeNotifier {
       unawaited(_purgeExpiredTasks());
     }, onError: _logError('tasks'));
 
-    _schedulesSub = householdRef.collection('taskSchedules').snapshots().listen((snap) {
-      schedules = snap.docs.map(TaskSchedule.fromFirestore).whereType<TaskSchedule>().toList()
-        ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
-      notifyListeners();
-    });
+    _schedulesSub = householdRef.collection('taskSchedules').snapshots().listen(
+      (snap) {
+        schedules =
+            snap.docs
+                .map(TaskSchedule.fromFirestore)
+                .whereType<TaskSchedule>()
+                .toList()
+              ..sort(
+                (a, b) =>
+                    a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+              );
+        notifyListeners();
+      },
+    );
 
     _rewardsSub = householdRef.collection('rewards').snapshots().listen((snap) {
       availableRewards = snap.docs.map(Reward.fromFirestore).toList();
       notifyListeners();
     }, onError: _logError('rewards'));
 
-    _redemptionsSub = householdRef
-        .collection('redemptions')
-        .snapshots()
-        .listen((snap) {
-          final list = snap.docs.map(Redemption.fromFirestore).toList();
-          list.sort((a, b) => b.redeemedAt.compareTo(a.redeemedAt));
-          redemptions = list;
-          notifyListeners();
-        }, onError: _logError('redemptions'));
+    _redemptionsSub = householdRef.collection('redemptions').snapshots().listen(
+      (snap) {
+        final list = snap.docs.map(Redemption.fromFirestore).toList();
+        list.sort((a, b) => b.redeemedAt.compareTo(a.redeemedAt));
+        redemptions = list;
+        notifyListeners();
+      },
+      onError: _logError('redemptions'),
+    );
   }
 
   /// One live listener per member profile (read by id: Firestore rules check
@@ -289,14 +316,18 @@ class DatabaseService extends ChangeNotifier {
     }
     for (final id in memberIds) {
       if (_memberSubs.containsKey(id)) continue;
-      _memberSubs[id] = _firestore.collection('users').doc(id).snapshots().listen((snap) {
-        if (snap.exists) {
-          _membersById[id] = AppUser.fromFirestore(snap);
-        } else {
-          _membersById.remove(id);
-        }
-        _publishMembers();
-      }, onError: _logError('member $id'));
+      _memberSubs[id] = _firestore
+          .collection('users')
+          .doc(id)
+          .snapshots()
+          .listen((snap) {
+            if (snap.exists) {
+              _membersById[id] = AppUser.fromFirestore(snap);
+            } else {
+              _membersById.remove(id);
+            }
+            _publishMembers();
+          }, onError: _logError('member $id'));
     }
     _publishMembers();
   }
@@ -322,10 +353,16 @@ class DatabaseService extends ChangeNotifier {
   /// created it) becomes the admin. Done by a parent's device.
   Future<void> _backfillOwner(Household h) async {
     final user = _sessionUser;
-    if (_ownerBackfillTried || user == null || !user.isParent || h.memberIds.isEmpty) return;
+    if (_ownerBackfillTried ||
+        user == null ||
+        !user.isParent ||
+        h.memberIds.isEmpty)
+      return;
     _ownerBackfillTried = true;
     try {
-      await _firestore.collection('households').doc(h.id).update({'ownerId': h.memberIds.first});
+      await _firestore.collection('households').doc(h.id).update({
+        'ownerId': h.memberIds.first,
+      });
     } catch (e) {
       debugPrint('DatabaseService: could not set household admin: $e');
     }
@@ -377,7 +414,9 @@ class DatabaseService extends ChangeNotifier {
     final tz = await _deviceTimeZone();
     if (tz == null || householdId != _householdId) return;
     try {
-      await _firestore.collection('households').doc(householdId).update({'timezone': tz});
+      await _firestore.collection('households').doc(householdId).update({
+        'timezone': tz,
+      });
     } catch (e) {
       debugPrint('DatabaseService: could not set household time zone: $e');
     }
@@ -493,7 +532,8 @@ class DatabaseService extends ChangeNotifier {
     await _firestore.runTransaction((transaction) async {
       final snap = await transaction.get(ref);
       final before = snap.exists ? TaskModel.fromFirestore(snap) : null;
-      final reassigned = before != null && before.assignedToUserId != task.assignedToUserId;
+      final reassigned =
+          before != null && before.assignedToUserId != task.assignedToUserId;
       transaction.update(ref, {
         ...task.toFirestore(),
         if (reassigned) ..._freshAssignment(task.assignedToUserId),
@@ -504,7 +544,10 @@ class DatabaseService extends ChangeNotifier {
   // --- Mutations: repeating tasks ----------------------------------------
 
   CollectionReference<Map<String, dynamic>> get _schedulesCollection =>
-      _firestore.collection('households').doc(_householdId).collection('taskSchedules');
+      _firestore
+          .collection('households')
+          .doc(_householdId)
+          .collection('taskSchedules');
 
   /// Creates a repeating task. The server generates its occurrences.
   Future<String> addSchedule(TaskSchedule schedule) async {
@@ -640,10 +683,14 @@ class DatabaseService extends ChangeNotifier {
   /// granted at most once.
   Future<void> _finishTask(String taskId, {required Set<TaskStatus> from}) async {
     final taskRef = _tasksCollection.doc(taskId);
-    await _firestore.runTransaction((transaction) async {
+
+    final approvedTask = await _firestore.runTransaction<TaskModel?>((
+      transaction,
+    ) async {
       // All reads must happen before any writes in a transaction.
       final taskSnap = await transaction.get(taskRef);
-      if (!taskSnap.exists) return;
+      if (!taskSnap.exists) return null;
+
       final task = TaskModel.fromFirestore(taskSnap);
 
       if (!from.contains(task.status)) return;
@@ -655,10 +702,12 @@ class DatabaseService extends ChangeNotifier {
         if (task.status == TaskStatus.pending) 'completedAt': now,
         if (task.proof?.verdict.needsReview ?? false) 'proof.parentOverride': true,
       };
+
       final assignedTo = task.assignedToUserId;
+
       if (assignedTo == null) {
         transaction.update(taskRef, approval);
-        return;
+        return task;
       }
 
       // XP and coins live on the child's account, so they count in every
@@ -667,15 +716,65 @@ class DatabaseService extends ChangeNotifier {
       final userSnap = await transaction.get(userRef);
 
       transaction.update(taskRef, approval);
+
       if (userSnap.exists) {
         final currentXp = userSnap.data()?['xp'] as int? ?? 0;
         final currentCoins = userSnap.data()?['coins'] as int? ?? 0;
+
         transaction.update(userRef, {
           'xp': currentXp + task.rewardXp,
           'coins': currentCoins + task.coinReward,
         });
       }
+
+      return task;
     });
+
+    if (approvedTask == null) return;
+
+    await _recordTaskApprovalGoalProgress(taskId: taskId, task: approvedTask);
+  }
+
+  Future<void> _recordTaskApprovalGoalProgress({
+    required String taskId,
+    required TaskModel task,
+  }) async {
+    final householdId = _householdId;
+    final userId = task.assignedToUserId;
+
+    if (householdId == null || userId == null) return;
+
+    final now = DateTime.now();
+
+    final goalsSnapshot = await _firestore
+        .collection('households')
+        .doc(householdId)
+        .collection('goals')
+        .get();
+
+    final goalService = GoalService(firestore: _firestore);
+
+    for (final goalDoc in goalsSnapshot.docs) {
+      final goal = Goal.fromFirestore(goalDoc);
+
+      final amount = switch (goal.metric) {
+        GoalMetric.tasksCompleted => 1,
+        GoalMetric.xpEarned => task.rewardXp,
+        GoalMetric.coinsEarned => task.coinReward,
+      };
+
+      await goalService.recordContribution(
+        householdId: householdId,
+        goalId: goal.id,
+        contribution: GoalContribution(
+          activityId: taskId,
+          userId: userId,
+          amount: amount,
+          activityType: GoalActivityType.taskApproval,
+          recordedAt: now,
+        ),
+      );
+    }
   }
 
   // --- Mutations: household membership ---------------------------------------
@@ -687,7 +786,9 @@ class DatabaseService extends ChangeNotifier {
   /// request.
   Future<void> approveJoinRequest(JoinRequest request) async {
     final batch = _firestore.batch();
-    batch.update(_householdRef, {'memberIds': FieldValue.arrayUnion([request.userId])});
+    batch.update(_householdRef, {
+      'memberIds': FieldValue.arrayUnion([request.userId]),
+    });
     batch.delete(_householdRef.collection('joinRequests').doc(request.userId));
     await batch.commit();
   }
@@ -703,7 +804,9 @@ class DatabaseService extends ChangeNotifier {
     final h = household;
     if (h == null) return;
     if (h.ownerId == userId) {
-      throw Exception('The admin can\'t be removed. Make someone else admin first.');
+      throw Exception(
+        'The admin can\'t be removed. Make someone else admin first.',
+      );
     }
     final unfinished = tasks.where(
       (t) => t.assignedToUserId == userId && t.status != TaskStatus.approved,
@@ -713,7 +816,9 @@ class DatabaseService extends ChangeNotifier {
       batch.update(_tasksCollection.doc(task.id), _freshAssignment(null));
     }
     await batch.commit();
-    await _householdRef.update({'memberIds': FieldValue.arrayRemove([userId])});
+    await _householdRef.update({
+      'memberIds': FieldValue.arrayRemove([userId]),
+    });
   }
 
   /// Admin hands the admin role to another parent in the household.

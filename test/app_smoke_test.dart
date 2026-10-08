@@ -42,6 +42,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    // The link sits below the social sign-in buttons, off the 800x600 test
+    // screen, so scroll it into view first.
+    await tester.ensureVisible(find.text('Sign Up'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Sign Up'));
     await tester.pumpAndSettle();
 

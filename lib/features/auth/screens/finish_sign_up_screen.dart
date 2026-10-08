@@ -34,6 +34,7 @@ class _FinishSignUpScreenState extends State<FinishSignUpScreen> {
   bool _joinExisting = false;
   bool _isSubmitting = false;
   bool _finished = false;
+  bool _leaving = false;
 
   bool get _usesInviteCode => _role == UserRole.child || _joinExisting;
 
@@ -69,22 +70,40 @@ class _FinishSignUpScreenState extends State<FinishSignUpScreen> {
     }
   }
 
+  /// Backing out: remove the half-made account and sign out *before*
+  /// popping, so the previous screen never sees a stale session (and a quick
+  /// second sign-in can't be signed out by a cleanup still in flight).
+  Future<void> _leave() async {
+    if (_leaving) return;
+    setState(() => _leaving = true);
+    try {
+      await context.read<AuthService>().cancelSocialSignUp();
+    } catch (e) {
+      debugPrint('Cancel sign-up failed: $e');
+    }
+    if (!mounted) return;
+    Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final hint = theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade600);
 
     return PopScope(
-      // Leaving without finishing removes the half-made account.
+      // Leaving without finishing removes the half-made account; the pop
+      // waits for that cleanup (see [_leave]).
+      canPop: _finished,
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop && !_finished) {
-          context.read<AuthService>().cancelSocialSignUp().catchError((Object e) {
-            debugPrint('Cancel sign-up failed: $e');
-          });
-        }
+        if (!didPop) _leave();
       },
       child: Scaffold(
-        appBar: AppBar(title: const Text('Finish Signing Up')),
+        appBar: AppBar(
+          title: const Text('Finish Signing Up'),
+          bottom: _leaving
+              ? const PreferredSize(preferredSize: Size.fromHeight(2), child: LinearProgressIndicator(minHeight: 2))
+              : null,
+        ),
         body: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -157,7 +176,7 @@ class _FinishSignUpScreenState extends State<FinishSignUpScreen> {
                     ),
                   ],
                   const SizedBox(height: 24),
-                  AppButton(label: 'Create Account', isLoading: _isSubmitting, onPressed: _submit),
+                  AppButton(label: 'Create Account', isLoading: _isSubmitting, onPressed: _leaving ? null : _submit),
                   const SizedBox(height: 12),
                   const LegalFooter(prefix: 'By creating an account, you agree to our'),
                 ],
