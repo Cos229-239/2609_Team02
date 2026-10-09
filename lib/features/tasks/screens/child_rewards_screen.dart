@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/theme.dart';
+import '../../../shared/widgets/help_tip.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/models/redemption.dart';
 import '../../../core/models/user.dart';
@@ -68,9 +69,15 @@ class ChildRewardsScreen extends StatelessWidget {
           children: [
             Icon(Icons.emoji_events, color: Colors.amber.shade700),
             const SizedBox(width: 8),
-            Text('Family Leaderboard', style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-            )),
+            Flexible(
+              child: Text('Family Leaderboard', style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              )),
+            ),
+            const HelpTip(
+              title: 'Leaderboard',
+              message: 'Everyone in the family ranked by XP. XP is never spent, so it only goes up!',
+            ),
           ],
         ),
         const SizedBox(height: 4),
@@ -94,7 +101,16 @@ class ChildRewardsScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Your Coin Balance', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700)),
+                    Row(
+                      children: [
+                        Text('Your Coin Balance', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600)),
+                        const HelpTip(
+                          iconSize: 16,
+                          title: 'Coins',
+                          message: 'You earn coins when a parent approves your tasks. Spend them in the Reward Store below.',
+                        ),
+                      ],
+                    ),
                     Text('${child.coins} coins', style: Theme.of(context).textTheme.headlineSmall),
                   ],
                 ),
@@ -107,9 +123,16 @@ class ChildRewardsScreen extends StatelessWidget {
           children: [
             Icon(Icons.storefront, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 8),
-            Text('Reward Store', style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-            )),
+            Flexible(
+              child: Text('Reward Store', style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              )),
+            ),
+            const HelpTip(
+              title: 'Reward Store',
+              message: 'Redeem a reward when you have enough coins - your parent gets a heads-up. '
+                  'Pin one to set it as your goal.',
+            ),
           ],
         ),
         const SizedBox(height: 4),

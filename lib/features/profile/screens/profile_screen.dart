@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/theme_controller.dart';
 import '../../../shared/utils/legal_links.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../widgets/profile_menu_tile.dart';
@@ -87,6 +88,11 @@ class ProfileScreen extends StatelessWidget {
                 onTap: () => Navigator.of(context).pushNamed(AppRoutes.notificationSettings),
               ),
               ProfileMenuTile(
+                icon: Icons.school_outlined,
+                label: 'App Tour & Tutorials',
+                onTap: () => Navigator.of(context).pushNamed(AppRoutes.helpCenter),
+              ),
+              ProfileMenuTile(
                 icon: Icons.help_outline,
                 label: 'Help & Support',
                 onTap: () => _launchSupportEmail(context),
@@ -104,6 +110,13 @@ class ProfileScreen extends StatelessWidget {
             ],
           ),
         ),
+        if (ThemeController.maybeOf(context) != null) ...[
+          const SizedBox(height: 16),
+          const AppCard(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: _DarkModeTile(),
+          ),
+        ],
         const SizedBox(height: 16),
         AppCard(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -120,6 +133,37 @@ class ProfileScreen extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Settings > Dark Mode. Switches the whole app between the light and dark
+/// themes; the choice is remembered on this device (see [ThemeController]).
+class _DarkModeTile extends StatelessWidget {
+  const _DarkModeTile();
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = ThemeController.maybeOf(context);
+    if (controller == null) return const SizedBox.shrink();
+    final isDark = controller.isDark(context);
+    final color = Theme.of(context).colorScheme.onSurface;
+
+    return SwitchListTile.adaptive(
+      key: const Key('dark-mode-switch'),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+      dense: true,
+      secondary: Icon(isDark ? Icons.dark_mode : Icons.dark_mode_outlined, color: color, size: 24),
+      title: Text(
+        'Dark Mode',
+        style: TextStyle(color: color, fontWeight: FontWeight.w500, fontSize: 16),
+      ),
+      subtitle: Text(
+        isDark ? 'On - easier on the eyes at night' : 'Off',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
+      ),
+      value: isDark,
+      onChanged: controller.setDark,
     );
   }
 }

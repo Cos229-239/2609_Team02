@@ -47,6 +47,12 @@ dependencies:
   # Opens the mailto: link for Help & Support (Settings screen).
   url_launcher: ^6.3.1
 
+  # Small on-device key/value store: remembers the light/dark mode choice
+  # and each user's onboarding progress/completion between app launches.
+  # See lib/core/services/theme_controller.dart and
+  # lib/features/onboarding/onboarding_controller.dart.
+  shared_preferences: ^2.5.3
+
   # Task photo proof.
   image_picker: ^1.1.2
   firebase_storage: ^13.0.0

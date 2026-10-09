@@ -8,6 +8,8 @@ import '../../../core/services/database_service.dart';
 import '../../../shared/layouts/main_tab_shell.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/coach_mark_tour.dart';
+import '../../../shared/widgets/help_tip.dart';
 import '../../tasks/widgets/task_swipe.dart';
 import '../../tasks/widgets/task_tile.dart';
 import '../widgets/family_member_card.dart';
@@ -71,11 +73,14 @@ class HouseholdHomeScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
         ],
-        AppButton(
-          label: 'Create a New Task',
-          icon: Icons.add_task,
-          variant: AppButtonVariant.primary,
-          onPressed: () => Navigator.of(context).pushNamed(AppRoutes.taskCreate),
+        KeyedSubtree(
+          key: CoachMarkScope.keyOf(context, CoachTarget.createTask),
+          child: AppButton(
+            label: 'Create a New Task',
+            icon: Icons.add_task,
+            variant: AppButtonVariant.primary,
+            onPressed: () => Navigator.of(context).pushNamed(AppRoutes.taskCreate),
+          ),
         ),
         if (db.isAdmin && db.joinRequests.isNotEmpty) ...[
           const SizedBox(height: 16),
@@ -101,10 +106,15 @@ class HouseholdHomeScreen extends StatelessWidget {
         ],
         if (needsApproval.isNotEmpty) ...[
           const SizedBox(height: 32),
-          Text('Needs Approval:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-          )),
+          HeadingWithHelp(
+            heading: Text('Needs Approval:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+            )),
+            helpTitle: 'Needs Approval',
+            help: 'Tasks your kids marked as done. Approving pays out the XP and coins; '
+                'check the photo first if proof was required.',
+          ),
           const SizedBox(height: 4),
           Text(
             'Swipe right to approve, left to delete.',
@@ -124,10 +134,15 @@ class HouseholdHomeScreen extends StatelessWidget {
         ],
         if (db.schedules.isNotEmpty) ...[
           const SizedBox(height: 32),
-          Text('Repeating Tasks:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-          )),
+          HeadingWithHelp(
+            heading: Text('Repeating Tasks:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+            )),
+            helpTitle: 'Repeating Tasks',
+            help: 'Chores you set up once. A fresh copy is created on each scheduled day. '
+                'Tap one to change or stop it.',
+          ),
           const SizedBox(height: 4),
           Text(
             "Each day's task shows up that morning; reminders go out at 9 AM.",
@@ -165,10 +180,14 @@ class HouseholdHomeScreen extends StatelessWidget {
           ],
         ],
         const SizedBox(height: 32),
-        Text('Your Family:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          fontSize: 22,
-          fontWeight: FontWeight.w600,
-        )),
+        HeadingWithHelp(
+          heading: Text('Your Family:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+          )),
+          helpTitle: 'Your Family',
+          help: "Tap a child to see and manage their tasks. Add or invite members from the Family tab.",
+        ),
         const SizedBox(height: 14),
         for (final member in db.familyMembers) ...[
           FamilyMemberCard(
@@ -204,7 +223,7 @@ class HouseholdHomeScreen extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontSize: 15,
                       height: 1.3,
-                      color: Colors.grey.shade800,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     )
                   ),
                 ),

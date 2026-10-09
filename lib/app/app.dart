@@ -5,6 +5,8 @@ import '../core/constants/app_constants.dart';
 import '../core/services/auth_service.dart';
 import '../core/services/database_service.dart';
 import '../core/services/notification_service.dart';
+import '../core/services/theme_controller.dart';
+import '../features/onboarding/onboarding_controller.dart';
 import 'routes.dart';
 import 'theme.dart';
 
@@ -17,6 +19,8 @@ class FamotiveApp extends StatelessWidget {
     required this.navigatorKey,
     this.scaffoldMessengerKey,
     this.notificationService,
+    this.themeController,
+    this.onboardingController,
   });
 
   /// Constructed and given a chance to restore any existing session
@@ -36,6 +40,15 @@ class FamotiveApp extends StatelessWidget {
   /// turning notifications back on can re-request permission.
   final NotificationService? notificationService;
 
+  /// Light/dark mode (Settings > Dark Mode). Loaded in main.dart before
+  /// `runApp` so the first frame is already in the right theme; tests can
+  /// leave it null to get the default (light).
+  final ThemeController? themeController;
+
+  /// First-time walkthrough / tutorial progress (see
+  /// lib/features/onboarding/). Null in tests: a fresh in-memory one is used.
+  final OnboardingController? onboardingController;
+
   @override
   Widget build(BuildContext context) {
     final homeRouteName = authService.isLoggedIn ? AppRoutes.home : AppRoutes.login;
@@ -44,6 +57,12 @@ class FamotiveApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider<AuthService>.value(value: authService),
         Provider<NotificationService?>.value(value: notificationService),
+        ChangeNotifierProvider<ThemeController>(
+          create: (_) => themeController ?? ThemeController(),
+        ),
+        ChangeNotifierProvider<OnboardingController>(
+          create: (_) => onboardingController ?? (OnboardingController()..load()),
+        ),
         ChangeNotifierProxyProvider<AuthService, DatabaseService>(
           create: (_) => DatabaseService(),
           update: (_, auth, db) => db!
@@ -55,18 +74,22 @@ class FamotiveApp extends StatelessWidget {
             ..bindSession(auth.currentUser),
         ),
       ],
-      child: MaterialApp(
+      child: Consumer<ThemeController>(
+        builder: (context, appTheme, _) => MaterialApp(
         navigatorKey: navigatorKey,
         scaffoldMessengerKey: scaffoldMessengerKey,
         title: AppConstants.appName,
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
+        darkTheme: AppTheme.dark,
+        themeMode: appTheme.mode,
         initialRoute: homeRouteName,
         onGenerateRoute: AppRoutes.onGenerateRoute,
         onGenerateInitialRoutes: (initialRoute) {
           final routeName = AppRoutes.isSafeInitialRoute(initialRoute) ? initialRoute : homeRouteName;
           return [AppRoutes.onGenerateRoute(RouteSettings(name: routeName))];
         },
+      ),
       ),
     );
   }

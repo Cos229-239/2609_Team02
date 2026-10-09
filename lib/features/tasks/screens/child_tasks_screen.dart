@@ -7,6 +7,7 @@ import '../../../core/constants/task_icons.dart';
 import '../../../core/models/task.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/database_service.dart';
+import '../../../shared/widgets/help_tip.dart';
 import '../widgets/task_swipe.dart';
 import '../task_completion_flow.dart';
 
@@ -76,6 +77,7 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
             title: 'Claimed / Assigned',
             count: activeTasks.length,
             badgeColor: AppColors.growthGreen,
+            help: 'Your tasks. Tap Complete (or swipe right) when you finish one.',
           ),
           const SizedBox(height: 6),
           if (activeTasks.isEmpty)
@@ -108,6 +110,7 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
             title: 'Awaiting Approval',
             count: awaitingApproval.length,
             badgeColor: Colors.orange,
+            help: 'Done and waiting for a parent to check. You get the XP and coins once it\'s approved.',
           ),
           const SizedBox(height: 6),
           if (awaitingApproval.isEmpty)
@@ -134,6 +137,7 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
             title: 'Available Tasks',
             count: availableTasks.length,
             badgeColor: AppColors.primaryBlue,
+            help: 'Household tasks anyone can do. Claim one to make it yours - first come, first served!',
           ),
           const SizedBox(height: 8),
           if (availableTasks.isEmpty)
@@ -198,7 +202,7 @@ class _ViewToggle extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.grey.shade200,
+        color: context.mutedFill,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
@@ -254,13 +258,13 @@ class _ToggleButton extends StatelessWidget {
               Icon(
                 icon,
                 size: 18,
-                color: selected ? Colors.white : Colors.grey.shade600,
+                color: selected ? Colors.white : (context.isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600),
               ),
               const SizedBox(width: 8),
               Text(
                 label,
                 style: TextStyle(
-                  color: selected ? Colors.white : Colors.grey.shade700,
+                  color: selected ? Colors.white : (context.isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -278,12 +282,16 @@ class _SectionHeader extends StatelessWidget {
     required this.title,
     required this.count,
     required this.badgeColor,
+    this.help,
   });
 
   final IconData icon;
   final String title;
   final int count;
   final Color badgeColor;
+
+  /// Optional ⓘ tip explaining this section.
+  final String? help;
 
   @override
   Widget build(BuildContext context) {
@@ -302,7 +310,13 @@ class _SectionHeader extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+            child: help == null
+                ? Text(title, style: Theme.of(context).textTheme.titleMedium)
+                : HeadingWithHelp(
+                    heading: Text(title, style: Theme.of(context).textTheme.titleMedium),
+                    helpTitle: title,
+                    help: help!,
+                  ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
@@ -354,9 +368,9 @@ class _TaskRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: EdgeInsets.symmetric(horizontal: 14, vertical: isAvailable ? 2 : 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.raisedSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: context.subtleBorder),
       ),
       child: Row(
         children: [
@@ -510,11 +524,11 @@ class _HistoryRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.raisedSurface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.shade200,
+            color: context.isDarkMode ? Colors.black26 : Colors.grey.shade200,
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),

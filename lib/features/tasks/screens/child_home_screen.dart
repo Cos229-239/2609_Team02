@@ -7,6 +7,8 @@ import '../../../core/models/task.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/database_service.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/coach_mark_tour.dart';
+import '../../../shared/widgets/help_tip.dart';
 import '../task_completion_flow.dart';
 
 /// "Home" tab for a signed-in child: today's progress and task list.
@@ -52,6 +54,7 @@ class ChildHomeScreen extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _NextRewardCard(
+          key: CoachMarkScope.keyOf(context, CoachTarget.childProgress),
           progress: progress,
           nextRewardXp: nextRewardXp,
           completedCount: completedCount,
@@ -66,6 +69,11 @@ class ChildHomeScreen extends StatelessWidget {
                 Icon(Icons.event_available, color: Colors.blue.shade700),
                 const SizedBox(width: 8),
                 Text("Today's Tasks", style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                const HelpTip(
+                  title: "Today's Tasks",
+                  message: 'Tap the circle when a task is done. A parent approves it, '
+                      'then you earn its XP ⭐ and coins 🪙.',
+                ),
               ],
             ),
             _CountBadge(completed: completedCount, total: totalCount),
@@ -128,6 +136,7 @@ class ChildHomeScreen extends StatelessWidget {
 
 class _NextRewardCard extends StatelessWidget {
   const _NextRewardCard({
+    super.key,
     required this.progress,
     required this.nextRewardXp,
     required this.completedCount,
@@ -142,7 +151,7 @@ class _NextRewardCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppCard(
-      color:Colors.white,
+      color: context.raisedSurface,
       child: Row(
         children: [
           SizedBox(
@@ -217,7 +226,7 @@ Positioned(
                   style: Theme.of(context)
                       .textTheme
                       .bodyMedium
-                      ?.copyWith(color: Colors.black, fontWeight: FontWeight.w600),
+                      ?.copyWith(color: context.strongText, fontWeight: FontWeight.w600),
                 ),
                 Text(
   '+$nextRewardXp XP',
@@ -230,7 +239,7 @@ ClipRRect(
   child: LinearProgressIndicator(
     value: totalCount == 0 ? 0 : completedCount / totalCount,
     minHeight: 8,
-    backgroundColor: Colors.grey.shade300,
+    backgroundColor: context.isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
     valueColor: const AlwaysStoppedAnimation<Color>(
       Color(0xFF4CAF50),
     ),
@@ -255,7 +264,7 @@ const SizedBox(height: 4),
         vertical: 3,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.raisedSurface,
         borderRadius: BorderRadius.circular(12),
       ),
      
@@ -315,9 +324,9 @@ class _ChildTaskRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.raisedSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: context.subtleBorder),
       ),
       child: Row(
         children: [
