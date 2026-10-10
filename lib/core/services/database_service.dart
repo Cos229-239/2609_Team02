@@ -704,7 +704,7 @@ class DatabaseService extends ChangeNotifier {
 
       final task = TaskModel.fromFirestore(taskSnap);
 
-      if (!from.contains(task.status)) return;
+      if (!from.contains(task.status)) return null;
 
       final now = Timestamp.fromDate(DateTime.now());
       final approval = <String, Object?>{
