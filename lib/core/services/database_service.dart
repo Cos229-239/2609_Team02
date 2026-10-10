@@ -819,10 +819,28 @@ class DatabaseService extends ChangeNotifier {
     await _householdRef.update({'ownerId': userId});
   }
 
-  Future<void> renameHousehold(String name) async {
-    final trimmed = name.trim();
-    if (trimmed.isEmpty) return;
-    await _householdRef.update({'name': trimmed});
+  /// Admin renames a household: the active one, or [householdId] (any
+  /// household the signed-in user is admin of). Extra spaces are collapsed.
+  /// Throws a user-facing message if the name is empty/too long or the user
+  /// isn't the admin (firestore.rules enforces the same).
+  Future<void> renameHousehold(String name, {String? householdId}) async {
+    final trimmed = name.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (trimmed.isEmpty) throw Exception('Give your household a name.');
+    if (trimmed.length > AppConstants.householdNameMaxLength) {
+      throw Exception('Keep the name to ${AppConstants.householdNameMaxLength} characters or fewer.');
+    }
+    final id = householdId ?? _householdId;
+    if (id == null) throw Exception('No household selected.');
+
+    Household? target = household?.id == id ? household : null;
+    for (final h in myHouseholds) {
+      if (h.id == id) target = h;
+    }
+    if (target == null || !target.isAdmin(_sessionUserId)) {
+      throw Exception('Only the household admin can change its name.');
+    }
+    if (target.name == trimmed) return;
+    await _firestore.collection('households').doc(id).update({'name': trimmed});
   }
 
   // --- Mutations: reward store --------------------------------------------

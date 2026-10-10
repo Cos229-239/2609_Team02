@@ -148,10 +148,12 @@ class _HouseholdTile extends StatelessWidget {
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'switch') context.read<AuthService>().switchHousehold(household.id);
+              if (value == 'rename') showRenameHouseholdDialog(context, household);
               if (value == 'leave') _leave(context);
             },
             itemBuilder: (_) => [
               if (!active) const PopupMenuItem(value: 'switch', child: Text('Switch to this household')),
+              if (isAdmin) const PopupMenuItem(value: 'rename', child: Text('Rename household')),
               const PopupMenuItem(
                 value: 'leave',
                 child: Text('Leave household', style: TextStyle(color: Colors.red)),

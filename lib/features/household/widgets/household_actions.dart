@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/constants/app_constants.dart';
+import '../../../core/models/household.dart';
 import '../../../core/models/join_request.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/database_service.dart';
 import '../../../shared/widgets/app_card.dart';
 
 String _message(Object e) => e.toString().replaceFirst('Exception: ', '');
@@ -153,5 +156,79 @@ Future<void> showCreateHouseholdDialog(BuildContext context) async {
     if (context.mounted) showHouseholdSnack(context, '"${name.trim()}" created - you\'re its admin.');
   } catch (e) {
     if (context.mounted) showHouseholdSnack(context, _message(e));
+  }
+}
+
+/// Admin only: asks for a new name for [household] and saves it. Shown from
+/// the Family tab header and Settings > Households.
+Future<void> showRenameHouseholdDialog(BuildContext context, Household household) async {
+  final db = context.read<DatabaseService>();
+  final name = await showDialog<String>(
+    context: context,
+    builder: (_) => _RenameHouseholdDialog(currentName: household.name),
+  );
+  if (name == null || name.trim() == household.name) return;
+  try {
+    await db.renameHousehold(name, householdId: household.id);
+    if (context.mounted) showHouseholdSnack(context, 'Household renamed to "${name.trim()}".');
+  } catch (e) {
+    if (context.mounted) showHouseholdSnack(context, _message(e));
+  }
+}
+
+class _RenameHouseholdDialog extends StatefulWidget {
+  const _RenameHouseholdDialog({required this.currentName});
+
+  final String currentName;
+
+  @override
+  State<_RenameHouseholdDialog> createState() => _RenameHouseholdDialogState();
+}
+
+class _RenameHouseholdDialogState extends State<_RenameHouseholdDialog> {
+  late final TextEditingController _controller = TextEditingController(text: widget.currentName);
+
+  bool get _canSave {
+    final name = _controller.text.trim();
+    return name.isNotEmpty && name != widget.currentName;
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    if (_canSave) Navigator.of(context).pop(_controller.text);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Rename Household'),
+      content: TextField(
+        key: const Key('rename-household-field'),
+        controller: _controller,
+        autofocus: true,
+        maxLength: AppConstants.householdNameMaxLength,
+        textCapitalization: TextCapitalization.words,
+        textInputAction: TextInputAction.done,
+        decoration: const InputDecoration(
+          labelText: 'Household name',
+          helperText: 'Everyone in the household will see the new name.',
+        ),
+        onChanged: (_) => setState(() {}),
+        onSubmitted: (_) => _save(),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        FilledButton(
+          key: const Key('rename-household-save'),
+          onPressed: _canSave ? _save : null,
+          child: const Text('Save'),
+        ),
+      ],
+    );
   }
 }

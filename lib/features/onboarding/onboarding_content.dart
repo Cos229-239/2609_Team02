@@ -94,6 +94,7 @@ class OnboardingGuides {
     bullets: [
       'Create a household, or join one with its invite code',
       'Tap the household name at the top to switch households',
+      'Admins can rename it with the ✏️ on the Family tab',
       'Manage households in Settings > Households',
     ],
   );

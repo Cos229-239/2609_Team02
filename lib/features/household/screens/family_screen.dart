@@ -14,6 +14,7 @@ import '../../profile/widgets/current_password_prompt.dart';
 import '../../rewards/widgets/reward_editor_sheet.dart';
 import '../widgets/add_child_sheet.dart';
 import '../widgets/family_member_card.dart';
+import '../widgets/household_actions.dart';
 
 /// "Family" tab: household members (with admin tools: approve join
 /// requests, remove members, hand over admin), adding a child account, the
@@ -51,10 +52,23 @@ class FamilyScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(household.name, style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-          )),
+          Row(
+            children: [
+              Expanded(
+                child: Text(household.name, style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                )),
+              ),
+              if (isAdmin)
+                IconButton(
+                  key: const Key('rename-household-button'),
+                  tooltip: 'Rename household',
+                  icon: Icon(Icons.edit_outlined, color: Theme.of(context).colorScheme.primary),
+                  onPressed: () => showRenameHouseholdDialog(context, household),
+                ),
+            ],
+          ),
           const SizedBox(height: 2),
           Text(
             isAdmin
