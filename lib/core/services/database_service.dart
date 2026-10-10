@@ -670,9 +670,18 @@ class DatabaseService extends ChangeNotifier {
     });
   }
 
-    /// Parent approves a completed task, grants XP and coins to the child,
-    /// and records the approval toward eligible household goals.
-  Future<void> approveTask(String taskId) async {
+  /// Parent approves a completed task: grants XP and coins to the child.
+  Future<void> approveTask(String taskId) =>
+      _finishTask(taskId, from: const {TaskStatus.completed});
+
+  /// Parent marks a task done themselves.
+  Future<void> parentCompleteTask(String taskId) =>
+      _finishTask(taskId, from: const {TaskStatus.pending, TaskStatus.completed});
+
+  /// Moves a task whose status is in [from] to `approved` and grants its
+  /// rewards to the assigned child, all in one transaction so rewards are
+  /// granted at most once.
+  Future<void> _finishTask(String taskId, {required Set<TaskStatus> from}) async {
     final taskRef = _tasksCollection.doc(taskId);
 
     final approvedTask = await _firestore.runTransaction<TaskModel?>((
@@ -684,11 +693,13 @@ class DatabaseService extends ChangeNotifier {
 
       final task = TaskModel.fromFirestore(taskSnap);
 
-      if (task.status != TaskStatus.completed) return null;
+      if (!from.contains(task.status)) return;
 
+      final now = Timestamp.fromDate(DateTime.now());
       final approval = <String, Object?>{
         'status': TaskStatus.approved.name,
-        'approvedAt': Timestamp.fromDate(DateTime.now()),
+        'approvedAt': now,
+        if (task.status == TaskStatus.pending) 'completedAt': now,
         if (task.proof?.verdict.needsReview ?? false) 'proof.parentOverride': true,
       };
 
