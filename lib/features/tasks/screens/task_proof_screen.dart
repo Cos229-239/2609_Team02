@@ -297,7 +297,9 @@ class _PhotoFrame extends StatelessWidget {
           children: [
             if (photo == null)
               Container(
-                color: AppColors.surfaceLight,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? AppColors.surfaceDarkRaised
+                    : AppColors.surfaceLight,
                 child: Icon(Icons.photo_camera_outlined, size: 64, color: Colors.grey.shade400),
               )
             else

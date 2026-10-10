@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../app/routes.dart';
 import '../../../app/theme.dart';
+import '../../../shared/widgets/help_tip.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/task_icons.dart';
 import '../../../core/models/task.dart';
@@ -64,12 +65,17 @@ class ProgressScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
 children: [
-  Text(
-    'Family Progress',
-    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-      fontSize: 28,
-      fontWeight: FontWeight.w700,
+  HeadingWithHelp(
+    heading: Text(
+      'Family Progress',
+      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+        fontSize: 28,
+        fontWeight: FontWeight.w700,
+      ),
     ),
+    helpTitle: 'Family Progress',
+    help: "Each child's lifetime XP and current coin balance. XP only goes up; "
+        'coins go down when a reward is redeemed.',
   ),
   const SizedBox(height: 6),
   Text(
@@ -127,10 +133,15 @@ children: [
           const SizedBox(height: 12),
         ],
         const SizedBox(height: 12),
-        Text('All Tasks:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-        )),
+        HeadingWithHelp(
+          heading: Text('All Tasks:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          )),
+          helpTitle: 'All Tasks',
+          help: 'Every task in the household, grouped by status. Use the ⋮ menu on a task '
+              'to approve, re-assign or duplicate it.',
+        ),
         const SizedBox(height: 4),
         Text(
           'Tap a task to edit it. Swipe right to approve (or archive), '

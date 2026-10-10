@@ -57,6 +57,11 @@ class AppConstants {
   // Small bold status/badge label text (task/reward status pills).
   static const double captionFontSize = 12;
 
+  // Households
+  /// Longest household name the admin can set (also enforced in
+  /// firestore.rules when the name changes).
+  static const int householdNameMaxLength = 40;
+
   // Shape
   static const double radiusSm = 8;
   static const double radiusMd = 12;

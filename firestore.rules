@@ -138,13 +138,22 @@ service cloud.firestore {
         request.resource.data.ownerId == request.auth.uid &&
         request.resource.data.memberIds == [request.auth.uid] &&
         !request.resource.data.keys().hasAny(['premiumUntil']);
+      // A new household name: 1-40 characters (AppConstants.householdNameMaxLength).
+      function nameValid() {
+        return !changedKeys().hasAny(['name']) || (
+          request.resource.data.name is string &&
+          request.resource.data.name.trim().size() > 0 &&
+          request.resource.data.name.size() <= 40);
+      }
+
       // premiumUntil is server-only, even for the admin.
       allow update: if isSignedIn() && resource.data.memberIds.hasAny([request.auth.uid]) && ownerStillMember() &&
-        !changedKeys().hasAny(['premiumUntil']) && (
+        !changedKeys().hasAny(['premiumUntil']) && nameValid() && (
         // Admin: anything (approve/remove members, hand over admin, rename, ...).
         isOwner() ||
-        // Other members: rename / time zone / allowed membership changes.
-        (changedKeys().hasOnly(['name', 'timezone', 'memberIds']) && memberChangeAllowed()) ||
+        // Other members: time zone / allowed membership changes. Only the
+        // admin can rename the household.
+        (changedKeys().hasOnly(['timezone', 'memberIds']) && memberChangeAllowed()) ||
         // Households from before admins existed: a parent member records the
         // first member (the creator) as admin.
         (resource.data.get('ownerId', null) == null && isParent() &&

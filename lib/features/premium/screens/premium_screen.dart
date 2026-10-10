@@ -315,9 +315,11 @@ class _PlanTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AppColors.primaryBlue : Colors.grey.shade300;
+    final color = selected
+        ? AppColors.primaryBlue
+        : (context.isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300);
     return Material(
-      color: selected ? AppColors.primaryBlue.withValues(alpha: 0.06) : Colors.white,
+      color: selected ? AppColors.primaryBlue.withValues(alpha: 0.06) : context.raisedSurface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppConstants.radiusMd),
         side: BorderSide(color: color, width: selected ? 2 : 1),

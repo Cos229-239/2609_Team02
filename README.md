@@ -37,6 +37,9 @@ Parent assigns → Child completes → Parent approves → Child earns XP + coin
 
 - Email/password auth with in-app password reset and email change via deep links (`famotive.org/__/auth/links`)
 - Account settings, avatar picker, notification settings, Help & Support
+- First-time onboarding tailored to the role: a swipeable walkthrough (parents: household setup, inviting, creating/scheduling/assigning tasks, approvals, rewards; kids: tasks, XP vs. coins, rewards), then a spotlight "Show me around" tour of the tabs. Skippable, resumes where it was left, and remembered per user so it isn't shown again — replay it or open topic guides from **Settings → App Tour & Tutorials**
+- Contextual ⓘ tips next to key sections (Needs Approval, Repeat, Assign To, Reward Store, Leaderboard, …) and descriptive tab tooltips (long-press a tab)
+- Dark mode toggle in Settings (remembered on the device)
 - Push notifications (FCM) for new/assigned tasks, a 9 AM (family time zone) digest of what's due and overdue, completions, approvals and redemptions — see [functions/README.md](functions/README.md)
 
 ## Tech Stack
@@ -118,13 +121,15 @@ Push notifications need the Blaze plan and an APNs key for iOS — the one-time 
 │   │   ├── tasks/                # task list/detail/create/completion,
 │   │   │                         # child home/tasks/rewards screens, task_tile
 │   │   ├── rewards/              # progress screen, reward editor/progress tiles
+│   │   ├── onboarding/           # walkthrough + topic guide content, progress
+│   │   │                         # controller, onboarding & help center screens
 │   │   └── profile/              # settings, account & notification settings,
 │   │                             # avatar picker, password dialogs
 │   └── shared/
 │       ├── layouts/              # main_tab_shell.dart (role-based bottom nav)
 │       ├── screens/              # route_not_found_screen.dart
 │       └── widgets/              # app_button, app_card, loading_indicator,
-│                                 # number_stepper
+│                                 # number_stepper, help_tip, coach_mark_tour
 ├── functions/                    # Cloud Functions (push notifications, repeating tasks)
 │   └── src/                      # index.ts, notifications/{plan,messages,recurrence}.ts
 ├── test/                         # widget, model and database service tests

@@ -9,10 +9,12 @@ import '../../../core/models/reward.dart';
 import '../../../core/models/user.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/database_service.dart';
+import '../../../shared/widgets/help_tip.dart';
 import '../../profile/widgets/current_password_prompt.dart';
 import '../../rewards/widgets/reward_editor_sheet.dart';
 import '../widgets/add_child_sheet.dart';
 import '../widgets/family_member_card.dart';
+import '../widgets/household_actions.dart';
 
 /// "Family" tab: household members (with admin tools: approve join
 /// requests, remove members, hand over admin), adding a child account, the
@@ -50,10 +52,23 @@ class FamilyScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(household.name, style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-          )),
+          Row(
+            children: [
+              Expanded(
+                child: Text(household.name, style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                )),
+              ),
+              if (isAdmin)
+                IconButton(
+                  key: const Key('rename-household-button'),
+                  tooltip: 'Rename household',
+                  icon: Icon(Icons.edit_outlined, color: Theme.of(context).colorScheme.primary),
+                  onPressed: () => showRenameHouseholdDialog(context, household),
+                ),
+            ],
+          ),
           const SizedBox(height: 2),
           Text(
             isAdmin
@@ -121,6 +136,11 @@ class FamilyScreen extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
+                    const HelpTip(
+                      title: 'Children',
+                      message: 'Tap a child to see their tasks. "Add Child" below creates a login '
+                          'for a kid without an email; "Invite" shares your household code.',
+                    ),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -141,12 +161,17 @@ class FamilyScreen extends StatelessWidget {
                     Icon(Icons.storefront, size: 20, color: Theme.of(context).colorScheme.primary),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Text(
-                        'Reward Store',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                      child: HeadingWithHelp(
+                        heading: Text(
+                          'Reward Store',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
+                        helpTitle: 'Reward Store',
+                        help: 'Kids spend the coins they earn on these. Set a coin price that matches '
+                            "the effort - you'll be notified when one is redeemed.",
                       ),
                     ),
                     TextButton.icon(
@@ -689,9 +714,11 @@ class _TransactionRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: redemption.acknowledgedByParent ? Colors.white : Colors.amber.withValues(alpha: 0.06),
+        color: redemption.acknowledgedByParent
+            ? theme.colorScheme.surface
+            : Colors.amber.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.5)),
       ),
       child: Row(
         children: [

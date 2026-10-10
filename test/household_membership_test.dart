@@ -620,4 +620,40 @@ void main() {
       expect(household.data()?['memberIds'], ['parent-1', 'new-kid']);
     });
   });
+
+  group('renameHousehold', () {
+    Future<String?> storedName() async =>
+        (await firestore.collection('households').doc(householdId).get()).data()?['name'] as String?;
+
+    test('the admin can rename the household (spaces tidied)', () async {
+      await seedHousehold();
+      db.bindSession(parent);
+      await pumpEventQueue();
+
+      await db.renameHousehold('  The   Pat   Crew ');
+      await pumpEventQueue();
+
+      expect(await storedName(), 'The Pat Crew');
+      expect(db.household?.name, 'The Pat Crew');
+    });
+
+    test('a member who is not the admin cannot rename it', () async {
+      await seedHousehold();
+      db.bindSession(child);
+      await pumpEventQueue();
+
+      await expectLater(db.renameHousehold('Kid Kingdom'), throwsA(isA<Exception>()));
+      expect(await storedName(), 'The Pats');
+    });
+
+    test('rejects empty and too-long names', () async {
+      await seedHousehold();
+      db.bindSession(parent);
+      await pumpEventQueue();
+
+      await expectLater(db.renameHousehold('   '), throwsA(isA<Exception>()));
+      await expectLater(db.renameHousehold('x' * 41), throwsA(isA<Exception>()));
+      expect(await storedName(), 'The Pats');
+    });
+  });
 }

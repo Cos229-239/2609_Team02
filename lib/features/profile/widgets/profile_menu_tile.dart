@@ -19,7 +19,7 @@ class ProfileMenuTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = destructive
     ? Theme.of(context).colorScheme.error
-    : Colors.black;
+    : Theme.of(context).colorScheme.onSurface;
 
 return ListTile(
   leading: Icon(

@@ -6,6 +6,8 @@ import 'app/app.dart';
 import 'core/services/auth_service.dart';
 import 'core/services/deep_link_service.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/theme_controller.dart';
+import 'features/onboarding/onboarding_controller.dart';
 import 'core/services/premium_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -28,6 +30,13 @@ void main() async {
   final authService = AuthService();
   await authService.tryRestoreSession();
 
+  // Restore the saved light/dark choice and onboarding progress before the
+  // first frame, so there's no flash of the wrong theme and returning users
+  // aren't shown the walkthrough again.
+  final themeController = ThemeController();
+  final onboardingController = OnboardingController();
+  await Future.wait([themeController.load(), onboardingController.load()]);
+
   final notificationService = NotificationService(
     authService: authService,
     navigatorKey: navigatorKey,
@@ -43,6 +52,8 @@ void main() async {
     navigatorKey: navigatorKey,
     scaffoldMessengerKey: scaffoldMessengerKey,
     notificationService: notificationService,
+    themeController: themeController,
+    onboardingController: onboardingController,
     premiumService: premiumService,
   ));
 

@@ -12,6 +12,7 @@ import '../../../core/services/database_service.dart';
 import '../../../core/services/description_suggester.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/help_tip.dart';
 import '../../../shared/widgets/number_stepper.dart';
 
 enum _AssignTarget { household, child }
@@ -489,10 +490,15 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500, fontSize: 11),
             ),
             const SizedBox(height: 20),
-            Text('Rewards for Completing This Task:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            )),
+            HeadingWithHelp(
+              heading: Text('Rewards for Completing This Task:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              )),
+              helpTitle: 'XP vs. coins',
+              help: 'XP is never spent - it levels kids up and ranks the leaderboard. '
+                  'Coins are spent in your reward store. Both are paid when you approve the task.',
+            ),
             const SizedBox(height: 8),
             NumberStepper(
               label: 'XP Earned',
@@ -536,10 +542,15 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               ),
             const SizedBox(height: 20),
             if (_canChooseRepeat) ...[
-              Text('Repeat:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              )),
+              HeadingWithHelp(
+                heading: Text('Repeat:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                )),
+                helpTitle: 'Repeating chores',
+                help: 'Set it up once: a fresh copy appears on each scheduled day, '
+                    'and reminders go out that morning.',
+              ),
               const SizedBox(height: 8),
               _RepeatPicker(
                 repeat: _repeat,
@@ -553,11 +564,16 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               ),
               const SizedBox(height: 20),
             ],
-            Text(_repeat != null && _canChooseRepeat ? 'Starts On:' : 'Select a Due Date:',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+            HeadingWithHelp(
+              heading: Text(_repeat != null && _canChooseRepeat ? 'Starts On:' : 'Select a Due Date:',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+              ),
+              helpTitle: 'Due dates',
+              help: 'Optional. Tasks without a date show as "Due Today". '
+                  'For a repeating task this is the first day it appears.',
             ),
             const SizedBox(height: 8),
             AppCard(
@@ -584,7 +600,12 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            Text('Assign To:', style: Theme.of(context).textTheme.titleMedium),
+            HeadingWithHelp(
+              heading: Text('Assign To:', style: Theme.of(context).textTheme.titleMedium),
+              helpTitle: 'Assigning',
+              help: 'Pick a child to give it straight to them, or choose Household Task '
+                  'so any child can claim it from their Tasks tab.',
+            ),
             const SizedBox(height: 8),
             _AssignOptionCard(
               icon: Icons.groups_outlined,
@@ -666,15 +687,20 @@ class _IconOption extends StatelessWidget {
     return Tooltip(
       message: entry.label,
       child: Material(
-        color: selected ? AppColors.primaryBlue : Colors.grey.shade100,
+        color: selected ? AppColors.primaryBlue : (context.isDarkMode ? context.mutedFill : Colors.grey.shade100),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: selected ? AppColors.primaryBlue : Colors.grey.shade300),
+          side: BorderSide(
+            color: selected ? AppColors.primaryBlue : (context.isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300),
+          ),
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: onTap,
-          child: Icon(entry.icon, color: selected ? Colors.white : Colors.grey.shade700),
+          child: Icon(
+            entry.icon,
+            color: selected ? Colors.white : (context.isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700),
+          ),
         ),
       ),
     );
