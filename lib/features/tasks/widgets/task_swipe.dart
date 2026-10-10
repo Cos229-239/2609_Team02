@@ -187,10 +187,11 @@ class _SwipeBackground extends StatelessWidget {
   }
   switch (task.status) {
     case TaskStatus.pending:
+      final needsPhoto = Provider.of<DatabaseService>(context, listen: false).needsPhoto(task);
       return (
         startToEnd: TaskSwipeAction(
-          label: task.requiresPhoto ? 'Add Photo' : 'Complete',
-          icon: task.requiresPhoto ? Icons.photo_camera : Icons.check_circle,
+          label: needsPhoto ? 'Add Photo' : 'Complete',
+          icon: needsPhoto ? Icons.photo_camera : Icons.check_circle,
           color: AppColors.growthGreen,
           // Photo-proof tasks open the camera flow instead.
           onTriggered: () => startTaskCompletion(context, task),

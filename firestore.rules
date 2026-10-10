@@ -3,14 +3,23 @@ rules_version = '2';
 // Data model:
 //   users/{uid}                       - profile: name, email, role, xp, coins,
 //                                       householdId (the ACTIVE household), pendingHouseholdIds, ...
+//                                       premium (server only: Premium subscription summary)
 //   users/{uid}/fcmTokens/{token}     - push-notification device tokens (owner only)
 //   households/{householdId}          - name, ownerId (admin), memberIds, inviteCode,
-//                                       timezone (IANA), nextRunAt (server)
+//                                       timezone (IANA), nextRunAt (server),
+//                                       premiumUntil (server: when the admin's Premium ends)
 //   households/{householdId}/joinRequests/{uid} - "let me in" requests the admin approves
 //   households/{householdId}/tasks/{taskId}
 //   households/{householdId}/taskSchedules/{scheduleId} - repeating tasks
 //   households/{householdId}/rewards/{rewardId}
 //   households/{householdId}/redemptions/{redemptionId}
+//   subscriptions/{id}                - store subscriptions (server only; no client access)
+//   premiumGrants/{uid}               - complimentary Premium for test accounts (console only)
+//
+// Premium: a household has Premium features (photo proof) while its admin
+// has a Premium subscription. Cloud Functions (functions/src/premium) verify
+// purchases with the App Store / Google Play and keep `users/{uid}.premium`
+// and `households/{id}.premiumUntil` up to date; clients can't write either.
 //
 // Membership: `households/{id}.memberIds` is the only source of truth. A user
 // can be in several households; XP and coins live on the user so they carry
@@ -46,6 +55,12 @@ service cloud.firestore {
         householdData(householdId).memberIds.hasAny([request.auth.uid]);
     }
 
+    // The household's admin has Premium right now (see functions/src/premium).
+    function householdHasPremium(householdId) {
+      let until = householdData(householdId).get('premiumUntil', null);
+      return until is timestamp && until > request.time;
+    }
+
     function userData(userId) {
       return get(/databases/$(database)/documents/users/$(userId)).data;
     }
@@ -63,12 +78,14 @@ service cloud.firestore {
       allow read: if isSignedIn() &&
         (request.auth.uid == userId || sharesActiveHousehold(userId));
       allow create: if isSignedIn() && request.auth.uid == userId &&
-        request.resource.data.role in ['parent', 'child'];
+        request.resource.data.role in ['parent', 'child'] &&
+        !request.resource.data.keys().hasAny(['premium']);
       // Users edit their own profile. A parent can update a fellow member's
       // rewards/profile basics (approving a task grants XP + coins).
       allow update: if isSignedIn() && (
         (request.auth.uid == userId &&
-          request.resource.data.role == resource.data.role) ||
+          request.resource.data.role == resource.data.role &&
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['premium'])) ||
         (isParent() && sharesActiveHousehold(userId) &&
           request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['xp', 'coins', 'name', 'avatarEmoji', 'age']))
@@ -119,7 +136,8 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isSignedIn() &&
         request.resource.data.ownerId == request.auth.uid &&
-        request.resource.data.memberIds == [request.auth.uid];
+        request.resource.data.memberIds == [request.auth.uid] &&
+        !request.resource.data.keys().hasAny(['premiumUntil']);
       // A new household name: 1-40 characters (AppConstants.householdNameMaxLength).
       function nameValid() {
         return !changedKeys().hasAny(['name']) || (
@@ -128,7 +146,9 @@ service cloud.firestore {
           request.resource.data.name.size() <= 40);
       }
 
-      allow update: if isSignedIn() && resource.data.memberIds.hasAny([request.auth.uid]) && ownerStillMember() && nameValid() && (
+      // premiumUntil is server-only, even for the admin.
+      allow update: if isSignedIn() && resource.data.memberIds.hasAny([request.auth.uid]) && ownerStillMember() &&
+        !changedKeys().hasAny(['premiumUntil']) && nameValid() && (
         // Admin: anything (approve/remove members, hand over admin, rename, ...).
         isOwner() ||
         // Other members: time zone / allowed membership changes. Only the
@@ -141,6 +161,15 @@ service cloud.firestore {
           resource.data.memberIds.hasAny([request.resource.data.ownerId]))
       );
       allow delete: if false;
+
+      // Photo proof is a Premium feature: a task or schedule can only be
+      // switched to requiring a photo while the household has Premium. One
+      // that already requires it can still be edited after Premium lapses.
+      function photoSettingAllowed() {
+        return request.resource.data.get('requiresPhoto', false) != true ||
+          householdHasPremium(householdId) ||
+          (resource != null && resource.data.get('requiresPhoto', false) == true);
+      }
 
       // Join requests: the requester files their own; members can see them;
       // the admin approves (adds to memberIds + deletes) or declines (deletes);
@@ -193,10 +222,13 @@ service cloud.firestore {
             resource.data.get('assignedToUserId', null) == request.auth.uid &&
             !('proof' in request.resource.data);
         }
+        // Without Premium, photo proof is switched off: tasks that ask for a
+        // photo can be finished without one.
         function photoRequirementMet() {
           return !isSubmitting() ||
             resource.data.get('requiresPhoto', false) != true ||
-            hasOwnProofPhoto(request.resource.data);
+            hasOwnProofPhoto(request.resource.data) ||
+            !householdHasPremium(householdId);
         }
         function proofChangeAllowed() {
           return !taskChanged().hasAny(['proof']) ||
@@ -210,8 +242,9 @@ service cloud.firestore {
             proofChangeAllowed();
         }
 
-        allow read, create: if isMemberOf(householdId);
-        allow update: if isParentMember() ||
+        allow read: if isMemberOf(householdId);
+        allow create: if isMemberOf(householdId) && photoSettingAllowed();
+        allow update: if (isParentMember() && photoSettingAllowed()) ||
           (isMemberOf(householdId) && childUpdateAllowed());
         allow delete: if isParentMember();
       }
@@ -219,7 +252,8 @@ service cloud.firestore {
       // Repeating-task schedules. The server (Cloud Functions) turns each
       // into one ordinary task per occurrence under /tasks.
       match /taskSchedules/{scheduleId} {
-        allow read, write: if isMemberOf(householdId);
+        allow read, delete: if isMemberOf(householdId);
+        allow create, update: if isMemberOf(householdId) && photoSettingAllowed();
       }
 
         // Cooperative household goals and their contribution records.

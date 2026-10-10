@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'premium_status.dart';
+
 /// The role a household member has inside a family. Drives which
 /// screens/actions are available (e.g. only parents can assign tasks).
 enum UserRole { parent, child }
@@ -20,6 +22,7 @@ class AppUser {
     this.pushNotificationsEnabled = true,
     this.pendingHouseholdIds = const [],
     this.createdByParentId,
+    this.premium = PremiumStatus.none,
   });
 
   final String id;
@@ -58,6 +61,10 @@ class AppUser {
   /// Cloud Functions in functions/src/index.ts before sending anything.
   final bool pushNotificationsEnabled;
 
+  /// Famotive Premium subscription (server-written; never saved by the app,
+  /// so it isn't in [toFirestore]).
+  final PremiumStatus premium;
+
   bool get isParent => role == UserRole.parent;
   bool get isChild => role == UserRole.child;
 
@@ -91,6 +98,7 @@ class AppUser {
       pushNotificationsEnabled: pushNotificationsEnabled ?? this.pushNotificationsEnabled,
       pendingHouseholdIds: pendingHouseholdIds ?? this.pendingHouseholdIds,
       createdByParentId: createdByParentId,
+      premium: premium,
     );
   }
 
@@ -114,6 +122,7 @@ class AppUser {
       pushNotificationsEnabled: data['pushNotificationsEnabled'] as bool? ?? true,
       pendingHouseholdIds: List<String>.from(data['pendingHouseholdIds'] as List? ?? const []),
       createdByParentId: data['createdByParentId'] as String?,
+      premium: PremiumStatus.fromMap(data['premium']),
     );
   }
 

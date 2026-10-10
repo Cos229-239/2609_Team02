@@ -7,6 +7,7 @@ import '../core/services/database_service.dart';
 import '../core/services/notification_service.dart';
 import '../core/services/theme_controller.dart';
 import '../features/onboarding/onboarding_controller.dart';
+import '../core/services/premium_service.dart';
 import 'routes.dart';
 import 'theme.dart';
 
@@ -21,6 +22,7 @@ class FamotiveApp extends StatelessWidget {
     this.notificationService,
     this.themeController,
     this.onboardingController,
+    this.premiumService,
   });
 
   /// Constructed and given a chance to restore any existing session
@@ -49,6 +51,9 @@ class FamotiveApp extends StatelessWidget {
   /// lib/features/onboarding/). Null in tests: a fresh in-memory one is used.
   final OnboardingController? onboardingController;
 
+  /// Famotive Premium purchases; null in tests.
+  final PremiumService? premiumService;
+
   @override
   Widget build(BuildContext context) {
     final homeRouteName = authService.isLoggedIn ? AppRoutes.home : AppRoutes.login;
@@ -63,6 +68,7 @@ class FamotiveApp extends StatelessWidget {
         ChangeNotifierProvider<OnboardingController>(
           create: (_) => onboardingController ?? (OnboardingController()..load()),
         ),
+        ChangeNotifierProvider<PremiumService?>.value(value: premiumService),
         ChangeNotifierProxyProvider<AuthService, DatabaseService>(
           create: (_) => DatabaseService(),
           update: (_, auth, db) => db!

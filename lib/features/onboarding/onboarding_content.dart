@@ -118,7 +118,7 @@ class OnboardingGuides {
     icon: Icons.add_task,
     bullets: [
       'Set the XP and coins it earns',
-      'Turn on Photo Proof if you want to see the result',
+      'With Premium, turn on Photo Proof to see the result',
       '"Suggest" writes a description for you, on-device',
     ],
   );

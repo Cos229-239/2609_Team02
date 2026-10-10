@@ -388,6 +388,117 @@ void main() {
       expect(child.data()?['coins'], 35);
     });
 
+    group('parentCompleteTask', () {
+      Future<String> addAndGetId(TaskModel task) async {
+        await databaseService.addTask(task);
+        final snapshot = await firestore
+            .collection('households')
+            .doc(householdId)
+            .collection('tasks')
+            .get();
+        return snapshot.docs.first.id;
+      }
+
+      Future<Map<String, dynamic>?> taskData(String id) async => (await firestore
+              .collection('households')
+              .doc(householdId)
+              .collection('tasks')
+              .doc(id)
+              .get())
+          .data();
+
+      setUp(() async {
+        await firestore.collection('users').doc('child-1').set({
+          'xp': 10,
+          'coins': 5,
+          'householdId': householdId,
+        });
+      });
+
+      test('takes a pending task straight to approved and grants rewards', () async {
+        final id = await addAndGetId(const TaskModel(
+          id: 'task-1',
+          title: 'Feed the Dog',
+          assignedToUserId: 'child-1',
+          rewardXp: 50,
+          coinReward: 15,
+        ));
+
+        await databaseService.parentCompleteTask(id);
+
+        final data = await taskData(id);
+        expect(data?['status'], TaskStatus.approved.name);
+        expect(data?['completedAt'], isNotNull);
+        expect(data?['approvedAt'], isNotNull);
+        final child = await firestore.collection('users').doc('child-1').get();
+        expect(child.data()?['xp'], 60);
+        expect(child.data()?['coins'], 20);
+      });
+
+      test('skips photo proof on a photo-required task', () async {
+        final id = await addAndGetId(const TaskModel(
+          id: 'task-1',
+          title: 'Clean Room',
+          assignedToUserId: 'child-1',
+          rewardXp: 20,
+          requiresPhoto: true,
+        ));
+
+        await databaseService.parentCompleteTask(id);
+
+        final data = await taskData(id);
+        expect(data?['status'], TaskStatus.approved.name);
+        expect(data?['proof'], isNull);
+      });
+
+      test('approves a task the child already marked done', () async {
+        final id = await addAndGetId(const TaskModel(
+          id: 'task-1',
+          title: 'Feed the Dog',
+          assignedToUserId: 'child-1',
+          rewardXp: 50,
+          status: TaskStatus.completed,
+        ));
+
+        await databaseService.parentCompleteTask(id);
+
+        expect((await taskData(id))?['status'], TaskStatus.approved.name);
+        final child = await firestore.collection('users').doc('child-1').get();
+        expect(child.data()?['xp'], 60);
+      });
+
+      test('grants rewards only once', () async {
+        final id = await addAndGetId(const TaskModel(
+          id: 'task-1',
+          title: 'Feed the Dog',
+          assignedToUserId: 'child-1',
+          rewardXp: 50,
+          coinReward: 15,
+        ));
+
+        await databaseService.parentCompleteTask(id);
+        await databaseService.parentCompleteTask(id);
+        await databaseService.approveTask(id);
+
+        final child = await firestore.collection('users').doc('child-1').get();
+        expect(child.data()?['xp'], 60);
+        expect(child.data()?['coins'], 20);
+      });
+
+      test('approveTask still ignores a pending task', () async {
+        final id = await addAndGetId(const TaskModel(
+          id: 'task-1',
+          title: 'Feed the Dog',
+          assignedToUserId: 'child-1',
+          rewardXp: 50,
+        ));
+
+        await databaseService.approveTask(id);
+
+        expect((await taskData(id))?['status'], TaskStatus.pending.name);
+      });
+    });
+
     test('updateTask overwrites the editable fields of an existing task', () async {
       const task = TaskModel(
         id: 'task-1',

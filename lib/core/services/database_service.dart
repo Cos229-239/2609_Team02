@@ -356,8 +356,9 @@ class DatabaseService extends ChangeNotifier {
     if (_ownerBackfillTried ||
         user == null ||
         !user.isParent ||
-        h.memberIds.isEmpty)
+        h.memberIds.isEmpty) {
       return;
+    }
     _ownerBackfillTried = true;
     try {
       await _firestore.collection('households').doc(h.id).update({
@@ -425,6 +426,16 @@ class DatabaseService extends ChangeNotifier {
   // --- Queries ---------------------------------------------------------
 
   String? get activeHouseholdId => _householdId;
+
+  /// Premium features (photo proof) are on in the active household: its
+  /// admin has Famotive Premium.
+  bool get householdHasPremium => household?.hasPremium ?? false;
+
+  /// Whether finishing [task] needs a photo right now. A task can ask for
+  /// photo proof, but it only applies while the household has Premium
+  /// (the Firestore rules agree: without Premium it can be finished without
+  /// one).
+  bool needsPhoto(TaskModel task) => task.requiresPhoto && householdHasPremium;
 
   List<AppUser> get children =>
       familyMembers.where((m) => m.isChild).toList(growable: false);
@@ -670,9 +681,18 @@ class DatabaseService extends ChangeNotifier {
     });
   }
 
-    /// Parent approves a completed task, grants XP and coins to the child,
-    /// and records the approval toward eligible household goals.
-  Future<void> approveTask(String taskId) async {
+  /// Parent approves a completed task: grants XP and coins to the child.
+  Future<void> approveTask(String taskId) =>
+      _finishTask(taskId, from: const {TaskStatus.completed});
+
+  /// Parent marks a task done themselves.
+  Future<void> parentCompleteTask(String taskId) =>
+      _finishTask(taskId, from: const {TaskStatus.pending, TaskStatus.completed});
+
+  /// Moves a task whose status is in [from] to `approved` and grants its
+  /// rewards to the assigned child, all in one transaction so rewards are
+  /// granted at most once.
+  Future<void> _finishTask(String taskId, {required Set<TaskStatus> from}) async {
     final taskRef = _tasksCollection.doc(taskId);
 
     final approvedTask = await _firestore.runTransaction<TaskModel?>((
@@ -684,11 +704,13 @@ class DatabaseService extends ChangeNotifier {
 
       final task = TaskModel.fromFirestore(taskSnap);
 
-      if (task.status != TaskStatus.completed) return null;
+      if (!from.contains(task.status)) return;
 
+      final now = Timestamp.fromDate(DateTime.now());
       final approval = <String, Object?>{
         'status': TaskStatus.approved.name,
-        'approvedAt': Timestamp.fromDate(DateTime.now()),
+        'approvedAt': now,
+        if (task.status == TaskStatus.pending) 'completedAt': now,
         if (task.proof?.verdict.needsReview ?? false) 'proof.parentOverride': true,
       };
 

@@ -81,6 +81,15 @@ initializeApp();
 export { deleteAccount } from './account/delete';
 // Task proof photo retention.
 export { cleanUpTaskPhotos, purgeExpiredTaskPhotos } from './photos/cleanup';
+// Premium subscriptions (App Store / Google Play). See ./premium/index.ts.
+export {
+  verifyPurchase,
+  appStoreNotifications,
+  playStoreNotifications,
+  refreshSubscriptions,
+  syncHouseholdPremium,
+  onPremiumGrantWritten,
+} from './premium';
 setGlobalOptions({ maxInstances: 10 });
 
 const db = getFirestore();

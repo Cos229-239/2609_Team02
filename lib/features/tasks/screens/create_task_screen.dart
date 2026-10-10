@@ -7,6 +7,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/task_icons.dart';
 import '../../../core/models/task.dart';
 import '../../../core/models/task_schedule.dart';
+import '../../../core/services/auth_service.dart';
 import '../../../core/services/database_service.dart';
 import '../../../core/services/description_suggester.dart';
 import '../../../shared/widgets/app_button.dart';
@@ -172,7 +173,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
       weekdays: _repeat!.usesWeekdays ? (_weekdays.toList()..sort()) : const [],
       startDate: _dueDate ?? _today,
       createdAt: _originalSchedule?.createdAt ?? DateTime.now(),
-      requiresPhoto: _requiresPhoto,
+      requiresPhoto: _photoOn,
     );
   }
 
@@ -239,7 +240,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         coinReward: _coins,
         dueDate: _dueDate,
         clearDueDate: _dueDate == null,
-        requiresPhoto: _requiresPhoto,
+        requiresPhoto: _photoOn,
       );
       db.updateTask(original.id, updated);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -257,7 +258,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
           rewardXp: _xp,
           coinReward: _coins,
           createdAt: DateTime.now(),
-          requiresPhoto: _requiresPhoto,
+          requiresPhoto: _photoOn,
         ),
       );
       ScaffoldMessenger.of(context).showSnackBar(
@@ -344,10 +345,18 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     if (mounted) Navigator.of(context).pop();
   }
 
+  /// Photo proof is a Premium feature: it's only saved as on while the
+  /// household has Premium (the Firestore rules insist too).
+  /// (listen: false rather than context.read, since _repeatSummary reaches
+  /// this during build.)
+  bool get _photoOn =>
+      _requiresPhoto && Provider.of<DatabaseService>(context, listen: false).householdHasPremium;
+
   @override
   Widget build(BuildContext context) {
     final db = context.watch<DatabaseService>();
     final children = db.children;
+    final isHouseholdAdmin = db.household?.isAdmin(context.watch<AuthService>().currentUser?.id) ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -511,23 +520,26 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               onChanged: (value) => setState(() => _coins = value),
             ),
             const SizedBox(height: 12),
-            AppCard(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              child: SwitchListTile.adaptive(
-                key: const ValueKey('requires-photo-switch'),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                secondary: const Icon(Icons.photo_camera_outlined),
-                title: const Text('Require Photo Proof'),
-                subtitle: Text(
-                  'Your child takes a photo when done. It is checked on their device for a match '
-                  'with this task, and you review it before approving. Photos are deleted after '
-                  '${AppConstants.taskPhotoRetentionDays} days.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+            if (!db.householdHasPremium)
+              _PremiumPhotoProofTile(isHouseholdAdmin: isHouseholdAdmin)
+            else
+              AppCard(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                child: SwitchListTile.adaptive(
+                  key: const ValueKey('requires-photo-switch'),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                  secondary: const Icon(Icons.photo_camera_outlined),
+                  title: const Text('Require Photo Proof'),
+                  subtitle: Text(
+                    'Your child takes a photo when done. It is checked on their device for a match '
+                    'with this task, and you review it before approving. Photos are deleted after '
+                    '${AppConstants.taskPhotoRetentionDays} days.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+                  ),
+                  value: _requiresPhoto,
+                  onChanged: (value) => setState(() => _requiresPhoto = value),
                 ),
-                value: _requiresPhoto,
-                onChanged: (value) => setState(() => _requiresPhoto = value),
               ),
-            ),
             const SizedBox(height: 20),
             if (_canChooseRepeat) ...[
               HeadingWithHelp(
@@ -871,6 +883,44 @@ class _RepeatPicker extends StatelessWidget {
           const SizedBox(height: 6),
           Text(summary, style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade600, fontSize: 12)),
         ],
+      ),
+    );
+  }
+}
+
+/// Stands in for the "Require Photo Proof" switch when the household doesn't
+/// have Premium: the admin can open the Premium screen (free trial); other
+/// parents are told who to ask.
+class _PremiumPhotoProofTile extends StatelessWidget {
+  const _PremiumPhotoProofTile({required this.isHouseholdAdmin});
+
+  final bool isHouseholdAdmin;
+
+  @override
+  Widget build(BuildContext context) {
+    final subtitleStyle = Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600);
+    return AppCard(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      child: ListTile(
+        key: const ValueKey('requires-photo-premium'),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+        leading: const Icon(Icons.photo_camera_outlined),
+        title: const Text('Require Photo Proof'),
+        subtitle: Text(
+          isHouseholdAdmin
+              ? 'A Premium feature: your child takes a photo when done and you review it. '
+                  'Try it free for ${AppConstants.premiumTrialDays} days.'
+              : "A Premium feature. It's unlocked when your household's admin has Premium.",
+          style: subtitleStyle,
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.workspace_premium, color: Colors.amber.shade700),
+            if (isHouseholdAdmin) const Icon(Icons.chevron_right),
+          ],
+        ),
+        onTap: isHouseholdAdmin ? () => Navigator.of(context).pushNamed(AppRoutes.premium) : null,
       ),
     );
   }

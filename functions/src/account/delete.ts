@@ -18,6 +18,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore, type DocumentReference } from 'firebase-admin/firestore';
 
 import { planAccountDeletion, summarize, type HouseholdInfo, type MemberInfo } from './plan';
+import { forgetSubscriptions } from '../premium';
 
 const RECENT_LOGIN_SECONDS = 5 * 60;
 
@@ -148,6 +149,9 @@ export const deleteAccount = onCall({ invoker: 'public' }, async (request) => {
   // An admin deleting a child: the child can't sign in to retry anyway, so
   // drop its login first (see [deleteUser]); deleting yourself keeps the
   // login until last.
+  // Store subscriptions aren't cancelled by this (only the store can do
+  // that); we just forget which account they belonged to.
+  await forgetSubscriptions(targetId);
   await deleteUser(targetId, { loginLast: actorId === targetId });
 
   logger.info('Account deleted', {

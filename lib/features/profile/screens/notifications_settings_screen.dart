@@ -93,7 +93,7 @@ class _NotificationsSettingsScreenState extends State<NotificationsSettingsScree
                     secondary: const Icon(Icons.mail_outline),
                     title: const Text('Email Notifications'),
                     subtitle: const Text('Task approvals, reminders and family updates',
-                    style: const TextStyle(fontSize: 11),
+                    style: TextStyle(fontSize: 11),
                     ),
                     value: _emailNotifications,
                     activeThumbColor: Colors.white,
