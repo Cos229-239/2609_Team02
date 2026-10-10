@@ -51,6 +51,17 @@ dependencies:
   image_picker: ^1.1.2
   firebase_storage: ^13.0.0
 
+  # Famotive Premium: subscriptions through the App Store / Google Play
+  # (7-day free trial = the store's introductory offer). Purchases are
+  # verified by the verifyPurchase Cloud Function; see
+  # Documents/Premium_Setup.md and lib/core/services/premium_service.dart.
+  in_app_purchase: ^3.2.0
+  # Android-only product details (base plans / free-trial offers). Version
+  # follows whatever in_app_purchase resolves.
+  in_app_purchase_android: any
+  # Derives the purchase's account token (a UUID) from the user id.
+  crypto: ^3.0.6
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

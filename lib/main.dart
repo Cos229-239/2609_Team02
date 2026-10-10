@@ -6,6 +6,7 @@ import 'app/app.dart';
 import 'core/services/auth_service.dart';
 import 'core/services/deep_link_service.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/premium_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
@@ -33,11 +34,16 @@ void main() async {
     messengerKey: scaffoldMessengerKey,
   );
 
+  // Listens to the store's purchase stream from launch, so renewals and
+  // purchases that were interrupted get verified (Famotive Premium).
+  final premiumService = PremiumService(authService: authService)..start();
+
   runApp(FamotiveApp(
     authService: authService,
     navigatorKey: navigatorKey,
     scaffoldMessengerKey: scaffoldMessengerKey,
     notificationService: notificationService,
+    premiumService: premiumService,
   ));
 
   // Started after runApp so DeepLinkService can defer any cold-start link

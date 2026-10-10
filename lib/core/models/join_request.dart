@@ -29,7 +29,7 @@ class JoinRequest {
   final String avatarEmoji;
 
   /// Copied from the household so the requester can show "Waiting for
-  /// approval from <household>" without another read.
+  /// approval from `<household>`" without another read.
   final String? householdName;
   final DateTime? requestedAt;
 

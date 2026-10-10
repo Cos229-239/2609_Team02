@@ -80,7 +80,7 @@ class TaskDetailScreen extends StatelessWidget {
                         ],
                       ],
                     ),
-                    if (task.requiresPhoto) ...[
+                    if (db.needsPhoto(resolvedTask)) ...[
                       const SizedBox(height: 10),
                       Row(
                         children: [
@@ -126,9 +126,9 @@ class TaskDetailScreen extends StatelessWidget {
                 const Center(child: Text('⏳ Waiting for a parent to approve'))
               else if (task.status == TaskStatus.pending)
                 AppButton(
-                  label: task.requiresPhoto ? 'Take Photo to Finish' : 'Mark as Complete',
+                  label: db.needsPhoto(resolvedTask) ? 'Take Photo to Finish' : 'Mark as Complete',
                   variant: AppButtonVariant.success,
-                  icon: task.requiresPhoto ? Icons.photo_camera : Icons.check_circle_outline,
+                  icon: db.needsPhoto(resolvedTask) ? Icons.photo_camera : Icons.check_circle_outline,
                   onPressed: () => startTaskCompletion(context, resolvedTask, celebrate: true),
                 )
               else if (task.status == TaskStatus.completed) ...[

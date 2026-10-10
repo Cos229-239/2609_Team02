@@ -76,6 +76,12 @@ class ProfileScreen extends StatelessWidget {
                 label: 'Account Settings',
                 onTap: () => Navigator.of(context).pushNamed(AppRoutes.accountSettings),
               ),
+              if (user?.isParent ?? false)
+                ProfileMenuTile(
+                  icon: Icons.workspace_premium_outlined,
+                  label: (user?.premium.isActive ?? false) ? 'Famotive Premium' : 'Get Premium',
+                  onTap: () => Navigator.of(context).pushNamed(AppRoutes.premium),
+                ),
               ProfileMenuTile(
                 icon: Icons.home_work_outlined,
                 label: 'Households',

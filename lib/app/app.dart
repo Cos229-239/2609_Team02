@@ -5,6 +5,7 @@ import '../core/constants/app_constants.dart';
 import '../core/services/auth_service.dart';
 import '../core/services/database_service.dart';
 import '../core/services/notification_service.dart';
+import '../core/services/premium_service.dart';
 import 'routes.dart';
 import 'theme.dart';
 
@@ -17,6 +18,7 @@ class FamotiveApp extends StatelessWidget {
     required this.navigatorKey,
     this.scaffoldMessengerKey,
     this.notificationService,
+    this.premiumService,
   });
 
   /// Constructed and given a chance to restore any existing session
@@ -36,6 +38,9 @@ class FamotiveApp extends StatelessWidget {
   /// turning notifications back on can re-request permission.
   final NotificationService? notificationService;
 
+  /// Famotive Premium purchases; null in tests.
+  final PremiumService? premiumService;
+
   @override
   Widget build(BuildContext context) {
     final homeRouteName = authService.isLoggedIn ? AppRoutes.home : AppRoutes.login;
@@ -44,6 +49,7 @@ class FamotiveApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider<AuthService>.value(value: authService),
         Provider<NotificationService?>.value(value: notificationService),
+        ChangeNotifierProvider<PremiumService?>.value(value: premiumService),
         ChangeNotifierProxyProvider<AuthService, DatabaseService>(
           create: (_) => DatabaseService(),
           update: (_, auth, db) => db!

@@ -92,14 +92,11 @@ class AuthService extends ChangeNotifier {
   AuthService({
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
-    ChildAccountCreator? childAccountCreator,
-    GoogleIdTokenProvider? googleIdTokenProvider,
-    AccountDeletionCall? accountDeletionCall,
+    this._childAccountCreator,
+    this._googleIdTokenProvider,
+    this._accountDeletionCall,
   })  : _auth = auth ?? FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance,
-        _childAccountCreator = childAccountCreator,
-        _googleIdTokenProvider = googleIdTokenProvider,
-        _accountDeletionCall = accountDeletionCall;
+        _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
@@ -707,7 +704,7 @@ class AuthService extends ChangeNotifier {
   /// parent, [childId]'s account) would do. Changes nothing.
   Future<AccountDeletionPreview> previewAccountDeletion({String? childId}) async {
     _requireUser();
-    final result = await _callDeleteAccount({'dryRun': true, if (childId != null) 'childId': childId});
+    final result = await _callDeleteAccount({'dryRun': true, 'childId': ?childId});
     return AccountDeletionPreview.fromMap(result);
   }
 

@@ -85,4 +85,22 @@ class AppConstants {
   static const int doneTaskVisibleDays = 7;
 
   static const int taskPhotoRetentionDays = 7;
+
+  // Famotive Premium (photo proof). The free trial is the subscription's
+  // introductory offer in App Store Connect / Play Console; keep this in step.
+  static const int premiumTrialDays = 7;
+  static const String appleManageSubscriptionsUrl = 'https://apps.apple.com/account/subscriptions';
+  static const String googleManageSubscriptionsUrl = 'https://play.google.com/store/account/subscriptions';
+}
+
+/// Store product ids for Famotive Premium (same ids in App Store Connect and
+/// Play Console). Keep in sync with PREMIUM_PRODUCT_IDS in
+/// functions/src/premium/plan.ts.
+class PremiumProducts {
+  PremiumProducts._();
+
+  static const String monthly = 'famotive_premium_monthly';
+  static const String yearly = 'famotive_premium_yearly';
+
+  static const Set<String> ids = {monthly, yearly};
 }
