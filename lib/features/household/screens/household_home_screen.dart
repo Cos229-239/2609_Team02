@@ -10,6 +10,7 @@ import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/coach_mark_tour.dart';
 import '../../../shared/widgets/help_tip.dart';
+import '../../milestones/widgets/family_goal_card.dart';
 import '../../tasks/widgets/task_swipe.dart';
 import '../../tasks/widgets/task_tile.dart';
 import '../widgets/family_member_card.dart';
@@ -82,6 +83,8 @@ class HouseholdHomeScreen extends StatelessWidget {
             onPressed: () => Navigator.of(context).pushNamed(AppRoutes.taskCreate),
           ),
         ),
+        const SizedBox(height: 16),
+        const FamilyGoalCard(isParent: true),
         if (db.isAdmin && db.joinRequests.isNotEmpty) ...[
           const SizedBox(height: 16),
           AppCard(

@@ -303,6 +303,11 @@ class NotificationService {
       // Let into a household.
       case 'household_joined':
         return const NotificationRoute(AppRoutes.home, replaceStack: true);
+      // The family reached its goal: open the celebration.
+      case 'milestone_completed':
+        final milestoneId = data['milestoneId'] as String?;
+        if (milestoneId == null || milestoneId.isEmpty) return null;
+        return NotificationRoute(AppRoutes.milestoneCelebration, arguments: milestoneId);
       case 'task_assigned':
       case 'task_due':
       case 'task_overdue':

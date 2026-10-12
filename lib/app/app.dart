@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/constants/app_constants.dart';
 import '../core/services/auth_service.dart';
 import '../core/services/database_service.dart';
+import '../core/services/milestone_service.dart';
 import '../core/services/notification_service.dart';
 import '../core/services/theme_controller.dart';
 import '../features/onboarding/onboarding_controller.dart';
@@ -78,6 +79,11 @@ class FamotiveApp extends StatelessWidget {
             ..onPendingRequestResolved = ((id, {required approved}) =>
                 _quietly(auth.forgetPendingHousehold(id, approved: approved)))
             ..bindSession(auth.currentUser),
+        ),
+        // Family Goal board of the active household.
+        ChangeNotifierProxyProvider<AuthService, MilestoneService>(
+          create: (_) => MilestoneService(),
+          update: (_, auth, service) => service!..bind(auth.currentUser),
         ),
       ],
       child: Consumer<ThemeController>(

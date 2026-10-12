@@ -6,6 +6,7 @@ import {
   planDigest,
   planJoinRequested,
   planMembersAdded,
+  planMilestoneUpdated,
   planMorning,
   planRedemptionCreated,
   planTaskCreated,
@@ -188,7 +189,7 @@ test('message copy mentions names, task and rewards', () => {
   );
   const all: NotificationKind[] = [
     'task_available', 'task_assigned', 'task_due', 'task_overdue', 'task_approved',
-    'task_accepted', 'task_completed', 'reward_redeemed', 'daily_digest',
+    'task_accepted', 'task_completed', 'reward_redeemed', 'daily_digest', 'milestone_completed',
   ];
   for (const k of all) {
     const m = buildMessage(k, {});
@@ -219,4 +220,23 @@ test('membership copy names the household and requester', () => {
   assert.match(req.body, /Sam asked to join The Smiths/);
   const joined = buildMessage('household_joined', { householdName: 'The Smiths' });
   assert.match(joined.body, /The Smiths/);
+});
+
+// --- Family Goal ------------------------------------------------------------------
+
+test('a family goal reaching completion notifies children and parents once', () => {
+  assert.deepEqual(planMilestoneUpdated({ status: 'active' }, { status: 'completed' }, PARENT), [
+    { kind: 'milestone_completed', audience: { type: 'children' }, excludeUserIds: [PARENT] },
+    { kind: 'milestone_completed', audience: { type: 'parents' }, excludeUserIds: [PARENT] },
+  ]);
+  // Later edits of a completed goal (e.g. claiming the reward) are silent.
+  assert.deepEqual(planMilestoneUpdated({ status: 'completed' }, { status: 'completed' }, PARENT), []);
+  assert.deepEqual(planMilestoneUpdated({ status: 'active' }, { status: 'paused' }, PARENT), []);
+  assert.deepEqual(planMilestoneUpdated({ status: 'active' }, { status: 'cancelled' }, PARENT), []);
+});
+
+test('family goal copy names the goal and the unlocked reward', () => {
+  const m = buildMessage('milestone_completed', { milestoneTitle: 'Park day', rewardTitle: 'Amusement park', rewardIcon: '🎢' });
+  assert.equal(m.title, 'Family goal reached! 🎉');
+  assert.equal(m.body, 'You did it together — Park day is complete and 🎢 Amusement park is unlocked!');
 });

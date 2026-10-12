@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/models/user.dart';
 import '../../core/services/auth_service.dart';
 import '../../features/household/screens/family_screen.dart';
+import '../../features/milestones/widgets/progress_event_presenter.dart';
 import '../../features/household/screens/no_household_screen.dart';
 import '../../features/household/widgets/household_switcher.dart';
 import '../../features/onboarding/onboarding_content.dart';
@@ -268,7 +269,11 @@ class _MainTabShellState extends State<MainTabShell> {
       ),
 
       body: SafeArea(
-        child: IndexedStack(index: _currentTab.index, children: tabBodies),
+        // Children see their newly approved tasks move the family board once.
+        child: ProgressEventPresenter(
+          enabled: isChild,
+          child: IndexedStack(index: _currentTab.index, children: tabBodies),
+        ),
       ),
       bottomNavigationBar: NavigationBar(
         key: _coachKeys[CoachTarget.navigationBar],
