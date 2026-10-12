@@ -67,13 +67,18 @@ class TaskDetailScreen extends StatelessWidget {
                       Text(task.description, style: Theme.of(context).textTheme.bodyMedium),
                     ],
                     const SizedBox(height: 14),
+                    const Divider(color: Colors.black12,
+                    thickness: 1,
+                    ),
+                    const SizedBox(height: 14),
                     Row(
                       children: [
+                        const SizedBox(width: 12),
                         const Icon(Icons.star, color: Colors.amber, size: 24),
                         const SizedBox(width: 2),
                         Text('Reward: +${task.rewardXp} XP', style: Theme.of(context).textTheme.bodyMedium),
                         if (task.coinReward > 0) ...[
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 110),
                           Icon(Icons.monetization_on, color: Colors.amber.shade700, size: 22),
                           const SizedBox(width: 2),
                           Text('+${task.coinReward} coins', style: Theme.of(context).textTheme.bodyMedium),
