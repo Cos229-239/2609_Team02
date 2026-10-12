@@ -5,8 +5,8 @@ import 'package:flutter/widgets.dart';
 import '../../core/models/mini_game.dart';
 import '../../core/models/mini_game_settings.dart';
 import 'games/balloon_popper/balloon_popper_game.dart';
-import 'games/match_pairs/match_pairs_game.dart';
 import 'games/jump_and_run/jump_run_game.dart';
+import 'games/match_pairs/match_pairs_game.dart';
 import 'games/memory_run/memory_run_game.dart';
 
 /// Everything a game gets from the host: its resolved settings, a seeded

@@ -11,6 +11,7 @@ import '../features/household/screens/households_screen.dart';
 import '../features/milestones/screens/family_board_screen.dart';
 import '../features/milestones/screens/milestone_celebration_screen.dart';
 import '../features/milestones/screens/milestone_editor_screen.dart';
+import '../features/minigames/screens/mini_game_settings_screen.dart';
 import '../features/onboarding/screens/help_center_screen.dart';
 import '../features/premium/screens/premium_screen.dart';
 import '../features/profile/screens/account_settings_screen.dart';
@@ -60,6 +61,8 @@ class AppRoutes {
   static const String milestoneEditor = '/family-goal/edit';
   /// "We did it!" screen; milestone id argument.
   static const String milestoneCelebration = '/family-goal/celebrate';
+  /// Parent: mini-game difficulty and bonus XP; optional child id argument.
+  static const String miniGameSettings = '/minigames/settings';
 
   // Settings sub-screens, pushed from the Settings tab.
   static const String accountSettings = '/settings/account';
@@ -136,6 +139,9 @@ class AppRoutes {
         return _page(MilestoneEditorScreen(milestoneId: args as String?), settings);
       case milestoneCelebration:
         return _page(MilestoneCelebrationScreen(milestoneId: args as String), settings);
+
+      case miniGameSettings:
+        return _page(MiniGameSettingsScreen(initialChildId: args as String?), settings);
 
       case accountSettings:
         return _page(const AccountSettingsScreen(), settings);
