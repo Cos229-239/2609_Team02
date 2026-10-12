@@ -82,6 +82,16 @@ test('a valid finished game pays the bonus exactly once', async () => {
   assert.equal(await xp('kid'), 30);
 });
 
+test('a second session pointing at an already-rewarded task pays nothing', async () => {
+  const before = await xp('kid');
+  await offer('dup', { taskId: 'ok' });
+  await finish('dup', 10);
+  const s = await waitFor(() => session('dup'), (v) => v.status !== 'finished');
+  assert.equal(s.status, 'rewarded', 'settled against the existing ledger entry');
+  assert.equal(s.bonusXp, undefined);
+  assert.equal(await xp('kid'), before);
+});
+
 test('implausible outcomes are rejected and pay nothing', async () => {
   const before = await xp('kid');
   await offer('fast', { startedAt: Timestamp.now() });

@@ -163,7 +163,7 @@ params; give it throwaway values in git-ignored files first:
 
 ```bash
 cd functions
-printf 'APPLE_IAP_ISSUER_ID=emulator\nAPPLE_IAP_KEY_ID=emulator\n' > .env.local
+printf 'APPLE_BUNDLE_ID=com.famotive\nANDROID_PACKAGE_NAME=com.famotive\nAPPLE_IAP_ISSUER_ID=emulator\nAPPLE_IAP_KEY_ID=emulator\n' > .env.local
 printf 'APPLE_IAP_PRIVATE_KEY=emulator\n' > .secret.local
 npm run test:emulator
 ```

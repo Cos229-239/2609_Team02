@@ -32,7 +32,6 @@ export const awardMiniGameBonus = onDocumentUpdated(SESSION_PATH, async (event) 
   const { householdId, sessionId } = event.params;
   const householdRef = db.collection('households').doc(householdId);
   const sessionRef = householdRef.collection('miniGameSessions').doc(sessionId);
-  const xpRef = householdRef.collection('xpTransactions').doc(`minigame_${sessionId}`);
 
   const result = await db.runTransaction(async (tx) => {
     const sessionSnap = await tx.get(sessionRef);
@@ -40,6 +39,9 @@ export const awardMiniGameBonus = onDocumentUpdated(SESSION_PATH, async (event) 
     if (!session || session.status !== 'finished') return 'not finished';
 
     const taskId = typeof session.taskId === 'string' && session.taskId ? session.taskId : sessionId;
+    // Keyed by the task, not the session: one bonus per approved task even
+    // if more than one session ever pointed at it.
+    const xpRef = householdRef.collection('xpTransactions').doc(`minigame_${taskId}`);
     const taskSnap = await tx.get(householdRef.collection('tasks').doc(taskId));
     const xpSnap = await tx.get(xpRef);
     if (xpSnap.exists) {
