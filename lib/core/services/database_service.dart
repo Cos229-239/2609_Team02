@@ -515,13 +515,13 @@ class DatabaseService extends ChangeNotifier {
   /// task completed by one child and moved back to the household pool would
   /// show up as "awaiting approval" again as soon as someone claimed it.
   static Map<String, dynamic> _freshAssignment(String? childId) => {
-        'assignedToUserId': childId,
-        'status': TaskStatus.pending.name,
-        'completedAt': null,
-        'approvedAt': null,
-        'claimedBy': FieldValue.delete(),
-        'proof': FieldValue.delete(),
-      };
+    'assignedToUserId': childId,
+    'status': TaskStatus.pending.name,
+    'completedAt': null,
+    'approvedAt': null,
+    'claimedBy': FieldValue.delete(),
+    'proof': FieldValue.delete(),
+  };
 
   TaskModel? taskById(String id) {
     for (final t in tasks) {
@@ -615,7 +615,9 @@ class DatabaseService extends ChangeNotifier {
     final proof = TaskProof(
       photoPath: photoPath,
       submittedAt: at,
-      deleteAt: at.add(const Duration(days: AppConstants.taskPhotoRetentionDays)),
+      deleteAt: at.add(
+        const Duration(days: AppConstants.taskPhotoRetentionDays),
+      ),
       scan: scan,
     );
     await _firestore.runTransaction((transaction) async {
@@ -686,49 +688,95 @@ class DatabaseService extends ChangeNotifier {
       _finishTask(taskId, from: const {TaskStatus.completed});
 
   /// Parent marks a task done themselves.
-  Future<void> parentCompleteTask(String taskId) =>
-      _finishTask(taskId, from: const {TaskStatus.pending, TaskStatus.completed});
+  Future<void> parentCompleteTask(String taskId) => _finishTask(
+    taskId,
+    from: const {TaskStatus.pending, TaskStatus.completed},
+  );
 
   /// Moves a task whose status is in [from] to `approved` and grants its
   /// rewards to the assigned child, all in one transaction so rewards are
   /// granted at most once.
-  Future<void> _finishTask(String taskId, {required Set<TaskStatus> from}) async {
+  Future<void> _finishTask(
+    String taskId, {
+    required Set<TaskStatus> from,
+  }) async {
     final taskRef = _tasksCollection.doc(taskId);
 
-    final approvedTask = await _firestore.runTransaction<TaskModel?>((
-      transaction,
-    ) async {
-      // All reads must happen before any writes in a transaction.
+    await _firestore.runTransaction<void>((transaction) async {
+      // Read the task first.
       final taskSnap = await transaction.get(taskRef);
-      if (!taskSnap.exists) return null;
+      if (!taskSnap.exists) return;
 
       final task = TaskModel.fromFirestore(taskSnap);
+      if (!from.contains(task.status)) return;
 
-      if (!from.contains(task.status)) return null;
+      final approvalTime = DateTime.now();
+      final now = Timestamp.fromDate(approvalTime);
 
-      final now = Timestamp.fromDate(DateTime.now());
       final approval = <String, Object?>{
         'status': TaskStatus.approved.name,
         'approvedAt': now,
         if (task.status == TaskStatus.pending) 'completedAt': now,
-        if (task.proof?.verdict.needsReview ?? false) 'proof.parentOverride': true,
+        if (task.proof?.verdict.needsReview ?? false)
+          'proof.parentOverride': true,
       };
 
       final assignedTo = task.assignedToUserId;
 
-      if (assignedTo == null) {
-        transaction.update(taskRef, approval);
-        return task;
+      // Read the child's account before any transaction writes.
+      DocumentReference<Map<String, dynamic>>? userRef;
+      DocumentSnapshot<Map<String, dynamic>>? userSnap;
+
+      if (assignedTo != null) {
+        userRef = _firestore.collection('users').doc(assignedTo);
+        userSnap = await transaction.get(userRef);
       }
 
-      // XP and coins live on the child's account, so they count in every
-      // household the child belongs to.
-      final userRef = _firestore.collection('users').doc(assignedTo);
-      final userSnap = await transaction.get(userRef);
+      // Prepare an eligible challenge contribution in this same transaction.
+      PreparedGoalContribution? preparedContribution;
 
+      final householdId = _householdId;
+      final goalId = task.goalId;
+
+      if (householdId != null && assignedTo != null && goalId != null) {
+        final goalRef = _firestore
+            .collection('households')
+            .doc(householdId)
+            .collection('goals')
+            .doc(goalId);
+
+        final goalSnapshot = await transaction.get(goalRef);
+
+        if (goalSnapshot.exists) {
+          final goal = Goal.fromFirestore(goalSnapshot);
+
+          final amount = switch (goal.metric) {
+            GoalMetric.tasksCompleted => 1,
+            GoalMetric.xpEarned => task.rewardXp,
+            GoalMetric.coinsEarned => task.coinReward,
+          };
+
+          preparedContribution = await GoalService(firestore: _firestore)
+              .prepareContribution(
+                transaction: transaction,
+                householdId: householdId,
+                goalId: goalId,
+                existingGoalSnapshot: goalSnapshot,
+                contribution: GoalContribution(
+                  activityId: taskId,
+                  userId: assignedTo,
+                  amount: amount,
+                  activityType: GoalActivityType.taskApproval,
+                  recordedAt: approvalTime,
+                ),
+              );
+        }
+      }
+
+      // All Firestore reads are complete. Begin transaction writes.
       transaction.update(taskRef, approval);
 
-      if (userSnap.exists) {
+      if (userRef != null && userSnap != null && userSnap.exists) {
         final currentXp = userSnap.data()?['xp'] as int? ?? 0;
         final currentCoins = userSnap.data()?['coins'] as int? ?? 0;
 
@@ -738,54 +786,9 @@ class DatabaseService extends ChangeNotifier {
         });
       }
 
-      return task;
+      // Challenge progress commits together with task approval and rewards.
+      preparedContribution?.apply(transaction);
     });
-
-    if (approvedTask == null) return;
-
-    await _recordTaskApprovalGoalProgress(taskId: taskId, task: approvedTask);
-  }
-
-  Future<void> _recordTaskApprovalGoalProgress({
-    required String taskId,
-    required TaskModel task,
-  }) async {
-    final householdId = _householdId;
-    final userId = task.assignedToUserId;
-
-    if (householdId == null || userId == null) return;
-
-    final now = DateTime.now();
-
-    final goalsSnapshot = await _firestore
-        .collection('households')
-        .doc(householdId)
-        .collection('goals')
-        .get();
-
-    final goalService = GoalService(firestore: _firestore);
-
-    for (final goalDoc in goalsSnapshot.docs) {
-      final goal = Goal.fromFirestore(goalDoc);
-
-      final amount = switch (goal.metric) {
-        GoalMetric.tasksCompleted => 1,
-        GoalMetric.xpEarned => task.rewardXp,
-        GoalMetric.coinsEarned => task.coinReward,
-      };
-
-      await goalService.recordContribution(
-        householdId: householdId,
-        goalId: goal.id,
-        contribution: GoalContribution(
-          activityId: taskId,
-          userId: userId,
-          amount: amount,
-          activityType: GoalActivityType.taskApproval,
-          recordedAt: now,
-        ),
-      );
-    }
   }
 
   // --- Mutations: household membership ---------------------------------------
@@ -849,7 +852,9 @@ class DatabaseService extends ChangeNotifier {
     final trimmed = name.trim().replaceAll(RegExp(r'\s+'), ' ');
     if (trimmed.isEmpty) throw Exception('Give your household a name.');
     if (trimmed.length > AppConstants.householdNameMaxLength) {
-      throw Exception('Keep the name to ${AppConstants.householdNameMaxLength} characters or fewer.');
+      throw Exception(
+        'Keep the name to ${AppConstants.householdNameMaxLength} characters or fewer.',
+      );
     }
     final id = householdId ?? _householdId;
     if (id == null) throw Exception('No household selected.');
