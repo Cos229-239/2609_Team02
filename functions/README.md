@@ -136,3 +136,40 @@ on the `expiresAt` field of the `notificationEvents` collection group
 9. Create a repeating task (e.g. weekly, Mon & Thu) → its occurrences appear on those days; edit it → future ones update.
 10. With the app open, notifications appear as an in-app banner with a **View** button.
 11. Log out on device B → no further notifications arrive there.
+12. Create a Family Goal with a short board, approve tasks until it's reached → everyone in the household gets "Family goal reached! 🎉"; tapping it opens the celebration.
+
+## Mini-game bonus XP (`awardMiniGameBonus`)
+
+The only code that pays mini-game bonus XP. When a child's app moves
+`households/{h}/miniGameSessions/{taskId}` to `finished`, the trigger validates
+the outcome (`src/minigames/plan.ts`, unit tested in `plan.test.ts`) against
+the settings snapshotted on the session and the server-stamped play time, then
+in one transaction writes `xpTransactions/minigame_{taskId}` (at most once),
+increments the child's `xp` and marks the session `rewarded` (or `rejected`).
+See [Documents/Family_Milestones_and_MiniGames.md](../Documents/Family_Milestones_and_MiniGames.md).
+
+Deploy rules and functions together (the app's approval transaction reads and
+writes the new collections, so the new rules must be live before the app
+update ships):
+
+```bash
+firebase deploy --only firestore:rules,functions
+```
+
+## Emulator tests (rules + bonus trigger)
+
+Needs Java and the Firebase CLI. The Functions emulator asks for the Premium
+params; give it throwaway values in git-ignored files first:
+
+```bash
+cd functions
+printf 'APPLE_IAP_ISSUER_ID=emulator\nAPPLE_IAP_KEY_ID=emulator\n' > .env.local
+printf 'APPLE_IAP_PRIVATE_KEY=emulator\n' > .secret.local
+npm run test:emulator
+```
+
+`src/emulator/rules.emulator.ts` checks the Firestore rules (XP can't be
+self-raised, parent-only goals/settings, session transitions, server-only XP
+ledger, a parent's full approval commit). `src/emulator/award.emulator.ts`
+checks the trigger pays once, rejects implausible results and never pays a
+replayed finish twice.

@@ -312,3 +312,6 @@ coverage/
 #DEVELOPMENT ENVIRONMENT FILES
 
 SubscriptionKey_D26244PGV2.p8
+
+# Firebase emulator secret params (functions/README.md)
+.secret.local
