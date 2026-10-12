@@ -82,6 +82,8 @@ initializeApp();
 export { deleteAccount } from './account/delete';
 // Task proof photo retention.
 export { cleanUpTaskPhotos, purgeExpiredTaskPhotos } from './photos/cleanup';
+// Mini-game bonus XP (server-authoritative). See ./minigames/index.ts.
+export { awardMiniGameBonus } from './minigames';
 // Premium subscriptions (App Store / Google Play). See ./premium/index.ts.
 export {
   verifyPurchase,

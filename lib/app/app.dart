@@ -5,6 +5,8 @@ import '../core/constants/app_constants.dart';
 import '../core/services/auth_service.dart';
 import '../core/services/database_service.dart';
 import '../core/services/milestone_service.dart';
+import '../core/services/mini_game_service.dart';
+import '../features/minigames/mini_game_framework.dart';
 import '../core/services/notification_service.dart';
 import '../core/services/theme_controller.dart';
 import '../features/onboarding/onboarding_controller.dart';
@@ -71,7 +73,8 @@ class FamotiveApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<PremiumService?>.value(value: premiumService),
         ChangeNotifierProxyProvider<AuthService, DatabaseService>(
-          create: (_) => DatabaseService(),
+          // Only games this build includes are offered after approvals.
+          create: (_) => DatabaseService(availableMiniGames: MiniGameRegistry.ids),
           update: (_, auth, db) => db!
             // Keep the active household valid (e.g. after being removed from
             // one) and tidy up join requests once they're answered.
@@ -83,6 +86,11 @@ class FamotiveApp extends StatelessWidget {
         // Family Goal board of the active household.
         ChangeNotifierProxyProvider<AuthService, MilestoneService>(
           create: (_) => MilestoneService(),
+          update: (_, auth, service) => service!..bind(auth.currentUser),
+        ),
+        // Bonus game sessions and mini-game settings.
+        ChangeNotifierProxyProvider<AuthService, MiniGameService>(
+          create: (_) => MiniGameService(),
           update: (_, auth, service) => service!..bind(auth.currentUser),
         ),
       ],

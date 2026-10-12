@@ -1,13 +1,25 @@
+import 'dart:math' as math;
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/family_milestone.dart';
+import '../models/mini_game.dart';
+import '../models/mini_game_session.dart';
+import '../models/mini_game_settings.dart';
 import '../models/progress_event.dart';
 import '../models/task.dart';
 import 'milestone_rules.dart';
+import 'xp_multiplier.dart';
 
 /// What approving one task did beyond paying its XP/coins.
 class ApprovalOutcome {
-  const ApprovalOutcome({this.milestoneId, this.fromPosition, this.toPosition, this.milestoneCompleted = false});
+  const ApprovalOutcome({
+    this.milestoneId,
+    this.fromPosition,
+    this.toPosition,
+    this.milestoneCompleted = false,
+    this.miniGame,
+  });
 
   static const none = ApprovalOutcome();
 
@@ -15,6 +27,9 @@ class ApprovalOutcome {
   final int? fromPosition;
   final int? toPosition;
   final bool milestoneCompleted;
+
+  /// The bonus game offered for this approval, if any.
+  final MiniGameId? miniGame;
 
   bool get movedBoard => milestoneId != null;
 }
@@ -38,16 +53,24 @@ class PreparedApproval {
 }
 
 /// Side effects of approving a child's task that must commit atomically with
-/// the approval itself: the family milestone contribution + board move and
-/// the "show this to the child" [ProgressEvent].
+/// the approval itself: the family milestone contribution + board move, the
+/// bonus mini-game offer, and the "show this to the child" [ProgressEvent].
 ///
 /// Everything is keyed by the task (occurrence) id, so a retried or
-/// concurrent approval can't count twice. See
+/// concurrent approval can't count twice or offer two rewarded games. See
 /// Documents/Family_Milestones_and_MiniGames.md.
 class ApprovalEffects {
-  ApprovalEffects(this._firestore);
+  ApprovalEffects(this._firestore, {math.Random? random, Iterable<MiniGameId>? availableGames})
+    : _random = random ?? math.Random(),
+      _availableGames = (availableGames ?? MiniGameId.values).toList(growable: false);
 
   final FirebaseFirestore _firestore;
+
+  /// Picks the game and its seed (injectable so tests are deterministic).
+  final math.Random _random;
+
+  /// Games this build can play; only these are offered.
+  final List<MiniGameId> _availableGames;
 
   DocumentReference<Map<String, dynamic>> _household(String id) =>
       _firestore.collection('households').doc(id);
@@ -120,6 +143,19 @@ class ApprovalEffects {
       );
     }
 
+    // Bonus mini-game: one rewarded session per approved task, with the
+    // child's settings snapshotted now.
+    final settingsRef = householdRef.collection('miniGameSettings');
+    final sessionRef = householdRef.collection('miniGameSessions').doc(taskId);
+    final householdSettings = await transaction.get(settingsRef.doc('household'));
+    final childSettings = await transaction.get(settingsRef.doc(childId));
+    final sessionSnap = await transaction.get(sessionRef);
+    final settings = MiniGameSettings.resolve(household: householdSettings.data(), child: childSettings.data());
+    MiniGameId? game;
+    if (settings.rewardedGamesEnabled && task.rewardXp > 0 && !sessionSnap.exists && _availableGames.isNotEmpty) {
+      game = GameSelector.pick(settings, _random, available: _availableGames);
+    }
+
     final writes = <void Function(Transaction)>[];
     var outcome = ApprovalOutcome.none;
 
@@ -155,6 +191,27 @@ class ApprovalEffects {
       );
     }
 
+    if (game != null) {
+      final offer = MiniGameSession.offer(
+        childId: childId,
+        taskId: taskId,
+        taskTitle: task.title,
+        gameId: game,
+        seed: _random.nextInt(1 << 31),
+        baseXp: task.rewardXp,
+        settings: settings,
+        now: approvedAt,
+      );
+      writes.add((tx) => tx.set(sessionRef, offer));
+      outcome = ApprovalOutcome(
+        milestoneId: outcome.milestoneId,
+        fromPosition: outcome.fromPosition,
+        toPosition: outcome.toPosition,
+        milestoneCompleted: outcome.milestoneCompleted,
+        miniGame: game,
+      );
+    }
+
     final event = ProgressEvent(
       taskId: taskId,
       childId: childId,
@@ -167,9 +224,10 @@ class ApprovalEffects {
       toPosition: outcome.toPosition,
       boardLength: outcome.movedBoard ? current?.boardLength : null,
       milestoneCompleted: outcome.milestoneCompleted,
+      miniGameSessionId: game == null ? null : taskId,
     );
-    // Only worth showing the child if something happened on the board.
-    if (event.movedBoard) {
+    // Only worth showing the child if the board moved or a game is waiting.
+    if (event.movedBoard || game != null) {
       writes.add((tx) => tx.set(eventRef, event.toFirestore()));
     }
 

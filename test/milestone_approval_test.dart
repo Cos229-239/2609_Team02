@@ -75,7 +75,12 @@ void main() {
 
   setUp(() async {
     firestore = FakeFirebaseFirestore();
-    db = DatabaseService(firestore: firestore, clock: () => now, deviceTimeZone: () async => null);
+    db = DatabaseService(
+      firestore: firestore,
+      clock: () => now,
+      deviceTimeZone: () async => null,
+      availableMiniGames: const [],
+    );
     await household().set({
       'name': 'Test',
       'ownerId': parentId,
@@ -204,7 +209,12 @@ void main() {
     await addMilestone(boardLength: 10);
     await addTask('a');
     await addTask('b', assignee: otherChildId);
-    final second = DatabaseService(firestore: firestore, clock: () => now, deviceTimeZone: () async => null)
+    final second = DatabaseService(
+      firestore: firestore,
+      clock: () => now,
+      deviceTimeZone: () async => null,
+      availableMiniGames: const [],
+    )
       ..bindHousehold(householdId);
     await db.approveTask('a');
     await second.approveTask('b');

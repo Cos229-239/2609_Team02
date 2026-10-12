@@ -16,6 +16,9 @@ rules_version = '2';
 //   households/{householdId}/milestones/{milestoneId}          - Family Goal board
 //   households/{householdId}/milestones/{id}/contributions/{taskId} - board audit trail
 //   households/{householdId}/progressEvents/{taskId}           - approvals to show the child once
+//   households/{householdId}/miniGameSessions/{taskId}         - one rewarded bonus game per approval
+//   households/{householdId}/miniGameSettings/{household|childId} - parent difficulty/reward settings
+//   households/{householdId}/xpTransactions/{id}               - bonus XP ledger (server only)
 //   (see Documents/Family_Milestones_and_MiniGames.md)
 //   subscriptions/{id}                - store subscriptions (server only; no client access)
 //   premiumGrants/{uid}               - complimentary Premium for test accounts (console only)
@@ -319,6 +322,59 @@ service cloud.firestore {
           resource.data.childId == request.auth.uid &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['presentedAt']));
         allow delete: if false;
+      }
+
+      // --- Mini-games ------------------------------------------------------
+      // A parent's approval offers the session; the child may only start it
+      // (server-stamped, at most twice), finish it (server-stamped, with the
+      // outcome) or skip it, before it expires. The bonus XP and every reward
+      // field are written by the awardMiniGameBonus Cloud Function only.
+      function sessionStatusOf(data) {
+        return data.get('status', '');
+      }
+      function childSessionChange() {
+        let before = resource.data;
+        let after = request.resource.data;
+        let changed = after.diff(before).affectedKeys();
+        return before.childId == request.auth.uid &&
+          request.time < before.expiresAt && (
+          // Start, or restart once after an interruption.
+          (sessionStatusOf(before) in ['offered', 'started'] && sessionStatusOf(after) == 'started' &&
+            changed.hasOnly(['status', 'attempts', 'startedAt']) &&
+            after.attempts == before.get('attempts', 0) + 1 && after.attempts <= 2 &&
+            after.startedAt == request.time) ||
+          // Report the result.
+          (sessionStatusOf(before) == 'started' && sessionStatusOf(after) == 'finished' &&
+            changed.hasOnly(['status', 'outcome', 'finishedAt']) &&
+            after.outcome is map && after.finishedAt == request.time) ||
+          // No bonus for this one.
+          (sessionStatusOf(before) in ['offered', 'started'] && sessionStatusOf(after) == 'skipped' &&
+            changed.hasOnly(['status']))
+        );
+      }
+
+      match /miniGameSessions/{taskId} {
+        allow read: if isMemberOf(householdId);
+        allow create: if isParentMemberOf() &&
+          request.resource.data.status == 'offered' &&
+          request.resource.data.attempts == 0 &&
+          request.resource.data.childId is string &&
+          request.resource.data.baseXp is int && request.resource.data.baseXp >= 0 &&
+          request.resource.data.expiresAt is timestamp &&
+          !request.resource.data.keys().hasAny(
+            ['multiplierPct', 'bonusXp', 'finalXp', 'rewardedAt', 'performance', 'rejectReason']);
+        allow update: if isMemberOf(householdId) && childSessionChange();
+        allow delete: if false;
+      }
+
+      match /miniGameSettings/{settingsId} {
+        allow read: if isMemberOf(householdId);
+        allow write: if isParentMemberOf();
+      }
+
+      match /xpTransactions/{transactionId} {
+        allow read: if isMemberOf(householdId);
+        allow write: if false;
       }
 
       match /rewards/{rewardId} {

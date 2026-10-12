@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import '../constants/app_constants.dart';
 import '../models/household.dart';
 import '../models/join_request.dart';
+import '../models/mini_game.dart';
 import '../models/redemption.dart';
 import '../models/reward.dart';
 import '../models/task.dart';
@@ -28,10 +29,11 @@ class DatabaseService extends ChangeNotifier {
     Future<String?> Function()? deviceTimeZone,
     DateTime Function()? clock,
     ApprovalEffects? approvalEffects,
+    Iterable<MiniGameId>? availableMiniGames,
   }) : _firestore = firestore ?? FirebaseFirestore.instance,
        _deviceTimeZone = deviceTimeZone ?? TimeZoneService.localTimeZone,
        _clock = clock ?? DateTime.now {
-    _approvalEffects = approvalEffects ?? ApprovalEffects(_firestore);
+    _approvalEffects = approvalEffects ?? ApprovalEffects(_firestore, availableGames: availableMiniGames);
   }
 
   final FirebaseFirestore _firestore;
