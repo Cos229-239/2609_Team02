@@ -117,7 +117,7 @@ class _FamilyBoardState extends State<FamilyBoard> with SingleTickerProviderStat
                     _label(layout.centers.last, layout, widget.finishIcon, 'Goal!'),
                     Positioned(
                       left: point.dx - tokenSize / 2,
-                      top: point.dy - tokenSize * 0.95 - lift,
+                      top: point.dy - tokenSize * 1.25 - lift,
                       width: tokenSize,
                       height: tokenSize,
                       child: IgnorePointer(
@@ -145,24 +145,28 @@ class _FamilyBoardState extends State<FamilyBoard> with SingleTickerProviderStat
     );
   }
 
+  /// Start flag / finish reward drawn inside their (bigger) end spaces.
   Widget _label(Offset center, BoardLayout layout, String emoji, String text) {
     final r = layout.spaceRadius;
     return Positioned(
-      left: center.dx - r * 1.4,
-      top: center.dy + r * 0.55,
-      width: r * 2.8,
+      left: center.dx - r,
+      top: center.dy - r,
+      width: r * 2,
+      height: r * 2,
       child: IgnorePointer(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(emoji, style: TextStyle(fontSize: r * 0.75)),
-            Text(
-              text,
-              maxLines: 1,
-              style: TextStyle(fontSize: math.max(10, r * 0.34), fontWeight: FontWeight.w800, color: Colors.white,
-                  shadows: const [Shadow(blurRadius: 3, color: Colors.black54)]),
-            ),
-          ],
+        child: Semantics(
+          label: text,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(emoji, style: TextStyle(fontSize: r * 0.8, height: 1.1)),
+              Text(
+                text,
+                maxLines: 1,
+                style: TextStyle(fontSize: math.max(9, r * 0.3), fontWeight: FontWeight.w800, color: Colors.white),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -182,6 +186,7 @@ class _BoardPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
     final bg = RRect.fromRectAndRadius(rect, const Radius.circular(24));
+    canvas.clipRRect(bg);
     canvas.drawRRect(
       bg,
       Paint()

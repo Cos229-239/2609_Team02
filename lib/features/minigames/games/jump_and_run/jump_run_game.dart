@@ -150,11 +150,16 @@ class _RunPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final groundY = size.height * 0.78;
-    final ppm = math.min(size.width / 14, size.height / 6); // pixels per meter
-    final runnerScreenX = size.width * 0.25;
+    // Portrait phones: keep the action in the middle and show ~18 m of
+    // course (about 1.5 s of warning before an obstacle arrives).
+    final groundY = size.height * 0.62;
+    final ppm = math.min(size.width / 18, size.height / 6); // horizontal pixels per meter
+    // Drawn taller than the physics scale so sprites are big enough for kids
+    // on a narrow phone; widths (what collisions use) stay true to scale.
+    final ppmY = math.min(ppm * 2.2, groundY / 4);
+    final runnerScreenX = size.width * 0.18;
     double sx(double worldX) => runnerScreenX + (worldX - sim.x) * ppm;
-    double sy(double worldY) => groundY - worldY * ppm;
+    double sy(double worldY) => groundY - worldY * ppmY;
 
     // Sky and parallax hills.
     final sky = Offset.zero & size;
@@ -167,6 +172,13 @@ class _RunPainter extends CustomPainter {
           colors: dark ? const [Color(0xFF1B2A4A), Color(0xFF2E4A6E)] : const [Color(0xFF7EC8FF), Color(0xFFD8F0FF)],
         ).createShader(sky),
     );
+    final cloud = Paint()..color = Colors.white.withValues(alpha: dark ? 0.15 : 0.8);
+    for (var i = -1; i < 5; i++) {
+      final cx = (i * 160 - (sim.x * ppm * 0.15) % 160).toDouble() + 40;
+      final cy = groundY * (0.2 + 0.15 * (i % 2));
+      canvas.drawOval(Rect.fromCenter(center: Offset(cx, cy), width: 90, height: 34), cloud);
+      canvas.drawOval(Rect.fromCenter(center: Offset(cx + 22, cy - 12), width: 50, height: 34), cloud);
+    }
     final hill = Paint()..color = dark ? const Color(0xFF29523A) : const Color(0xFF9ED39A);
     for (var i = -1; i < 6; i++) {
       final hx = (i * 220 - (sim.x * ppm * 0.3) % 220).toDouble();
@@ -182,7 +194,7 @@ class _RunPainter extends CustomPainter {
     // Finish flag.
     final fx = sx(sim.course.runLength);
     if (fx < size.width + 40) {
-      canvas.drawRect(Rect.fromLTWH(fx, sy(3), 4, 3 * ppm), Paint()..color = Colors.white);
+      canvas.drawRect(Rect.fromLTWH(fx, sy(3), 4, 3 * ppmY), Paint()..color = Colors.white);
       for (var r = 0; r < 3; r++) {
         for (var c = 0; c < 4; c++) {
           canvas.drawRect(
@@ -213,13 +225,15 @@ class _RunPainter extends CustomPainter {
       if (sim.collected.contains(c.id)) continue;
       final cx = sx(c.x);
       if (cx < -20 || cx > size.width + 20) continue;
-      _star(canvas, Offset(cx, sy(c.y)), ppm * 0.38);
+      _star(canvas, Offset(cx, sy(c.y)), ppmY * 0.32);
     }
 
     // The runner: a round, friendly character facing right.
+    // Flickers after a hit, but never disappears completely.
     final blink = sim.isInvulnerable && (sim.time * 10).floor().isEven;
-    if (!blink) {
-      final h = JumpPhysics.runnerHeight * ppm;
+    canvas.saveLayer(null, Paint()..color = Colors.white.withValues(alpha: blink ? 0.35 : 1));
+    {
+      final h = JumpPhysics.runnerHeight * ppmY;
       final bodyCenter = Offset(runnerScreenX, sy(sim.y) - h * 0.45);
       final legPhase = math.sin(sim.time * 18) * (sim.onGround ? 1 : 0);
       final leg = Paint()
@@ -242,6 +256,7 @@ class _RunPainter extends CustomPainter {
           ..strokeWidth = 2.5,
       );
     }
+    canvas.restore();
   }
 
   void _star(Canvas canvas, Offset c, double r) {
