@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import '../../core/models/mini_game.dart';
 import '../../core/models/mini_game_settings.dart';
 import 'games/balloon_popper/balloon_popper_game.dart';
+import 'games/match_pairs/match_pairs_game.dart';
 
 /// Everything a game gets from the host: its resolved settings, a seeded
 /// random source (procedural generation is reproducible), and where to report
@@ -39,6 +40,7 @@ class MiniGameRegistry {
 
   static const List<MiniGameDefinition> definitions = <MiniGameDefinition>[
     BalloonPopperGame(),
+    MatchPairsMiniGame(),
   ];
 
   static Iterable<MiniGameId> get ids => definitions.map((d) => d.id);
