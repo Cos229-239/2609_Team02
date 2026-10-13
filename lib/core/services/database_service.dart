@@ -532,19 +532,133 @@ class DatabaseService extends ChangeNotifier {
 
   /// Changes who a task is assigned to; null clears it back to the pool.
   /// The task goes back to "to do" (see [_freshAssignment]).
+
   Future<void> reassignTask(String taskId, String? childId) async {
-    await _tasksCollection.doc(taskId).update(_freshAssignment(childId));
+    final taskRef = _tasksCollection.doc(taskId);
+
+    await _firestore.runTransaction<void>((transaction) async {
+      final taskSnapshot = await transaction.get(taskRef);
+
+      if (!taskSnapshot.exists) {
+        throw StateError('The task no longer exists.');
+      }
+
+      final task = TaskModel.fromFirestore(taskSnapshot);
+
+      // Validate challenge eligibility before changing the assignee.
+      // A null assignee is allowed so the task can return to the pool.
+      if (task.goalId != null && childId != null) {
+        // Verify the new assignee belongs to this household.
+        final householdRef = _firestore
+            .collection('households')
+            .doc(_householdId!);
+
+        final householdSnapshot = await transaction.get(householdRef);
+
+        if (!householdSnapshot.exists) {
+          throw StateError('The household no longer exists.');
+        }
+
+        final memberIds = List<String>.from(
+          householdSnapshot.data()?['memberIds'] ?? [],
+        );
+
+        if (!memberIds.contains(childId)) {
+          return;
+        }
+
+        final goalRef = _firestore
+            .collection('households')
+            .doc(_householdId!)
+            .collection('goals')
+            .doc(task.goalId!);
+
+        final goalSnapshot = await transaction.get(goalRef);
+
+        if (!goalSnapshot.exists) {
+          throw StateError('The linked challenge no longer exists.');
+        }
+
+        final goal = Goal.fromFirestore(goalSnapshot);
+
+        if (goal.type != GoalType.family &&
+            !goal.participantIds.contains(childId)) {
+          return;
+        }
+      }
+
+      // Only update after all required reads and validations.
+      transaction.update(taskRef, _freshAssignment(childId));
+    });
   }
 
   /// Overwrites every editable field of an existing task. If the assignee
   /// changed, the task goes back to "to do" (see [reassignTask]).
+
   Future<void> updateTask(String taskId, TaskModel task) async {
     final ref = _tasksCollection.doc(taskId);
-    await _firestore.runTransaction((transaction) async {
+
+    await _firestore.runTransaction<void>((transaction) async {
       final snap = await transaction.get(ref);
-      final before = snap.exists ? TaskModel.fromFirestore(snap) : null;
-      final reassigned =
-          before != null && before.assignedToUserId != task.assignedToUserId;
+
+      if (!snap.exists) {
+        throw StateError('The task no longer exists.');
+      }
+
+      final before = TaskModel.fromFirestore(snap);
+
+      // Challenge associations must be managed through the challenge
+      // workflow, not changed through ordinary task editing.
+      if (before.goalId != task.goalId) {
+        throw StateError(
+          'Challenge associations cannot be changed through task editing.',
+        );
+      }
+
+      // Validate the assignee before applying any changes.
+      if (before.goalId != null && task.assignedToUserId != null) {
+        // Verify the new assignee belongs to this household.
+        final householdRef = _firestore
+            .collection('households')
+            .doc(_householdId!);
+
+        final householdSnapshot = await transaction.get(householdRef);
+
+        if (!householdSnapshot.exists) {
+          throw StateError('The household no longer exists.');
+        }
+
+        final memberIds = List<String>.from(
+          householdSnapshot.data()?['memberIds'] ?? [],
+        );
+
+        if (!memberIds.contains(task.assignedToUserId)) {
+          return;
+        }
+
+        final goalRef = _firestore
+            .collection('households')
+            .doc(_householdId!)
+            .collection('goals')
+            .doc(before.goalId!);
+
+        final goalSnapshot = await transaction.get(goalRef);
+
+        if (!goalSnapshot.exists) {
+          throw StateError('The linked challenge no longer exists.');
+        }
+
+        final goal = Goal.fromFirestore(goalSnapshot);
+
+        if (goal.type != GoalType.family &&
+            !goal.participantIds.contains(task.assignedToUserId)) {
+          return;
+        }
+      }
+
+      final reassigned = before.assignedToUserId != task.assignedToUserId;
+
+      // Apply updates only after validation succeeds.
       transaction.update(ref, {
         ...task.toFirestore(),
         if (reassigned) ..._freshAssignment(task.assignedToUserId),
@@ -667,6 +781,49 @@ class DatabaseService extends ChangeNotifier {
 
       // Prevent an already-claimed task from being reassigned to another child.
       if (task.assignedToUserId != null) return;
+
+      // A task linked to an individual or team challenge can only
+      // be claimed by a participating child.
+      if (task.goalId != null) {
+        // Verify that the claiming child belongs to this household.
+        final householdRef = _firestore
+            .collection('households')
+            .doc(_householdId!);
+
+        final householdSnapshot = await transaction.get(householdRef);
+
+        if (!householdSnapshot.exists) {
+          throw StateError('The household no longer exists.');
+        }
+
+        final memberIds = List<String>.from(
+          householdSnapshot.data()?['memberIds'] ?? [],
+        );
+
+        if (!memberIds.contains(childId)) {
+          return;
+        }
+
+        final goalRef = _firestore
+            .collection('households')
+            .doc(_householdId!)
+            .collection('goals')
+            .doc(task.goalId!);
+
+        final goalSnapshot = await transaction.get(goalRef);
+
+        // Do not allow claiming if the linked challenge is missing.
+        if (!goalSnapshot.exists) {
+          throw StateError('The linked challenge no longer exists.');
+        }
+
+        final goal = Goal.fromFirestore(goalSnapshot);
+
+        if (goal.type != GoalType.family &&
+            !goal.participantIds.contains(childId)) {
+          return;
+        }
+      }
 
       // `claimedBy` lets the push-notification Cloud Function tell a child
       // claiming a task ("accepted", notify parents) apart from a parent
