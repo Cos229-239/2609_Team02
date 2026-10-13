@@ -72,19 +72,55 @@ class TaskDetailScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 14),
                     Row(
-                      children: [
-                        const SizedBox(width: 12),
-                        const Icon(Icons.star, color: Colors.amber, size: 24),
-                        const SizedBox(width: 2),
-                        Text('Reward: +${task.rewardXp} XP', style: Theme.of(context).textTheme.bodyMedium),
-                        if (task.coinReward > 0) ...[
-                          const SizedBox(width: 110),
-                          Icon(Icons.monetization_on, color: Colors.amber.shade700, size: 22),
-                          const SizedBox(width: 2),
-                          Text('+${task.coinReward} coins', style: Theme.of(context).textTheme.bodyMedium),
-                        ],
-                      ],
-                    ),
+                    children: [
+                      const SizedBox(width: 12),
+                      
+                      // Left side: XP Reward (Takes up 50% of remaining space)
+                      Expanded(
+                        flex: 1,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.star, color: Colors.amber, size: 24),
+                            const SizedBox(width: 2),
+                            // Wrap text in Flexible to prevent overflow if the text is very long
+                            Flexible(
+                              child: Text(
+                                'Reward: +${task.rewardXp} XP', 
+                                style: Theme.of(context).textTheme.bodyMedium,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Right side: Coin Reward (Takes up 50% of remaining space)
+                      Expanded(
+                        flex: 1,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          // Optional: Aligns content to the start of this 50% section. 
+                          // Change to MainAxisAlignment.end if you want coins pushed to the far right.
+                          mainAxisAlignment: MainAxisAlignment.start, 
+                          children: [
+                            if (task.coinReward > 0) ...[
+                              Icon(Icons.monetization_on, color: Colors.amber.shade700, size: 22),
+                              const SizedBox(width: 2),
+                              Flexible(
+                                child: Text(
+                                  '+${task.coinReward} coins', 
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12), // Optional trailing padding
+                    ],
+                  ),
                     if (db.needsPhoto(resolvedTask)) ...[
                       const SizedBox(height: 10),
                       Row(
