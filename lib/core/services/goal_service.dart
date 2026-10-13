@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:famotive/core/models/task.dart';
 import '../models/goal.dart';
 import '../models/goal_contribution.dart';
 
@@ -126,4 +126,136 @@ class GoalService {
       return true;
     });
   }
+
+  
+  /// Creates a challenge and links selected existing household tasks.
+  ///
+  /// The goal and task associations are written atomically.
+  /// Returns the ID of the newly created goal.
+  Future<String> createGoalWithTasks({
+    required String householdId,
+    required Goal goal,
+    required List<String> taskIds,
+  }) async {
+    
+    // Validate challenge details before attempting Firestore writes.
+    if (goal.title.trim().isEmpty) {
+      throw StateError('A challenge must have a title.');
+    }
+
+    if (goal.targetValue <= 0) {
+      throw StateError('A challenge target must be greater than zero.');
+    }
+
+    if (!goal.endsAt.isAfter(goal.startsAt)) {
+      throw StateError('The challenge end date must be after its start date.');
+    }
+
+    final uniqueParticipants = goal.participantIds.toSet();
+
+    if (goal.type == GoalType.individual &&
+        uniqueParticipants.length != 1) {
+      throw StateError(
+        'An individual challenge must have exactly one participant.',
+      );
+    }
+
+    if (goal.type == GoalType.team &&
+        uniqueParticipants.length < 2) {
+      throw StateError(
+        'A team challenge must have at least two participants.',
+      );
+    }
+    
+    // Each task can only appear once in a challenge creation request.
+    if (taskIds.toSet().length != taskIds.length) {
+      throw StateError(
+        'A task cannot be selected more than once.',
+      );
+    }
+
+    final householdRef = _firestore.collection('households').doc(householdId);
+    final goalRef = householdRef.collection('goals').doc();
+    final tasksCollection = householdRef.collection('tasks');
+
+    await _firestore.runTransaction<void>((transaction) async {
+      
+      // Confirm the household exists and validate challenge participants.
+      final householdSnapshot = await transaction.get(householdRef);
+
+      if (!householdSnapshot.exists) {
+        throw StateError('The household no longer exists.');
+      }
+
+      final memberIds = List<String>.from(
+        householdSnapshot.data()?['memberIds'] as List? ?? const [],
+      );
+
+      for (final participantId in goal.participantIds) {
+        if (!memberIds.contains(participantId)) {
+          throw StateError(
+            'All challenge participants must belong to the household.',
+          );
+        }
+      }
+
+      // Read all selected tasks before performing any writes.
+      final taskSnapshots = <DocumentSnapshot<Map<String, dynamic>>>[];
+
+      for (final taskId in taskIds) {
+        final snapshot = await transaction.get(tasksCollection.doc(taskId));
+        taskSnapshots.add(snapshot);
+      }
+
+      // Validate every selected task.
+      for (final snapshot in taskSnapshots) {
+        if (!snapshot.exists) {
+          throw StateError('A selected task no longer exists.');
+        }
+
+        final task = TaskModel.fromFirestore(snapshot);
+
+        if (task.status != TaskStatus.pending) {
+          throw StateError(
+            'Only pending tasks can be added to a challenge.',
+          );
+        }
+
+        if (task.isArchived) {
+          throw StateError(
+            'Archived tasks cannot be added to a challenge.',
+          );
+        }
+
+        if (task.goalId != null) {
+          throw StateError(
+            'A selected task already belongs to another challenge.',
+          );
+        }
+        
+        // Individual and team challenges can only include tasks assigned
+        // to their participants. Unclaimed tasks remain eligible.
+        if (goal.type != GoalType.family &&
+            task.assignedToUserId != null &&
+            !goal.participantIds.contains(task.assignedToUserId)) {
+          throw StateError(
+            'A selected task is assigned to someone outside '
+            'the challenge participants.',
+          );
+        }
+      }
+
+      // Queue the goal creation and all task associations together.
+      transaction.set(goalRef, goal.toFirestore());
+
+      for (final snapshot in taskSnapshots) {
+        transaction.update(snapshot.reference, {
+          'goalId': goalRef.id,
+        });
+      }
+    });
+
+    return goalRef.id;
+  }
+
 }

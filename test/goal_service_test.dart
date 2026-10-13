@@ -1,6 +1,6 @@
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:famotive/core/models/task.dart';
 import 'package:famotive/core/models/goal.dart';
 import 'package:famotive/core/models/goal_contribution.dart';
 import 'package:famotive/core/services/goal_service.dart';
@@ -914,5 +914,577 @@ void main() {
       expect(householdOneContribution.exists, isTrue);
       expect(householdTwoContribution.exists, isFalse);
     });
+
+    
+group('Challenge creation and task association', () {
+  test('creates a goal and links only the selected tasks', () async {
+    const householdId = 'household-1';
+
+    final householdRef =
+        firestore.collection('households').doc(householdId);
+    final tasksRef = householdRef.collection('tasks');
+
+    await householdRef.set({
+      'name': 'Test Household',
+      'ownerId': 'parent-1',
+      'memberIds': ['parent-1', 'child-1'],
+    });
+
+    for (final taskId in ['task-1', 'task-2', 'task-3']) {
+      await tasksRef.doc(taskId).set(
+        TaskModel(
+          id: taskId,
+          title: 'Task $taskId',
+        ).toFirestore(),
+      );
+    }
+
+    final goal = Goal(
+      id: '',
+      title: 'Kitchen Cleanup Week',
+      type: GoalType.family,
+      metric: GoalMetric.tasksCompleted,
+      period: GoalPeriod.weekly,
+      targetValue: 2,
+      startsAt: DateTime(2026, 10, 12),
+      endsAt: DateTime(2026, 10, 19),
+    );
+
+    final goalId = await service.createGoalWithTasks(
+      householdId: householdId,
+      goal: goal,
+      taskIds: ['task-1', 'task-2'],
+    );
+
+    final savedGoal =
+        await householdRef.collection('goals').doc(goalId).get();
+
+    final task1 = await tasksRef.doc('task-1').get();
+    final task2 = await tasksRef.doc('task-2').get();
+    final task3 = await tasksRef.doc('task-3').get();
+
+    expect(savedGoal.exists, isTrue);
+    expect(savedGoal.data()?['title'], 'Kitchen Cleanup Week');
+    expect(savedGoal.data()?['currentProgress'], 0);
+
+    expect(task1.data()?['goalId'], goalId);
+    expect(task2.data()?['goalId'], goalId);
+
+    // Unselected tasks must remain regular household tasks.
+    expect(task3.data()?['goalId'], isNull);
+  });
+});
+
+
+test('does not create a goal when a selected task is invalid', () async {
+  const householdId = 'household-1';
+
+  final householdRef =
+      firestore.collection('households').doc(householdId);
+  final tasksRef = householdRef.collection('tasks');
+
+  await householdRef.set({
+    'name': 'Test Household',
+    'ownerId': 'parent-1',
+    'memberIds': ['parent-1', 'child-1'],
+  });
+
+  await tasksRef.doc('task-1').set(
+    const TaskModel(
+      id: 'task-1',
+      title: 'Wash Dishes',
+    ).toFirestore(),
+  );
+
+  await tasksRef.doc('task-2').set(
+    const TaskModel(
+      id: 'task-2',
+      title: 'Wipe Counters',
+      status: TaskStatus.approved,
+    ).toFirestore(),
+  );
+
+  final goal = Goal(
+    id: '',
+    title: 'Kitchen Cleanup Week',
+    type: GoalType.family,
+    metric: GoalMetric.tasksCompleted,
+    period: GoalPeriod.weekly,
+    targetValue: 2,
+    startsAt: DateTime(2026, 10, 12),
+    endsAt: DateTime(2026, 10, 19),
+  );
+
+  await expectLater(
+    service.createGoalWithTasks(
+      householdId: householdId,
+      goal: goal,
+      taskIds: ['task-1', 'task-2'],
+    ),
+    throwsStateError,
+  );
+
+  final goalsSnapshot = await householdRef.collection('goals').get();
+  final validTaskSnapshot = await tasksRef.doc('task-1').get();
+  final invalidTaskSnapshot = await tasksRef.doc('task-2').get();
+
+  // The transaction must not partially create the challenge.
+  expect(goalsSnapshot.docs, isEmpty);
+  expect(validTaskSnapshot.data()?['goalId'], isNull);
+  expect(invalidTaskSnapshot.data()?['goalId'], isNull);
+});
+
+
+test('rejects a task already linked to another challenge', () async {
+  const householdId = 'household-1';
+
+  final householdRef =
+      firestore.collection('households').doc(householdId);
+  final tasksRef = householdRef.collection('tasks');
+
+  await householdRef.set({
+    'name': 'Test Household',
+    'ownerId': 'parent-1',
+    'memberIds': ['parent-1', 'child-1'],
+  });
+
+  await tasksRef.doc('task-1').set(
+    const TaskModel(
+      id: 'task-1',
+      title: 'Wash Dishes',
+      goalId: 'existing-goal',
+    ).toFirestore(),
+  );
+
+  final goal = Goal(
+    id: '',
+    title: 'Kitchen Cleanup Week',
+    type: GoalType.family,
+    metric: GoalMetric.tasksCompleted,
+    period: GoalPeriod.weekly,
+    targetValue: 2,
+    startsAt: DateTime(2026, 10, 12),
+    endsAt: DateTime(2026, 10, 19),
+  );
+
+  await expectLater(
+    service.createGoalWithTasks(
+      householdId: householdId,
+      goal: goal,
+      taskIds: ['task-1'],
+    ),
+    throwsStateError,
+  );
+
+  final goalsSnapshot = await householdRef.collection('goals').get();
+  final taskSnapshot = await tasksRef.doc('task-1').get();
+
+  expect(goalsSnapshot.docs, isEmpty);
+  expect(taskSnapshot.data()?['goalId'], 'existing-goal');
+});
+
+
+for (final invalidTask in [
+  const TaskModel(
+    id: 'invalid-task',
+    title: 'Awaiting Approval',
+    status: TaskStatus.completed,
+  ),
+  const TaskModel(
+    id: 'invalid-task',
+    title: 'Archived Task',
+    archived: true,
+  ),
+]) {
+  test('rejects ineligible task: ${invalidTask.title}', () async {
+    const householdId = 'household-1';
+
+    final householdRef =
+        firestore.collection('households').doc(householdId);
+    final tasksRef = householdRef.collection('tasks');
+
+    await householdRef.set({
+      'name': 'Test Household',
+      'ownerId': 'parent-1',
+      'memberIds': ['parent-1', 'child-1'],
+    });
+
+    await tasksRef.doc(invalidTask.id).set(
+      invalidTask.toFirestore(),
+    );
+
+    final goal = Goal(
+      id: '',
+      title: 'Kitchen Cleanup Week',
+      type: GoalType.family,
+      metric: GoalMetric.tasksCompleted,
+      period: GoalPeriod.weekly,
+      targetValue: 2,
+      startsAt: DateTime(2026, 10, 12),
+      endsAt: DateTime(2026, 10, 19),
+    );
+
+    await expectLater(
+      service.createGoalWithTasks(
+        householdId: householdId,
+        goal: goal,
+        taskIds: [invalidTask.id],
+      ),
+      throwsStateError,
+    );
+
+    final goals = await householdRef.collection('goals').get();
+    final task = await tasksRef.doc(invalidTask.id).get();
+
+    expect(goals.docs, isEmpty);
+    expect(task.data()?['goalId'], isNull);
+  });
+}
+
+
+test('rejects a missing task without creating a partial challenge', () async {
+  const householdId = 'household-1';
+
+  final householdRef =
+      firestore.collection('households').doc(householdId);
+  final tasksRef = householdRef.collection('tasks');
+
+  await householdRef.set({
+    'name': 'Test Household',
+    'ownerId': 'parent-1',
+    'memberIds': ['parent-1', 'child-1'],
+  });
+
+  await tasksRef.doc('task-1').set(
+    const TaskModel(
+      id: 'task-1',
+      title: 'Wash Dishes',
+    ).toFirestore(),
+  );
+
+  final goal = Goal(
+    id: '',
+    title: 'Kitchen Cleanup Week',
+    type: GoalType.family,
+    metric: GoalMetric.tasksCompleted,
+    period: GoalPeriod.weekly,
+    targetValue: 2,
+    startsAt: DateTime(2026, 10, 12),
+    endsAt: DateTime(2026, 10, 19),
+  );
+
+  await expectLater(
+    service.createGoalWithTasks(
+      householdId: householdId,
+      goal: goal,
+      taskIds: ['task-1', 'deleted-task'],
+    ),
+    throwsStateError,
+  );
+
+  final goals = await householdRef.collection('goals').get();
+  final validTask = await tasksRef.doc('task-1').get();
+
+  expect(goals.docs, isEmpty);
+  expect(validTask.data()?['goalId'], isNull);
+});
+
+
+for (final invalidGoal in [
+  Goal(
+    id: '',
+    title: '   ',
+    type: GoalType.family,
+    metric: GoalMetric.tasksCompleted,
+    period: GoalPeriod.weekly,
+    targetValue: 2,
+    startsAt: DateTime(2026, 10, 12),
+    endsAt: DateTime(2026, 10, 19),
+  ),
+  Goal(
+    id: '',
+    title: 'Invalid Target',
+    type: GoalType.family,
+    metric: GoalMetric.tasksCompleted,
+    period: GoalPeriod.weekly,
+    targetValue: 0,
+    startsAt: DateTime(2026, 10, 12),
+    endsAt: DateTime(2026, 10, 19),
+  ),
+  Goal(
+    id: '',
+    title: 'Invalid Dates',
+    type: GoalType.family,
+    metric: GoalMetric.tasksCompleted,
+    period: GoalPeriod.weekly,
+    targetValue: 2,
+    startsAt: DateTime(2026, 10, 19),
+    endsAt: DateTime(2026, 10, 12),
+  ),
+  Goal(
+    id: '',
+    title: 'Individual Without Participant',
+    type: GoalType.individual,
+    metric: GoalMetric.tasksCompleted,
+    period: GoalPeriod.weekly,
+    targetValue: 2,
+    startsAt: DateTime(2026, 10, 12),
+    endsAt: DateTime(2026, 10, 19),
+  ),
+  Goal(
+    id: '',
+    title: 'Team Without Enough Participants',
+    type: GoalType.team,
+    metric: GoalMetric.tasksCompleted,
+    period: GoalPeriod.weekly,
+    targetValue: 2,
+    participantIds: const ['child-1'],
+    startsAt: DateTime(2026, 10, 12),
+    endsAt: DateTime(2026, 10, 19),
+  ),
+]) {
+  test('rejects invalid goal: ${invalidGoal.title}', () async {
+    const householdId = 'household-1';
+
+    final householdRef =
+        firestore.collection('households').doc(householdId);
+
+    await householdRef.set({
+      'name': 'Test Household',
+      'ownerId': 'parent-1',
+      'memberIds': ['parent-1', 'child-1'],
+    });
+
+    await expectLater(
+      service.createGoalWithTasks(
+        householdId: householdId,
+        goal: invalidGoal,
+        taskIds: const [],
+      ),
+      throwsStateError,
+    );
+
+    final goals = await householdRef.collection('goals').get();
+    expect(goals.docs, isEmpty);
+  });
+}
+
+
+test('rejects duplicate task IDs without creating a challenge', () async {
+  const householdId = 'household-1';
+
+  final householdRef =
+      firestore.collection('households').doc(householdId);
+  final tasksRef = householdRef.collection('tasks');
+
+  await householdRef.set({
+    'name': 'Test Household',
+    'ownerId': 'parent-1',
+    'memberIds': ['parent-1', 'child-1'],
+  });
+
+  await tasksRef.doc('task-1').set(
+    const TaskModel(
+      id: 'task-1',
+      title: 'Wash Dishes',
+    ).toFirestore(),
+  );
+
+  final goal = Goal(
+    id: '',
+    title: 'Kitchen Cleanup Week',
+    type: GoalType.family,
+    metric: GoalMetric.tasksCompleted,
+    period: GoalPeriod.weekly,
+    targetValue: 2,
+    startsAt: DateTime(2026, 10, 12),
+    endsAt: DateTime(2026, 10, 19),
+  );
+
+  await expectLater(
+    service.createGoalWithTasks(
+      householdId: householdId,
+      goal: goal,
+      taskIds: ['task-1', 'task-1'],
+    ),
+    throwsStateError,
+  );
+
+  final goals = await householdRef.collection('goals').get();
+  final task = await tasksRef.doc('task-1').get();
+
+  expect(goals.docs, isEmpty);
+  expect(task.data()?['goalId'], isNull);
+});
+
+
+test('rejects a challenge with participants outside the household', () async {
+  const householdId = 'household-1';
+
+  final householdRef =
+      firestore.collection('households').doc(householdId);
+
+  await householdRef.set({
+    'name': 'Test Household',
+    'ownerId': 'parent-1',
+    'memberIds': ['parent-1', 'child-1', 'child-2'],
+  });
+
+  final goal = Goal(
+    id: '',
+    title: 'Team Cleanup Challenge',
+    type: GoalType.team,
+    metric: GoalMetric.tasksCompleted,
+    period: GoalPeriod.weekly,
+    targetValue: 5,
+    participantIds: const ['child-1', 'child-99'],
+    startsAt: DateTime(2026, 10, 12),
+    endsAt: DateTime(2026, 10, 19),
+  );
+
+  await expectLater(
+    service.createGoalWithTasks(
+      householdId: householdId,
+      goal: goal,
+      taskIds: const [],
+    ),
+    throwsStateError,
+  );
+
+  final goals = await householdRef.collection('goals').get();
+  expect(goals.docs, isEmpty);
+});
+
+
+test('rejects tasks assigned outside the challenge participants', () async {
+  const householdId = 'household-1';
+
+  final householdRef =
+      firestore.collection('households').doc(householdId);
+  final tasksRef = householdRef.collection('tasks');
+
+  await householdRef.set({
+    'name': 'Test Household',
+    'ownerId': 'parent-1',
+    'memberIds': ['parent-1', 'child-1', 'child-2'],
+  });
+
+  await tasksRef.doc('task-1').set(
+    const TaskModel(
+      id: 'task-1',
+      title: 'Clean Bedroom',
+      assignedToUserId: 'child-2',
+    ).toFirestore(),
+  );
+
+  final goal = Goal(
+    id: '',
+    title: 'Bedroom Challenge',
+    type: GoalType.individual,
+    metric: GoalMetric.tasksCompleted,
+    period: GoalPeriod.weekly,
+    targetValue: 3,
+    participantIds: const ['child-1'],
+    startsAt: DateTime(2026, 10, 12),
+    endsAt: DateTime(2026, 10, 19),
+  );
+
+  await expectLater(
+    service.createGoalWithTasks(
+      householdId: householdId,
+      goal: goal,
+      taskIds: ['task-1'],
+    ),
+    throwsStateError,
+  );
+
+  final goals = await householdRef.collection('goals').get();
+  final task = await tasksRef.doc('task-1').get();
+
+  expect(goals.docs, isEmpty);
+  expect(task.data()?['goalId'], isNull);
+});
+
+
+test('allows unclaimed tasks in an individual challenge', () async {
+  const householdId = 'household-1';
+
+  final householdRef =
+      firestore.collection('households').doc(householdId);
+  final tasksRef = householdRef.collection('tasks');
+
+  await householdRef.set({
+    'name': 'Test Household',
+    'ownerId': 'parent-1',
+    'memberIds': ['parent-1', 'child-1'],
+  });
+
+  await tasksRef.doc('task-1').set(
+    const TaskModel(
+      id: 'task-1',
+      title: 'Take Out Trash',
+      assignedToUserId: null,
+    ).toFirestore(),
+  );
+
+  final goal = Goal(
+    id: '',
+    title: 'Weekly Responsibility Challenge',
+    type: GoalType.individual,
+    metric: GoalMetric.tasksCompleted,
+    period: GoalPeriod.weekly,
+    targetValue: 3,
+    participantIds: const ['child-1'],
+    startsAt: DateTime(2026, 10, 12),
+    endsAt: DateTime(2026, 10, 19),
+  );
+
+  final goalId = await service.createGoalWithTasks(
+    householdId: householdId,
+    goal: goal,
+    taskIds: ['task-1'],
+  );
+
+  final savedGoal =
+      await householdRef.collection('goals').doc(goalId).get();
+  final task = await tasksRef.doc('task-1').get();
+
+  expect(savedGoal.exists, isTrue);
+  expect(task.data()?['goalId'], goalId);
+  expect(task.data()?['assignedToUserId'], isNull);
+});
+
+
+test('rejects challenge creation when the household does not exist', () async {
+  const householdId = 'missing-household';
+
+  final goal = Goal(
+    id: '',
+    title: 'Weekly Cleanup Challenge',
+    type: GoalType.family,
+    metric: GoalMetric.tasksCompleted,
+    period: GoalPeriod.weekly,
+    targetValue: 3,
+    startsAt: DateTime(2026, 10, 12),
+    endsAt: DateTime(2026, 10, 19),
+  );
+
+  await expectLater(
+    service.createGoalWithTasks(
+      householdId: householdId,
+      goal: goal,
+      taskIds: const [],
+    ),
+    throwsStateError,
+  );
+
+  final householdRef =
+      firestore.collection('households').doc(householdId);
+
+  final goals = await householdRef.collection('goals').get();
+
+  expect(goals.docs, isEmpty);
+});
+
   });
 }
