@@ -163,7 +163,7 @@ class OnboardingGuides {
     body: 'Rewards are what kids spend their coins on. Add them from the '
         'Family tab.',
     icon: Icons.storefront_outlined,
-    accent: OnboardingAccent.green,
+    accent: OnboardingAccent.blue,
     bullets: [
       'Tap "Add Reward" and set a coin price',
       'You\'re notified when a reward is redeemed',
@@ -195,8 +195,8 @@ class OnboardingGuides {
     steps: [
       OnboardingStep(
         title: 'Welcome to Famotive!',
-        body: 'Famotive turns chores into quests: kids earn XP and coins, and '
-            'you get one place to organize the household.',
+        body: 'Where everyday chores become exciting quests! '
+            'Complete tasks, earn rewards, and make family teamwork more fun.',
         icon: Icons.waving_hand_outlined,
         bullets: [
           'You assign a task',
@@ -204,14 +204,8 @@ class OnboardingGuides {
           'You approve it, and they earn rewards',
         ],
       ),
-      _householdStep,
-      _inviteStep,
       _createTaskStep,
-      _scheduleStep,
-      _assignStep,
-      _approveStep,
       _rewardStoreStep,
-      _progressStep,
       OnboardingStep(
         title: 'You\'re all set!',
         body: 'Tap "Show me around" for a quick look at where everything is. '
@@ -240,10 +234,7 @@ class OnboardingGuides {
         emoji: '🦸',
       ),
       _childTasksStep,
-      _childCompleteStep,
-      _childXpStep,
       _childRewardsStep,
-      _childLeaderboardStep,
       OnboardingStep(
         title: 'Ready for your first quest?',
         body: 'Tap "Show me around" to see where everything is. You can '
@@ -298,7 +289,7 @@ class OnboardingGuides {
     body: 'Open the Rewards tab to see the Reward Store your family set up.',
     icon: Icons.redeem_outlined,
     emoji: '🎁',
-    accent: OnboardingAccent.green,
+    accent: OnboardingAccent.blue,
     bullets: [
       'Redeem a reward when you have enough coins',
       'Pin one as your goal to track your progress',
