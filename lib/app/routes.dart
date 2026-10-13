@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../features/goals/screens/goals_screen.dart';
 import '../core/services/auth_service.dart' show SocialSignInResult;
 import '../features/auth/screens/finish_sign_up_screen.dart';
 import '../features/auth/screens/forgot_password_screen.dart';
@@ -27,6 +28,7 @@ class AppRoutes {
 
   static const String login = '/login';
   static const String register = '/register';
+
   /// First-time Google/Apple sign-in: pick role + household.
   static const String finishSignUp = '/finish-sign-up';
   static const String forgotPassword = '/forgot-password';
@@ -50,20 +52,31 @@ class AppRoutes {
   static const String taskEdit = '/tasks/edit';
   static const String scheduleEdit = '/tasks/repeating/edit';
 
+  // Family Challenges & Goals
+  static const String goals = '/goals';
+
   // Settings sub-screens, pushed from the Settings tab.
   static const String accountSettings = '/settings/account';
   static const String deleteAccount = '/settings/account/delete';
   static const String notificationSettings = '/settings/notifications';
   static const String households = '/settings/households';
+
   /// App Tour & Tutorials: replay onboarding and topic guides.
   static const String helpCenter = '/settings/help';
   static const String premium = '/settings/premium';
 
   static const Set<String> _safeInitialRoutes = {
-    login, register, forgotPassword, home, family, progress, settings,
+    login,
+    register,
+    forgotPassword,
+    home,
+    family,
+    progress,
+    settings,
   };
 
-  static bool isSafeInitialRoute(String name) => _safeInitialRoutes.contains(name);
+  static bool isSafeInitialRoute(String name) =>
+      _safeInitialRoutes.contains(name);
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     final args = settings.arguments;
@@ -76,7 +89,10 @@ class AppRoutes {
       case finishSignUp:
         final result = args as SocialSignInResult?;
         return _page(
-          FinishSignUpScreen(suggestedName: result?.suggestedName, email: result?.email),
+          FinishSignUpScreen(
+            suggestedName: result?.suggestedName,
+            email: result?.email,
+          ),
           settings,
         );
       case forgotPassword:
@@ -119,6 +135,9 @@ class AppRoutes {
         final scheduleId = args as String;
         return _page(CreateTaskScreen(scheduleId: scheduleId), settings);
 
+      case goals:
+        return _page(const GoalsScreen(), settings);
+
       case accountSettings:
         return _page(const AccountSettingsScreen(), settings);
       case deleteAccount:
@@ -139,7 +158,10 @@ class AppRoutes {
             return _page(ResetPasswordScreen(oobCode: authOobCode), settings);
           }
           if (authMode == 'verifyAndChangeEmail') {
-            return _page(ConfirmEmailChangeScreen(oobCode: authOobCode), settings);
+            return _page(
+              ConfirmEmailChangeScreen(oobCode: authOobCode),
+              settings,
+            );
           }
         }
         return _page(
@@ -165,7 +187,9 @@ class AppRoutes {
   static (String?, String?) _modeAndOobCodeFrom(Uri uri) {
     var mode = uri.queryParameters['mode'];
     var oobCode = uri.queryParameters['oobCode'];
-    if (_supportedModes.contains(mode) && oobCode != null && oobCode.isNotEmpty) {
+    if (_supportedModes.contains(mode) &&
+        oobCode != null &&
+        oobCode.isNotEmpty) {
       return (mode, oobCode);
     }
 
@@ -178,7 +202,10 @@ class AppRoutes {
     return (mode, oobCode);
   }
 
-  static MaterialPageRoute<dynamic> _page(Widget child, RouteSettings settings) {
+  static MaterialPageRoute<dynamic> _page(
+    Widget child,
+    RouteSettings settings,
+  ) {
     return MaterialPageRoute(builder: (_) => child, settings: settings);
   }
 }

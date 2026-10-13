@@ -66,6 +66,9 @@ class DatabaseService extends ChangeNotifier {
   List<AppUser> familyMembers = [];
   List<TaskModel> tasks = [];
 
+  /// Challenges and goals belonging to the active household.
+  List<Goal> goals = [];
+
   /// Repeating tasks (the rules; their occurrences are in [tasks]).
   List<TaskSchedule> schedules = [];
   List<Reward> availableRewards = [];
@@ -90,6 +93,7 @@ class DatabaseService extends ChangeNotifier {
   bool _ownerBackfillTried = false;
   bool _purgeTried = false;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _tasksSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _goalsSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _schedulesSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _rewardsSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _redemptionsSub;
@@ -229,6 +233,7 @@ class DatabaseService extends ChangeNotifier {
     unawaited(_joinRequestsSub?.cancel());
     _cancelMemberSubs();
     unawaited(_tasksSub?.cancel());
+    unawaited(_goalsSub?.cancel());
     unawaited(_schedulesSub?.cancel());
     unawaited(_rewardsSub?.cancel());
     unawaited(_redemptionsSub?.cancel());
@@ -237,6 +242,7 @@ class DatabaseService extends ChangeNotifier {
     familyMembers = [];
     joinRequests = [];
     tasks = [];
+    goals = [];
     schedules = [];
     availableRewards = [];
     redemptions = [];
@@ -288,6 +294,11 @@ class DatabaseService extends ChangeNotifier {
         notifyListeners();
       },
     );
+
+    _goalsSub = householdRef.collection('goals').snapshots().listen((snap) {
+      goals = snap.docs.map(Goal.fromFirestore).toList();
+      notifyListeners();
+    }, onError: _logError('goals'));
 
     _rewardsSub = householdRef.collection('rewards').snapshots().listen((snap) {
       availableRewards = snap.docs.map(Reward.fromFirestore).toList();
@@ -401,6 +412,7 @@ class DatabaseService extends ChangeNotifier {
     _joinRequestsSub?.cancel();
     _cancelMemberSubs();
     _tasksSub?.cancel();
+    _goalsSub?.cancel();
     _schedulesSub?.cancel();
     _rewardsSub?.cancel();
     _redemptionsSub?.cancel();
@@ -489,6 +501,31 @@ class DatabaseService extends ChangeNotifier {
   List<Redemption> redemptionsForChild(String childId) =>
       redemptions.where((r) => r.childId == childId).toList(growable: false);
 
+  // --- Mutations: goals --------------------------------------------------
+
+  /// Creates a challenge and links its tasks in one Firestore transaction.
+  ///
+  /// Returns the newly created challenge's Firestore ID.
+  Future<String> createChallenge({
+    required Goal goal,
+    required List<String> taskIds,
+    List<TaskModel> newTasks = const [],
+  }) async {
+    final householdId = _householdId;
+
+    if (householdId == null) {
+      throw StateError(
+        'Cannot create a challenge without an active household.',
+      );
+    }
+
+    return GoalService(firestore: _firestore).createGoalWithTasks(
+      householdId: householdId,
+      goal: goal,
+      taskIds: taskIds,
+      newTasks: newTasks,
+    );
+  }
   // --- Mutations: tasks --------------------------------------------------
 
   CollectionReference<Map<String, dynamic>> get _tasksCollection =>
