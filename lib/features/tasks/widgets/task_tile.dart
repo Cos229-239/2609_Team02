@@ -75,7 +75,7 @@ class TaskTile extends StatelessWidget {
           if (trailing != null)
             trailing!
           else ...[
-            const SizedBox(width: 8),
+            const SizedBox(width: 16),
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisSize: MainAxisSize.min,
