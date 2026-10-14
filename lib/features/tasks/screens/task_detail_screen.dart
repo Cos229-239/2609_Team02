@@ -102,7 +102,7 @@ class TaskDetailScreen extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           // Optional: Aligns content to the start of this 50% section. 
                           // Change to MainAxisAlignment.end if you want coins pushed to the far right.
-                          mainAxisAlignment: MainAxisAlignment.start, 
+                          mainAxisAlignment: MainAxisAlignment.end, 
                           children: [
                             if (task.coinReward > 0) ...[
                               Icon(Icons.monetization_on, color: Colors.amber.shade700, size: 22),
