@@ -5,6 +5,7 @@ import '../../../app/theme.dart';
 import '../../../core/models/task.dart';
 import '../../../core/services/database_service.dart';
 import '../task_completion_flow.dart';
+import '../../../core/services/accessibility_settings.dart';
 
 /// One swipe direction's action: the colored background that's revealed
 /// and what happens when the swipe goes past the threshold.
@@ -47,6 +48,8 @@ class TaskSwipe extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Settings > Accessibility > Swipe Actions: off means tap-only rows.
+    if (!AccessibilitySettings.swipesEnabled(context)) return child;
     final right = startToEnd;
     final left = endToStart;
     if (right == null && left == null) return child;

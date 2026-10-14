@@ -76,7 +76,8 @@ void main() {
 
       expect(find.text('Completed by Maximilian'), findsOneWidget);
       expect(find.textContaining('Get outside'), findsNothing);
-      expect(find.text('+50 XP'), findsOneWidget);
+      // Parent tiles leave rewards to the task card.
+      expect(find.text('+50 XP'), findsNothing);
       expect(find.text('Pending Approval'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });

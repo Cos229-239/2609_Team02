@@ -6,25 +6,20 @@ import '../../../core/models/task.dart';
 import '../../../core/models/task_proof.dart';
 import '../../../shared/widgets/app_card.dart';
 
-/// One row representing a task: icon, title, XP reward and a status
-/// indicator. Reused by the child's task list and the parent's
-/// create/assign screen.
+/// One row representing a task in a parent's view: icon, title and a
+/// status indicator. Rewards aren't shown here (parents see them on the
+/// task card); tapping the tile opens that card.
 class TaskTile extends StatelessWidget {
   const TaskTile({
     super.key,
     required this.task,
     this.onTap,
-    this.trailing,
     this.completedByName,
     this.showDescription = true,
   });
 
   final TaskModel task;
   final VoidCallback? onTap;
-
-  /// Overrides the default status icon (used by the "assign tasks" screen
-  /// to show a toggle/edit/delete row instead of a status indicator).
-  final Widget? trailing;
 
   /// When set, shows "Completed by <name>" under the title (parent approval
   /// views).
@@ -79,37 +74,6 @@ class TaskTile extends StatelessWidget {
             style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12, color: muted),
           ),
         ],
-        const SizedBox(height: 4),
-        Wrap(
-          spacing: 10,
-          runSpacing: 2,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.star, size: 14, color: Colors.amber),
-                const SizedBox(width: 2),
-                Text(
-                  '+${task.rewardXp} XP',
-                  style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12),
-                ),
-              ],
-            ),
-            if (task.coinReward > 0)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.monetization_on, size: 14, color: Colors.amber.shade700),
-                  const SizedBox(width: 2),
-                  Text(
-                    '+${task.coinReward}',
-                    style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12),
-                  ),
-                ],
-              ),
-          ],
-        ),
       ],
     );
 
@@ -130,20 +94,16 @@ class TaskTile extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          if (trailing != null) ...[
-            Expanded(child: details),
-            trailing!,
-          ] else ...[
-            Expanded(flex: 7, child: details),
-            const SizedBox(width: 8),
-            Expanded(
-              flex: 3,
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: _StatusBadge(status: task.status),
-              ),
+          // No action buttons here: tapping the tile opens the task card.
+          Expanded(flex: 7, child: details),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 3,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: _StatusBadge(status: task.status),
             ),
-          ],
+          ),
         ],
       ),
     );

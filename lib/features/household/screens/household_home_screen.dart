@@ -14,6 +14,8 @@ import '../../milestones/widgets/family_goal_card.dart';
 import '../../tasks/widgets/task_swipe.dart';
 import '../../tasks/widgets/task_tile.dart';
 import '../widgets/family_member_card.dart';
+import '../../tasks/widgets/task_view_card.dart';
+import '../../../core/services/accessibility_settings.dart';
 
 /// "Home" tab: the parent's dashboard. Surfaces a quick family summary
 /// and the primary "assign tasks" action from the wireframes, plus quick
@@ -120,7 +122,9 @@ class HouseholdHomeScreen extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Swipe right to approve, left to delete.',
+            AccessibilitySettings.swipesEnabled(context)
+                ? 'Tap a task to review it. Swipe right to approve, left to delete.'
+                : 'Tap a task to review and approve it.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
           ),
           const SizedBox(height: 12),
@@ -131,7 +135,7 @@ class HouseholdHomeScreen extends StatelessWidget {
                 task: task,
                 showDescription: false,
                 completedByName: db.userById(task.assignedToUserId ?? '')?.name ?? 'Someone',
-                onTap: () => Navigator.of(context).pushNamed(AppRoutes.taskDetail, arguments: task.id),
+                onTap: () => showTaskViewSheet(context, task.id),
               ),
             ),
             const SizedBox(height: 8),

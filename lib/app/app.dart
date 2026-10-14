@@ -13,6 +13,7 @@ import '../features/onboarding/onboarding_controller.dart';
 import '../core/services/premium_service.dart';
 import 'routes.dart';
 import 'theme.dart';
+import '../core/services/accessibility_settings.dart';
 
 /// Root widget: wires up app-wide state (auth/session + the Firestore
 /// household data) and the app's theme + routing.
@@ -24,6 +25,7 @@ class FamotiveApp extends StatelessWidget {
     this.scaffoldMessengerKey,
     this.notificationService,
     this.themeController,
+    this.accessibilitySettings,
     this.onboardingController,
     this.premiumService,
   });
@@ -50,6 +52,10 @@ class FamotiveApp extends StatelessWidget {
   /// leave it null to get the default (light).
   final ThemeController? themeController;
 
+  /// Settings > Accessibility (swipe actions on/off). Loaded in main.dart;
+  /// null in tests gives the defaults.
+  final AccessibilitySettings? accessibilitySettings;
+
   /// First-time walkthrough / tutorial progress (see
   /// lib/features/onboarding/). Null in tests: a fresh in-memory one is used.
   final OnboardingController? onboardingController;
@@ -67,6 +73,9 @@ class FamotiveApp extends StatelessWidget {
         Provider<NotificationService?>.value(value: notificationService),
         ChangeNotifierProvider<ThemeController>(
           create: (_) => themeController ?? ThemeController(),
+        ),
+        ChangeNotifierProvider<AccessibilitySettings>(
+          create: (_) => accessibilitySettings ?? AccessibilitySettings(),
         ),
         ChangeNotifierProvider<OnboardingController>(
           create: (_) => onboardingController ?? (OnboardingController()..load()),
