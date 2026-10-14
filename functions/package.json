@@ -13,7 +13,7 @@
     "serve": "npm run build && firebase emulators:start --only functions,firestore",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
-    "test:emulator": "tsc && cd .. && firebase emulators:exec --project demo-famotive --only firestore,functions \"node --test functions/lib/emulator/*.emulator.js\""
+    "test:emulator": "tsc -p tsconfig.emulator.json && cd .. && firebase emulators:exec --project demo-famotive --only firestore,functions \"node --test functions/lib/emulator/*.emulator.js\""
   },
   "dependencies": {
     "firebase-admin": "^13.0.0",
