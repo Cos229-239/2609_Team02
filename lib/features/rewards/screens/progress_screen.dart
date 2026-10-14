@@ -36,16 +36,16 @@ class ProgressScreen extends StatelessWidget {
     final awaitingApproval = <TaskModel>[];
     final completed = <TaskModel>[];
     for (final task in db.activeTasks) {
-  if (task.status == TaskStatus.approved) {
-    completed.add(task);
-  } else if (task.status == TaskStatus.completed) {
-    awaitingApproval.add(task);
-  } else if (_isOverdue(task.dueDate)) {
-    overdue.add(task);
-  } else {
-    pending.add(task);
-  }
-}
+      if (task.status == TaskStatus.approved) {
+        completed.add(task);
+      } else if (task.status == TaskStatus.completed) {
+        awaitingApproval.add(task);
+      } else if (_isOverdue(task.dueDate)) {
+        overdue.add(task);
+      } else {
+        pending.add(task);
+      }
+    }
     final archived = db.archivedTasks;
 
     // Soonest-due first within each group; tasks with no due date sort last.
@@ -64,50 +64,55 @@ class ProgressScreen extends StatelessWidget {
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-children: [
-  HeadingWithHelp(
-    heading: Text(
-      'Family Progress',
-      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-        fontSize: 28,
-        fontWeight: FontWeight.w700,
-      ),
-    ),
-    helpTitle: 'Family Progress',
-    help: "Each child's lifetime XP and current coin balance. XP only goes up; "
-        'coins go down when a reward is redeemed.',
-  ),
-  const SizedBox(height: 6),
-  Text(
-    'See how everyone is doing this week.',
-    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-      color: Colors.grey.shade600,
-      fontSize: 14,
-    ),
-  ),
-  const SizedBox(height: 20),
+      children: [
+        HeadingWithHelp(
+          heading: Text(
+            'Family Progress',
+            style: Theme.of(context).textTheme.headlineSmall
+                ?.copyWith(fontSize: 28, fontWeight: FontWeight.w700),
+          ),
+          helpTitle: 'Family Progress',
+          help:
+              "Each child's lifetime XP and current coin balance. XP only goes up; "
+              'coins go down when a reward is redeemed.',
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'See how everyone is doing this week.',
+          style: Theme.of(context).textTheme.bodyMedium
+              ?.copyWith(color: Colors.grey.shade600, fontSize: 14),
+        ),
+        const SizedBox(height: 20),
         for (final child in children) ...[
           AppCard(
-            onTap: () => Navigator.of(context).pushNamed(
-              AppRoutes.taskList,
-              arguments: child.id,
-            ),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 8,
-            ),
+            onTap: () =>
+                Navigator.of(context)
+                    .pushNamed(AppRoutes.taskList, arguments: child.id),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Text(child.avatarEmoji, style: const TextStyle(fontSize: AppConstants.emojiIconMd)),
+                    Text(
+                      child.avatarEmoji,
+                      style: const TextStyle(
+                        fontSize: AppConstants.emojiIconMd,
+                      ),
+                    ),
                     const SizedBox(width: 8),
-                    Text(child.name, style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      child.name,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                     const Spacer(),
                     Text('+${child.xp} XP'),
                     const SizedBox(width: 10),
-                    Icon(Icons.monetization_on, size: 16, color: Colors.amber.shade700),
+                    Icon(
+                      Icons.monetization_on,
+                      size: 16,
+                      color: Colors.amber.shade700,
+                    ),
                     const SizedBox(width: 2),
                     Text('${child.coins}'),
                   ],
@@ -116,7 +121,9 @@ children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(AppConstants.radiusSm),
                   child: LinearProgressIndicator(
-                    value: (child.xp / AppConstants.levelUpXpThreshold).clamp(0.0, 1.0).toDouble(),
+                    value: (child.xp / AppConstants.levelUpXpThreshold)
+                        .clamp(0.0, 1.0)
+                        .toDouble(),
                     minHeight: 6,
                     color: AppColors.growthGreen,
                     backgroundColor: const Color.fromARGB(255, 223, 244, 199),
@@ -125,7 +132,8 @@ children: [
                 const SizedBox(height: 8),
                 Text(
                   '${AppConstants.levelUpXpThreshold - child.xp > 0 ? AppConstants.levelUpXpThreshold - child.xp : 0} XP to next level',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+                  style: Theme.of(context).textTheme.bodyMedium
+                      ?.copyWith(color: Colors.grey.shade600),
                 ),
               ],
             ),
@@ -133,13 +141,40 @@ children: [
           const SizedBox(height: 12),
         ],
         const SizedBox(height: 12),
+        const SizedBox(height: 24),
         HeadingWithHelp(
-          heading: Text('All Tasks:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          )),
+          heading: Text(
+            'Family Challenges & Goals',
+            style: Theme.of(context).textTheme.titleMedium
+                ?.copyWith(fontSize: 20, fontWeight: FontWeight.w600),
+          ),
+          helpTitle: 'Family Challenges & Goals',
+          help: 'Track household challenges and progress toward shared goals.',
+        ),
+        const SizedBox(height: 12),
+        AppCard(
+          onTap: () {
+            Navigator.of(context).pushNamed(AppRoutes.goals);
+          },
+          child: const Row(
+            children: [
+              Icon(Icons.emoji_events_outlined),
+              SizedBox(width: 12),
+              Expanded(child: Text('View Family Challenges & Goals')),
+              Icon(Icons.chevron_right),
+            ],
+          ),
+        ),
+        const SizedBox(height: 28),
+        HeadingWithHelp(
+          heading: Text(
+            'All Tasks:',
+            style: Theme.of(context).textTheme.titleMedium
+                ?.copyWith(fontSize: 20, fontWeight: FontWeight.w600),
+          ),
           helpTitle: 'All Tasks',
-          help: 'Every task in the household, grouped by status. Use the ⋮ menu on a task '
+          help:
+              'Every task in the household, grouped by status. Use the ⋮ menu on a task '
               'to approve, re-assign or duplicate it.',
         ),
         const SizedBox(height: 4),
@@ -148,7 +183,8 @@ children: [
           'swipe left to delete. Completed tasks show for '
           '${AppConstants.doneTaskVisibleDays} days; all tasks are deleted '
           'after ${AppConstants.taskDeleteAfterDays} days.',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+          style: Theme.of(context).textTheme.bodyMedium
+              ?.copyWith(color: Colors.grey.shade600),
         ),
         const SizedBox(height: 12),
         _TaskSection(
@@ -173,14 +209,14 @@ children: [
 
         const SizedBox(height: 28),
         _TaskSection(
-        icon: Icons.hourglass_bottom,
-        title: 'Awaiting Approval',
-        color: Colors.orange,
-        tasks: awaitingApproval,
-        db: db,
-        emptyLabel: 'No tasks waiting for approval.',
-        actions: _RowActions.approveOrReassign,
-),
+          icon: Icons.hourglass_bottom,
+          title: 'Awaiting Approval',
+          color: Colors.orange,
+          tasks: awaitingApproval,
+          db: db,
+          emptyLabel: 'No tasks waiting for approval.',
+          actions: _RowActions.approveOrReassign,
+        ),
         const SizedBox(height: 28),
         _TaskSection(
           icon: Icons.check_circle_outline,
@@ -249,13 +285,34 @@ class _TaskSection extends StatelessWidget {
           ),
           child: Row(
             children: [
-              CircleAvatar(radius: 12, backgroundColor: color, child: Icon(icon, size: 14, color: Colors.white)),
+              CircleAvatar(
+                radius: 12,
+                backgroundColor: color,
+                child: Icon(icon, size: 14, color: Colors.white),
+              ),
               const SizedBox(width: 10),
-              Expanded(child: Text(title, style: Theme.of(context).textTheme.titleMedium)),
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 2),
-                decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(999)),
-                child: Text('${tasks.length}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '${tasks.length}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ],
           ),
@@ -263,13 +320,17 @@ class _TaskSection extends StatelessWidget {
         if (tasks.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-            child: Text(emptyLabel, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600)),
+            child: Text(
+              emptyLabel,
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(color: Colors.grey.shade600),
+            ),
           )
         else ...[
           const SizedBox(height: 2),
 
           for (final task in tasks) ...[
-            const SizedBox(height:12),
+            const SizedBox(height: 12),
             ParentTaskSwipe(
               task: task,
               child: _TaskProgressRow(
@@ -315,7 +376,8 @@ class _TaskProgressRow extends StatelessWidget {
         title: Text('Re-assign "${task.title}"'),
         children: [
           SimpleDialogOption(
-            onPressed: () => Navigator.of(dialogContext).pop(_householdPoolSentinel),
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(_householdPoolSentinel),
             child: const Row(
               children: [
                 Icon(Icons.groups_outlined),
@@ -368,7 +430,9 @@ class _TaskProgressRow extends StatelessWidget {
     final newTaskId = await db.addTask(duplicate);
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Duplicated as a new pending task - fine-tune it now.')),
+      SnackBar(
+        content: Text('Duplicated as a new pending task - fine-tune it now.'),
+      ),
     );
     Navigator.of(context).pushNamed(AppRoutes.taskEdit, arguments: newTaskId);
   }
@@ -379,34 +443,44 @@ class _TaskProgressRow extends StatelessWidget {
 
     return AppCard(
       onTap: actions == _RowActions.edit
-          ? () => Navigator.of(context).pushNamed(AppRoutes.taskEdit, arguments: task.id)
+          ? () =>
+                Navigator.of(context)
+                    .pushNamed(AppRoutes.taskEdit, arguments: task.id)
           : null,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 8,
-      ), 
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
           CircleAvatar(
             radius: 20,
-            backgroundColor: theme.colorScheme.secondary.withValues(alpha: 0.15),
-            child: Icon(TaskIconCatalog.resolve(task.icon).icon, color: theme.colorScheme.secondary, size: 20),
+            backgroundColor: theme.colorScheme.secondary.withValues(
+              alpha: 0.15,
+            ),
+            child: Icon(
+              TaskIconCatalog.resolve(task.icon).icon,
+              color: theme.colorScheme.secondary,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(task.title, style: theme.textTheme.titleMedium?.copyWith(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                )),
+                Text(
+                  task.title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 Text(
                   archivedDisplay
                       ? '${assignee?.name ?? 'Household'} • Archived'
                       : '${assignee?.name ?? 'Household'} • ${_dueLabel(task.dueDate)}',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600,
-                  fontSize: 13),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey.shade600,
+                    fontSize: 13,
+                  ),
                   maxLines: 2,
                 ),
               ],
@@ -424,37 +498,63 @@ class _TaskProgressRow extends StatelessWidget {
                 children: [
                   const Icon(Icons.star, size: 14, color: Colors.amber),
                   const SizedBox(width: 2),
-                  Text('+${task.rewardXp} XP', style: theme.textTheme.bodyMedium?.copyWith(
-                    fontSize: 13,
-                  )),
+                  Text(
+                    '+${task.rewardXp} XP',
+                    style: theme.textTheme.bodyMedium?.copyWith(fontSize: 13),
+                  ),
                   if (task.coinReward > 0) ...[
                     const SizedBox(width: 6),
-                    Icon(Icons.monetization_on, size: 13, color: Colors.amber.shade700),
+                    Icon(
+                      Icons.monetization_on,
+                      size: 13,
+                      color: Colors.amber.shade700,
+                    ),
                     const SizedBox(width: 1),
-                    Text('+${task.coinReward}', style: theme.textTheme.bodyMedium?.copyWith(
-                      fontSize: 12,
-                    )),
+                    Text(
+                      '+${task.coinReward}',
+                      style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12),
+                    ),
                   ],
                 ],
               ),
             ],
           ),
           const SizedBox(width: 4),
-          _TrailingAction(actions: actions, onReassign: () => _reassign(context), onApprove: () => db.approveTask(task.id), onDuplicate: () => _duplicate(context)),
+          _TrailingAction(
+            actions: actions,
+            onReassign: () => _reassign(context),
+            onApprove: () => db.approveTask(task.id),
+            onDuplicate: () => _duplicate(context),
+          ),
         ],
       ),
     );
   }
 
   String _dueLabel(DateTime? dueDate) {
-    if (dueDate == null) return 'No due date';
+    if (dueDate == null) {
+      return 'No due date';
+    }
+
     final today = DateTime.now();
     final dueDay = DateTime(dueDate.year, dueDate.month, dueDate.day);
     final todayDay = DateTime(today.year, today.month, today.day);
     final difference = dueDay.difference(todayDay).inDays;
-    if (difference < 0) return difference == -1 ? 'Past Due by 1 day' : 'Past Due by ${-difference} days';
-    if (difference == 0) return 'Due Today';
-    if (difference == 1) return 'Due Tomorrow';
+
+    if (difference < 0) {
+      return difference == -1
+          ? 'Past Due by 1 day'
+          : 'Past Due by ${-difference} days';
+    }
+
+    if (difference == 0) {
+      return 'Due Today';
+    }
+
+    if (difference == 1) {
+      return 'Due Tomorrow';
+    }
+
     return 'Due in $difference Days';
   }
 }
@@ -490,7 +590,11 @@ class _TrailingAction extends StatelessWidget {
               value: 'approve',
               child: Row(
                 children: [
-                  Icon(Icons.check_circle_outline, size: 20, color: AppColors.growthGreen),
+                  Icon(
+                    Icons.check_circle_outline,
+                    size: 20,
+                    color: AppColors.growthGreen,
+                  ),
                   SizedBox(width: 10),
                   Text('Approve'),
                 ],
@@ -526,20 +630,42 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color, icon) = switch (task.status) {
-      TaskStatus.pending => ('To Do', Colors.grey, Icons.radio_button_unchecked),
-      TaskStatus.completed => ('Awaiting Approval', Colors.orange, Icons.hourglass_bottom),
-      TaskStatus.approved => ('Approved', AppColors.growthGreen, Icons.check_circle),
+      TaskStatus.pending => (
+        'To Do',
+        Colors.grey,
+        Icons.radio_button_unchecked,
+      ),
+      TaskStatus.completed => (
+        'Awaiting Approval',
+        Colors.orange,
+        Icons.hourglass_bottom,
+      ),
+      TaskStatus.approved => (
+        'Approved',
+        AppColors.growthGreen,
+        Icons.check_circle,
+      ),
     };
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 14, color: color),
           const SizedBox(width: 4),
-          Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: AppConstants.captionFontSize)),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w600,
+              fontSize: AppConstants.captionFontSize,
+            ),
+          ),
         ],
       ),
     );
@@ -554,13 +680,23 @@ class _ArchivedPill extends StatelessWidget {
     final color = Colors.grey.shade600;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.archive_outlined, size: 14, color: color),
           const SizedBox(width: 4),
-          Text('Archived', style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: AppConstants.captionFontSize)),
+          Text(
+            'Archived',
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w600,
+              fontSize: AppConstants.captionFontSize,
+            ),
+          ),
         ],
       ),
     );

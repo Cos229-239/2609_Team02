@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../app/routes.dart';
 import '../../../core/models/goal.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/database_service.dart';
@@ -95,7 +96,9 @@ class GoalsScreen extends StatelessWidget {
       ),
       floatingActionButton: user?.isParent == true
           ? FloatingActionButton.extended(
-              onPressed: null,
+              onPressed: () {
+                Navigator.of(context).pushNamed(AppRoutes.challengeCreate);
+              },
               icon: const Icon(Icons.add),
               label: const Text('Create Challenge'),
             )

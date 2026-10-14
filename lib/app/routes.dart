@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../features/goals/screens/goals_screen.dart';
+import '../features/goals/screens/create_challenge_screen.dart';
 import '../core/services/auth_service.dart' show SocialSignInResult;
 import '../features/auth/screens/finish_sign_up_screen.dart';
 import '../features/auth/screens/forgot_password_screen.dart';
@@ -54,6 +55,7 @@ class AppRoutes {
 
   // Family Challenges & Goals
   static const String goals = '/goals';
+  static const String challengeCreate = '/goals/create';
 
   // Settings sub-screens, pushed from the Settings tab.
   static const String accountSettings = '/settings/account';
@@ -137,6 +139,9 @@ class AppRoutes {
 
       case goals:
         return _page(const GoalsScreen(), settings);
+
+      case challengeCreate:
+        return _page(const CreateChallengeScreen(), settings);
 
       case accountSettings:
         return _page(const AccountSettingsScreen(), settings);
