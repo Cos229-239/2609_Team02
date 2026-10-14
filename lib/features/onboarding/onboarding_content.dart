@@ -117,7 +117,7 @@ class OnboardingGuides {
         'name - kids should know exactly what "done" looks like.',
     icon: Icons.add_task,
     bullets: [
-      'Set the XP and coins it earns',
+      'Set the amount of XP and coins it earns',
       'With Premium, turn on Photo Proof to see the result',
       '"Suggest" writes a description for you, on-device',
     ],
