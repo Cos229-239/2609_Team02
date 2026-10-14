@@ -129,6 +129,8 @@ class HouseholdHomeScreen extends StatelessWidget {
               task: task,
               child: TaskTile(
                 task: task,
+                showDescription: false,
+                completedByName: db.userById(task.assignedToUserId ?? '')?.name ?? 'Someone',
                 onTap: () => Navigator.of(context).pushNamed(AppRoutes.taskDetail, arguments: task.id),
               ),
             ),

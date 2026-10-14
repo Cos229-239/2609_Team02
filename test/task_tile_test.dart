@@ -41,5 +41,44 @@ void main() {
 
       expect(tester.takeException(), isNull);
     });
+    testWidgets('approval card with long title fits a narrow phone', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(320, 700));
+      addTearDown(() async {
+        await tester.binding.setSurfaceSize(null);
+      });
+
+      const task = TaskModel(
+        id: 'task-long',
+        title: 'Go outside for a long walk around the whole neighborhood (Copy)',
+        description: 'Get outside for some active time - biking, walking or playing.',
+        rewardXp: 50,
+        coinReward: 10,
+        status: TaskStatus.completed,
+      );
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Padding(
+              padding: EdgeInsets.all(16),
+              child: TaskTile(
+                task: task,
+                showDescription: false,
+                completedByName: 'Maximilian',
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Completed by Maximilian'), findsOneWidget);
+      expect(find.textContaining('Get outside'), findsNothing);
+      expect(find.text('+50 XP'), findsOneWidget);
+      expect(find.text('Pending Approval'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
   });
 }
