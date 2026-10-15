@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/models/goal.dart';
+import '../models/challenge_draft.dart';
+import 'challenge_task_selection_screen.dart';
 
 import 'package:provider/provider.dart';
 
@@ -217,11 +219,26 @@ class _CreateChallengeScreenState extends State<CreateChallengeScreen> {
                   return;
                 }
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Challenge details validated successfully.'),
-                  ),
-                );
+                
+final draft = ChallengeDraft(
+  title: _titleController.text.trim(),
+  type: _selectedType,
+  metric: _selectedMetric,
+  targetValue: int.parse(_targetController.text.trim()),
+  period: _selectedPeriod,
+  participantIds: List<String>.of(_selectedParticipantIds),
+);
+
+
+Navigator.of(context).push(
+  MaterialPageRoute<void>(
+    builder: (_) => ChallengeTaskSelectionScreen(
+      draft: draft,
+    ),
+  ),
+);
+
+
               },
               child: const Text('Next'),
             ),
