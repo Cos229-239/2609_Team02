@@ -68,6 +68,10 @@ void main() {
 
       await tester.pump();
 
+      // Awaiting Approval starts closed; open it.
+      await tester.tap(find.text('Awaiting Approval'));
+      await tester.pumpAndSettle();
+
       expect(find.text('Clean Bedroom'), findsOneWidget);
 
       expect(find.text('Awaiting Approval'), findsNWidgets(2));
@@ -193,6 +197,13 @@ void main() {
       );
 
       await tester.pump();
+
+      // Closed drawer: only the header, not the task.
+      expect(find.text('Awaiting Approval'), findsOneWidget);
+      expect(find.text('Piano Lessons'), findsNothing);
+
+      await tester.tap(find.text('Awaiting Approval'));
+      await tester.pumpAndSettle();
 
       expect(find.text('Awaiting Approval'), findsNWidgets(2));
 

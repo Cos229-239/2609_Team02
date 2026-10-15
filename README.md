@@ -25,6 +25,8 @@ Parent assigns → Child completes → Parent approves → Child earns XP + coin
 - Approved tasks stay visible for 7 days; every task is deleted 60 days after it was created (data privacy)
 - Manage the reward store (screen time, activities, treats, badges, …) and see redemptions
 - Family and Progress tabs to track each child
+- **Family Goal**: set a shared reward (movie night, park day, …) with a deadline and board length; every eligible approved task moves the family's piece along a board game. Pause, extend, restart, replace or finish it; history is kept
+- Tune the **mini-games** for the whole family or per child (difficulty presets, how often each game is picked, bonus XP range)
 
 **For kids**
 
@@ -32,6 +34,8 @@ Parent assigns → Child completes → Parent approves → Child earns XP + coin
 - Claim tasks from the shared pool, mark tasks complete, and see what's awaiting approval — or just swipe a task right
 - XP and coins belong to the child's account, so they carry across every household the child is in
 - Earn XP (level up every 500 XP) and coins; pin a reward to work toward and redeem it
+- Watch the family's game piece hop along the Family Goal board when a task is approved, then play a **bonus mini-game** (Balloon Popper, Match Pairs, Jump and Run or Memory Run) that can multiply that task's XP up to the parent-set maximum — paid once, by the server
+- Play any mini-game for fun from the Reward Store (practice rounds, no XP)
 
 **Account & app**
 
@@ -87,7 +91,8 @@ If that changes the app IDs in `lib/firebase_options.dart` or `firebase.json`, d
 
 ```bash
 flutter test                      # app unit/widget tests
-cd functions && npm install && npm test   # Cloud Functions unit tests (notification rules, repeat/time-zone math)
+cd functions && npm install && npm test   # Cloud Functions unit tests (notification rules, repeat/time-zone math, mini-game XP rules)
+npm run test:emulator             # (in functions/) Firestore rules + bonus-XP trigger on the emulators; see functions/README.md
 ```
 
 ### Deploy backend
@@ -120,6 +125,8 @@ Push notifications need the Blaze plan and an APNs key for iOS — the one-time 
 │   │   │                         # household switcher
 │   │   ├── tasks/                # task list/detail/create/completion,
 │   │   │                         # child home/tasks/rewards screens, task_tile
+│   │   ├── milestones/           # Family Goal board, editor, celebration, approval journey
+│   │   ├── minigames/            # framework, host screen, settings, 4 games under games/
 │   │   ├── rewards/              # progress screen, reward editor/progress tiles
 │   │   ├── onboarding/           # walkthrough + topic guide content, progress
 │   │   │                         # controller, onboarding & help center screens
@@ -131,7 +138,7 @@ Push notifications need the Blaze plan and an APNs key for iOS — the one-time 
 │       └── widgets/              # app_button, app_card, loading_indicator,
 │                                 # number_stepper, help_tip, coach_mark_tour
 ├── functions/                    # Cloud Functions (push notifications, repeating tasks)
-│   └── src/                      # index.ts, notifications/{plan,messages,recurrence}.ts
+│   └── src/                      # index.ts, notifications/, minigames/ (bonus XP), emulator/ tests
 ├── test/                         # widget, model and database service tests
 ├── android/  ios/
 ├── Documents/                    # team onboarding guides (Flutter, Git, Trello)
@@ -168,6 +175,7 @@ Bug fixes should come with a regression test (see `test/` for examples).
 - [Documents/GIT_01_Clone_and_Branch.md](Documents/GIT_01_Clone_and_Branch.md) and the other `GIT_*` guides
 - [Documents/Trello_Walkthrough.md](Documents/Trello_Walkthrough.md)
 - [functions/README.md](functions/README.md) — push notification setup, deploy and manual test checklist
+- [Documents/Family_Milestones_and_MiniGames.md](Documents/Family_Milestones_and_MiniGames.md) — Family Goal board, mini-games, XP rules and security model
 
 ## Team
 
