@@ -6,12 +6,16 @@ import '../core/constants/app_constants.dart';
 import '../core/services/auth_service.dart';
 import '../core/services/database_service.dart';
 import '../core/services/demo_mode.dart';
+import '../core/services/milestone_service.dart';
+import '../core/services/mini_game_service.dart';
+import '../features/minigames/mini_game_framework.dart';
 import '../core/services/notification_service.dart';
 import '../core/services/theme_controller.dart';
 import '../features/onboarding/onboarding_controller.dart';
 import '../core/services/premium_service.dart';
 import 'routes.dart';
 import 'theme.dart';
+import '../core/services/accessibility_settings.dart';
 
 /// Root widget: wires up app-wide state (auth/session + the Firestore
 /// household data) and the app's theme + routing.
@@ -23,6 +27,7 @@ class FamotiveApp extends StatelessWidget {
     this.scaffoldMessengerKey,
     this.notificationService,
     this.themeController,
+    this.accessibilitySettings,
     this.onboardingController,
     this.premiumService,
     this.firestore,
@@ -51,6 +56,10 @@ class FamotiveApp extends StatelessWidget {
   /// leave it null to get the default (light).
   final ThemeController? themeController;
 
+  /// Settings > Accessibility (swipe actions on/off). Loaded in main.dart;
+  /// null in tests gives the defaults.
+  final AccessibilitySettings? accessibilitySettings;
+
   /// First-time walkthrough / tutorial progress (see
   /// lib/features/onboarding/). Null in tests: a fresh in-memory one is used.
   final OnboardingController? onboardingController;
@@ -76,13 +85,20 @@ class FamotiveApp extends StatelessWidget {
         ChangeNotifierProvider<ThemeController>(
           create: (_) => themeController ?? ThemeController(),
         ),
+        ChangeNotifierProvider<AccessibilitySettings>(
+          create: (_) => accessibilitySettings ?? AccessibilitySettings(),
+        ),
         ChangeNotifierProvider<OnboardingController>(
           create: (_) => onboardingController ?? (OnboardingController()..load()),
         ),
         ChangeNotifierProvider<PremiumService?>.value(value: premiumService),
         Provider<DemoMode?>.value(value: demoMode),
         ChangeNotifierProxyProvider<AuthService, DatabaseService>(
-          create: (_) => DatabaseService(firestore: firestore),
+          // Only games this build includes are offered after approvals.
+          create: (_) => DatabaseService(
+            firestore: firestore,
+            availableMiniGames: MiniGameRegistry.ids,
+          ),
           update: (_, auth, db) => db!
             // Keep the active household valid (e.g. after being removed from
             // one) and tidy up join requests once they're answered.
@@ -90,6 +106,16 @@ class FamotiveApp extends StatelessWidget {
             ..onPendingRequestResolved = ((id, {required approved}) =>
                 _quietly(auth.forgetPendingHousehold(id, approved: approved)))
             ..bindSession(auth.currentUser),
+        ),
+        // Family Goal board of the active household.
+        ChangeNotifierProxyProvider<AuthService, MilestoneService>(
+          create: (_) => MilestoneService(firestore: firestore),
+          update: (_, auth, service) => service!..bind(auth.currentUser),
+        ),
+        // Bonus game sessions and mini-game settings.
+        ChangeNotifierProxyProvider<AuthService, MiniGameService>(
+          create: (_) => MiniGameService(firestore: firestore),
+          update: (_, auth, service) => service!..bind(auth.currentUser),
         ),
       ],
       child: Consumer<ThemeController>(

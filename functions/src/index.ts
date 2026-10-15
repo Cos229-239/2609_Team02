@@ -54,6 +54,7 @@ import {
   planDigest,
   planJoinRequested,
   planMembersAdded,
+  planMilestoneUpdated,
   planMorning,
   planRedemptionCreated,
   planTaskCreated,
@@ -81,6 +82,8 @@ initializeApp();
 export { deleteAccount } from './account/delete';
 // Task proof photo retention.
 export { cleanUpTaskPhotos, purgeExpiredTaskPhotos } from './photos/cleanup';
+// Mini-game bonus XP (server-authoritative). See ./minigames/index.ts.
+export { awardMiniGameBonus } from './minigames';
 // Premium subscriptions (App Store / Google Play). See ./premium/index.ts.
 export {
   verifyPurchase,
@@ -108,6 +111,7 @@ const REDEMPTION_PATH = 'households/{householdId}/redemptions/{redemptionId}';
 const HOUSEHOLD_PATH = 'households/{householdId}';
 const SCHEDULE_PATH = 'households/{householdId}/taskSchedules/{scheduleId}';
 const JOIN_REQUEST_PATH = 'households/{householdId}/joinRequests/{userId}';
+const MILESTONE_PATH = 'households/{householdId}/milestones/{milestoneId}';
 /** Tasks are deleted this many days after they were created (privacy). Keep in sync with AppConstants.taskDeleteAfterDays. */
 const TASK_RETENTION_DAYS = 60;
 /** Schedule fields only the server writes; changing them isn't an edit. */
@@ -599,6 +603,23 @@ export const runHouseholdMornings = onSchedule({ schedule: 'every 30 minutes', t
       logger.error('Morning run failed', { householdId: doc.id, err });
     }
   }
+});
+
+/** The family reached its Family Goal: tell everyone in the household. */
+export const notifyOnMilestoneCompleted = onDocumentUpdatedWithAuthContext(MILESTONE_PATH, async (event) => {
+  const before = event.data?.before.data();
+  const after = event.data?.after.data();
+  if (!before || !after) return;
+  const plans = planMilestoneUpdated({ status: before.status }, { status: after.status }, event.authId);
+  if (plans.length === 0) return;
+  if (!(await claimEvent(event.id, 'notifyOnMilestoneCompleted'))) return;
+
+  const ctx: MessageContext = {
+    milestoneTitle: after.title,
+    rewardTitle: after.rewardTitle,
+    rewardIcon: after.rewardIcon,
+  };
+  await dispatch(plans, event.params.householdId, ctx, { milestoneId: event.params.milestoneId }, new UserCache());
 });
 
 /** Someone entered the invite code: tell the household's admin. */

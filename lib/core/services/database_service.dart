@@ -10,12 +10,14 @@ import 'package:flutter/foundation.dart';
 import '../constants/app_constants.dart';
 import '../models/household.dart';
 import '../models/join_request.dart';
+import '../models/mini_game.dart';
 import '../models/redemption.dart';
 import '../models/reward.dart';
 import '../models/task.dart';
 import '../models/task_proof.dart';
 import '../models/task_schedule.dart';
 import '../models/user.dart';
+import 'approval_effects.dart';
 import 'time_zone_service.dart';
 
 /// Firestore-backed household data: the households the signed-in user
@@ -25,11 +27,23 @@ class DatabaseService extends ChangeNotifier {
   DatabaseService({
     FirebaseFirestore? firestore,
     Future<String?> Function()? deviceTimeZone,
+    DateTime Function()? clock,
+    ApprovalEffects? approvalEffects,
+    Iterable<MiniGameId>? availableMiniGames,
   }) : _firestore = firestore ?? FirebaseFirestore.instance,
-       _deviceTimeZone = deviceTimeZone ?? TimeZoneService.localTimeZone;
+       _deviceTimeZone = deviceTimeZone ?? TimeZoneService.localTimeZone,
+       _clock = clock ?? DateTime.now {
+    _approvalEffects = approvalEffects ?? ApprovalEffects(_firestore, availableGames: availableMiniGames);
+  }
 
   final FirebaseFirestore _firestore;
   final Future<String?> Function() _deviceTimeZone;
+
+  /// Current time (injectable for tests).
+  final DateTime Function() _clock;
+
+  /// Milestone board / progress events written with each approval.
+  late final ApprovalEffects _approvalEffects;
 
   /// Household we've already tried to fill in a missing time zone for.
   String? _timeZoneBackfilledFor;
@@ -693,7 +707,11 @@ class DatabaseService extends ChangeNotifier {
   /// rewards to the assigned child, all in one transaction so rewards are
   /// granted at most once.
   Future<void> _finishTask(String taskId, {required Set<TaskStatus> from}) async {
+    final householdId = _householdId;
     final taskRef = _tasksCollection.doc(taskId);
+    final milestoneRefs = householdId == null
+        ? const <DocumentReference<Map<String, dynamic>>>[]
+        : await _approvalEffects.candidateMilestones(householdId);
 
     final approvedTask = await _firestore.runTransaction<TaskModel?>((
       transaction,
@@ -706,7 +724,8 @@ class DatabaseService extends ChangeNotifier {
 
       if (!from.contains(task.status)) return null;
 
-      final now = Timestamp.fromDate(DateTime.now());
+      final approvedAt = _clock();
+      final now = Timestamp.fromDate(approvedAt);
       final approval = <String, Object?>{
         'status': TaskStatus.approved.name,
         'approvedAt': now,
@@ -726,6 +745,21 @@ class DatabaseService extends ChangeNotifier {
       final userRef = _firestore.collection('users').doc(assignedTo);
       final userSnap = await transaction.get(userRef);
 
+      // Family milestone board move + the child's "approved!" moment, in
+      // this same transaction so they can't disagree with the approval.
+      final effects = householdId == null
+          ? PreparedApproval.nothing
+          : await _approvalEffects.prepare(
+              transaction,
+              householdId: householdId,
+              taskId: taskId,
+              task: task,
+              assigneeProfile: userSnap.data(),
+              approvedAt: approvedAt,
+              approverId: _sessionUser?.id,
+              milestoneRefs: milestoneRefs,
+            );
+
       transaction.update(taskRef, approval);
 
       if (userSnap.exists) {
@@ -737,6 +771,8 @@ class DatabaseService extends ChangeNotifier {
           'coins': currentCoins + task.coinReward,
         });
       }
+
+      effects.apply(transaction);
 
       return task;
     });

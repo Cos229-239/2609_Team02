@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:famotive/core/models/task.dart';
 
-import '../../../app/routes.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/services/database_service.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../widgets/task_swipe.dart';
 import '../widgets/task_tile.dart';
+import '../widgets/task_view_card.dart';
+import '../../../core/services/accessibility_settings.dart';
 
 /// "Children's view of tasks assigned": shows one child's tasks and
 /// their earned rewards. Also used by parents (tapping a child from Home
@@ -128,8 +129,8 @@ class TaskListScreen extends StatelessWidget {
                   ?.copyWith(fontSize: 20, fontWeight: FontWeight.w600),
             ),
             Text(
-              'Swipe right to approve, left to delete. Approved tasks show '
-              'for ${AppConstants.doneTaskVisibleDays} days.',
+              '${AccessibilitySettings.swipesEnabled(context) ? 'Tap a task to see it. Swipe right to approve, left to delete.' : 'Tap a task to see it.'} '
+              'Approved tasks show for ${AppConstants.doneTaskVisibleDays} days.',
               style: Theme.of(context).textTheme.bodyMedium
                   ?.copyWith(color: Colors.grey.shade600, fontSize: 14),
             ),
@@ -176,9 +177,7 @@ class TaskListScreen extends StatelessWidget {
                   task: task,
                   child: TaskTile(
                     task: task,
-                    onTap: () =>
-                        Navigator.of(context)
-                            .pushNamed(AppRoutes.taskDetail, arguments: task.id),
+                    onTap: () => showTaskViewSheet(context, task.id),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -221,9 +220,7 @@ class TaskListScreen extends StatelessWidget {
                   task: task,
                   child: TaskTile(
                     task: task,
-                    onTap: () =>
-                        Navigator.of(context)
-                            .pushNamed(AppRoutes.taskDetail, arguments: task.id),
+                    onTap: () => showTaskViewSheet(context, task.id),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -254,9 +251,7 @@ class TaskListScreen extends StatelessWidget {
                   task: task,
                   child: TaskTile(
                     task: task,
-                    onTap: () =>
-                        Navigator.of(context)
-                            .pushNamed(AppRoutes.taskDetail, arguments: task.id),
+                    onTap: () => showTaskViewSheet(context, task.id),
                   ),
                 ),
                 const SizedBox(height: 8),

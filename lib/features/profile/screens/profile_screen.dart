@@ -9,6 +9,7 @@ import '../../../core/services/theme_controller.dart';
 import '../../../shared/utils/legal_links.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../widgets/profile_menu_tile.dart';
+import '../../../core/services/accessibility_settings.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -124,6 +125,13 @@ class ProfileScreen extends StatelessWidget {
             child: _DarkModeTile(),
           ),
         ],
+        if (AccessibilitySettings.maybeOf(context) != null) ...[
+          const SizedBox(height: 16),
+          const AppCard(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: _SwipeActionsTile(),
+          ),
+        ],
         const SizedBox(height: 16),
         AppCard(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -149,6 +157,39 @@ class ProfileScreen extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Settings > Accessibility > Swipe Actions. Off makes task rows tap-only;
+/// every swipe action is still on the card that opens when a task is tapped.
+class _SwipeActionsTile extends StatelessWidget {
+  const _SwipeActionsTile();
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = AccessibilitySettings.maybeOf(context);
+    if (settings == null) return const SizedBox.shrink();
+    final on = settings.swipeActions;
+    final color = Theme.of(context).colorScheme.onSurface;
+
+    return SwitchListTile.adaptive(
+      key: const Key('swipe-actions-switch'),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+      dense: true,
+      secondary: Icon(Icons.swipe_outlined, color: color, size: 24),
+      title: Text(
+        'Swipe Actions',
+        style: TextStyle(color: color, fontWeight: FontWeight.w500, fontSize: 16),
+      ),
+      subtitle: Text(
+        on
+            ? 'On - swipe tasks to approve, complete or delete'
+            : 'Off - tap a task to see its actions',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
+      ),
+      value: on,
+      onChanged: settings.setSwipeActions,
     );
   }
 }

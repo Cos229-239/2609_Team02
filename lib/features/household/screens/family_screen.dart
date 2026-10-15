@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/routes.dart';
+import '../../../shared/widgets/app_card.dart';
 import '../../../core/models/join_request.dart';
 import '../../../core/models/redemption.dart';
 import '../../../core/models/reward.dart';
@@ -200,6 +201,31 @@ class FamilyScreen extends StatelessWidget {
                     _RewardManagementRow(reward: reward),
                     const SizedBox(height: 8),
                   ],
+                const SizedBox(height: 8),
+                // Mini-games live in the kids' Reward Store; parents tune them here.
+                AppCard(
+                  key: const Key('minigame-settings-entry'),
+                  onTap: () => Navigator.of(context).pushNamed(AppRoutes.miniGameSettings),
+                  child: Row(
+                    children: [
+                      const Text('🎮', style: TextStyle(fontSize: 26)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Mini-games & bonus XP', style: Theme.of(context).textTheme.titleMedium),
+                            Text(
+                              'Difficulty for each child and how big the XP bonus can be.',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: Colors.grey),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 24),
                 const Divider(),
                 const SizedBox(height: 12),
