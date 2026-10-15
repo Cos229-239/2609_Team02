@@ -94,7 +94,7 @@ children: [
             ),
             padding: const EdgeInsets.symmetric(
               horizontal: 14,
-              vertical: 8,
+              vertical: 4,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
