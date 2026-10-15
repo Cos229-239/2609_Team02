@@ -75,8 +75,10 @@ class TaskTile extends StatelessWidget {
           if (trailing != null)
             trailing!
           else ...[
-            const SizedBox(width: 8),
-            Column(
+            const SizedBox(width: 16),
+            SizedBox(
+              width: 100,
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -92,7 +94,7 @@ class TaskTile extends StatelessWidget {
                   ],
                 ),
                 if (task.coinReward > 0) ...[
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 12),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -107,7 +109,8 @@ class TaskTile extends StatelessWidget {
                 ],
               ],
             ),
-            const SizedBox(width: 12),
+            ),
+            const SizedBox(width: 2),
             Expanded(
               child: Align(
                 alignment: Alignment.centerRight,

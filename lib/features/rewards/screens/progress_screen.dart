@@ -88,7 +88,8 @@ class ProgressScreen extends StatelessWidget {
             onTap: () =>
                 Navigator.of(context)
                     .pushNamed(AppRoutes.taskList, arguments: child.id),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
