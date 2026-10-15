@@ -5,32 +5,78 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../app/app.dart';
 import '../app/theme.dart';
 import '../core/models/user.dart';
+import '../core/services/demo_mode.dart';
 import '../features/onboarding/onboarding_controller.dart';
 import '../features/onboarding/screens/onboarding_screen.dart';
+import 'demo_family.dart';
 import 'walkthrough_variants.dart';
 
 /// QA-only web build for A/B testing the first-time walkthrough.
 ///
-/// No Firebase, no sign-in: it shows the real [OnboardingScreen] with a
-/// sample family, records how each run went (finished / skipped, where,
-/// how long, a clarity rating) in the browser, and summarizes A vs. B.
+/// No Firebase, no sign-in. Each run:
+///   1. shows the real [OnboardingScreen] for a random variant (A/B) and
+///      role (parent/child), timing every step;
+///   2. opens the whole app as that role on sample data (the Rivera
+///      Household, see demo_family.dart), all in memory;
+///   3. "End test" (in Settings, where "Log Out" normally is) closes the
+///      app and asks the tester to fill in the external survey
+///      ([kSurveyUrl]).
+///
+/// A "VERSION A" / "VERSION B" watermark is shown over the screen during a
+/// run so screenshots and recordings say which walkthrough was tested.
 ///
 ///   flutter run -d chrome -t lib/qa/ab_walkthrough_main.dart
-///   flutter build web -t lib/qa/ab_walkthrough_main.dart --base-href /
 ///
 /// URL options: `?variant=A|B` forces a variant, `?role=parent|child`
-/// picks the role, `?tester=Name` pre-fills the tester name. Without
-/// `variant`, each browser is randomly (50/50) and stickily assigned one.
+/// forces the role, `?tester=Name` is passed to the survey, `?survey=<url>`
+/// overrides [kSurveyUrl], and `?setup=1` shows the manual setup + results
+/// screen instead of starting right away.
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const AbWalkthroughApp());
 }
 
-class AbWalkthroughApp extends StatelessWidget {
-  const AbWalkthroughApp({super.key});
+/// The survey testers fill in after "End test", opened in a new tab.
+///
+/// These placeholders are replaced (URL-encoded) before opening it:
+/// `{version}` (A or B), `{role}` (parent or child), `{tester}` (the
+/// `?tester=` name, if any) and `{run}` (the run code shown to the tester
+/// and saved with the run, to match survey answers to timings).
+///
+/// The Tally form "Famotive Walkthrough A/B Test". Tally ignores URL
+/// parameters it has no field for; to record these with each answer, add
+/// Hidden fields named `version`, `role`, `run` and `tester` to the form
+/// (Tally editor → type /hidden). The form's own "Which walkthrough version
+/// did you test?" question is answered by the tester from the watermark.
+const kSurveyUrl = 'https://tally.so/r/LD1bez?version={version}&role={role}&run={run}&tester={tester}';
+
+class AbWalkthroughApp extends StatefulWidget {
+  const AbWalkthroughApp({super.key, this.queryParameters, this.random});
+
+  /// Overrides the page's URL query parameters (for tests).
+  final Map<String, String>? queryParameters;
+
+  /// Overrides the random source for variant/role picks (for tests).
+  final math.Random? random;
+
+  @override
+  State<AbWalkthroughApp> createState() => _AbWalkthroughAppState();
+}
+
+class _AbWalkthroughAppState extends State<AbWalkthroughApp> {
+  /// Variant of the run in progress (shown as the watermark), else null.
+  final _watermark = ValueNotifier<WalkthroughVariant?>(null);
+
+  @override
+  void dispose() {
+    _watermark.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,26 +89,66 @@ class AbWalkthroughApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
         darkTheme: AppTheme.dark,
-        home: const AbTestHome(),
+        // Drawn above every route, including the demo app.
+        builder: (context, child) => Stack(
+          fit: StackFit.expand,
+          children: [
+            child!,
+            _VersionWatermark(variant: _watermark),
+          ],
+        ),
+        home: AbTestHome(
+          queryParameters: widget.queryParameters,
+          random: widget.random,
+          watermark: _watermark,
+        ),
       ),
     );
   }
 }
 
-// ---------------------------------------------------------------------------
-// Sample data (stands in for a signed-in household)
-// ---------------------------------------------------------------------------
+/// Large, faint, diagonal "VERSION A/B" over the whole screen. Ignores
+/// touches so it never gets in the way.
+class _VersionWatermark extends StatelessWidget {
+  const _VersionWatermark({required this.variant});
 
-class _SampleFamily {
-  static const householdName = 'The Rivera Household';
-  static const parent = AppUser(id: 'sample-parent', name: 'Alex Rivera', email: 'alex@example.com', role: UserRole.parent);
-  static const child = AppUser(id: 'sample-child', name: 'Maya Rivera', email: '', avatarEmoji: '🦸', role: UserRole.child);
-  static const tasks = [
-    ('Feed the dog', 10, 5),
-    ('Make your bed', 5, 2),
-    ('Empty the dishwasher', 15, 8),
-  ];
-  static const rewards = [('30 min screen time', 20), ('Pick Friday movie', 35)];
+  final ValueNotifier<WalkthroughVariant?> variant;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<WalkthroughVariant?>(
+      valueListenable: variant,
+      builder: (context, v, _) {
+        if (v == null) return const SizedBox.shrink();
+        return Positioned.fill(
+          child: IgnorePointer(
+            child: Center(
+              child: FractionallySizedBox(
+                widthFactor: 0.85,
+                child: Transform.rotate(
+                  angle: -math.pi / 8,
+                  child: FittedBox(
+                    child: Text(
+                      'VERSION ${v.code}',
+                      key: const Key('qa-watermark'),
+                      textDirection: TextDirection.ltr,
+                      style: TextStyle(
+                        fontSize: 96,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 6,
+                        decoration: TextDecoration.none,
+                        color: Colors.grey.withValues(alpha: 0.22),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -84,6 +170,7 @@ extension on RunOutcome {
 
 class RunResult {
   RunResult({
+    required this.runId,
     required this.tester,
     required this.variant,
     required this.role,
@@ -94,10 +181,11 @@ class RunResult {
     required this.durationMs,
     required this.stepDwellMs,
     required this.startedAt,
-    this.clarity,
-    this.comment = '',
+    this.appDurationMs = 0,
   });
 
+  /// Short code shown to the tester and sent to the survey ({run}).
+  final String runId;
   final String tester;
   final WalkthroughVariant variant;
   final UserRole role;
@@ -107,13 +195,17 @@ class RunResult {
   /// 1-based.
   final int furthestStep;
   final int exitStep;
+
+  /// Time in the walkthrough.
   final int durationMs;
   final List<int> stepDwellMs;
   final DateTime startedAt;
-  int? clarity;
-  String comment;
+
+  /// Time spent in the demo app afterwards, until "End test".
+  int appDurationMs;
 
   Map<String, Object?> toJson() => {
+        'runId': runId,
         'tester': tester,
         'variant': variant.code,
         'role': role.name,
@@ -122,13 +214,13 @@ class RunResult {
         'furthestStep': furthestStep,
         'exitStep': exitStep,
         'durationMs': durationMs,
+        'appDurationMs': appDurationMs,
         'stepDwellMs': stepDwellMs,
         'startedAt': startedAt.toIso8601String(),
-        'clarity': clarity,
-        'comment': comment,
       };
 
   static RunResult fromJson(Map<String, dynamic> j) => RunResult(
+        runId: j['runId'] as String? ?? '',
         tester: j['tester'] as String? ?? '',
         variant: WalkthroughVariant.parse(j['variant'] as String?) ?? WalkthroughVariant.a,
         role: UserRole.values.byName(j['role'] as String),
@@ -137,20 +229,20 @@ class RunResult {
         furthestStep: j['furthestStep'] as int,
         exitStep: j['exitStep'] as int,
         durationMs: j['durationMs'] as int,
+        appDurationMs: j['appDurationMs'] as int? ?? 0,
         stepDwellMs: (j['stepDwellMs'] as List).cast<int>(),
         startedAt: DateTime.parse(j['startedAt'] as String),
-        clarity: j['clarity'] as int?,
-        comment: j['comment'] as String? ?? '',
       );
 
   static const csvHeader =
-      'startedAt,tester,variant,role,outcome,totalSteps,furthestStep,exitStep,durationSec,clarity,stepDwellSec,comment';
+      'startedAt,runId,tester,variant,role,outcome,totalSteps,furthestStep,exitStep,walkthroughSec,appSec,stepDwellSec';
 
   String toCsvRow() {
     String q(String s) => '"${s.replaceAll('"', '""')}"';
-    final dwell = stepDwellMs.map((ms) => (ms / 1000).toStringAsFixed(1)).join(' | ');
+    String sec(int ms) => (ms / 1000).toStringAsFixed(1);
     return [
       startedAt.toIso8601String(),
+      runId,
       q(tester),
       variant.code,
       role.name,
@@ -158,10 +250,9 @@ class RunResult {
       totalSteps,
       furthestStep,
       exitStep,
-      (durationMs / 1000).toStringAsFixed(1),
-      clarity ?? '',
-      q(dwell),
-      q(comment),
+      sec(durationMs),
+      sec(appDurationMs),
+      q(stepDwellMs.map(sec).join(' | ')),
     ].join(',');
   }
 }
@@ -207,11 +298,18 @@ class _ResultStore {
 }
 
 // ---------------------------------------------------------------------------
-// Home: pick a role, start a run, see results
+// Home: runs the test, then the thank-you / survey card (or, with
+// ?setup=1, the manual setup + results screen)
 // ---------------------------------------------------------------------------
 
 class AbTestHome extends StatefulWidget {
-  const AbTestHome({super.key});
+  const AbTestHome({super.key, this.queryParameters, this.random, this.watermark});
+
+  final Map<String, String>? queryParameters;
+  final math.Random? random;
+
+  /// Set to the running variant for the "VERSION A/B" watermark.
+  final ValueNotifier<WalkthroughVariant?>? watermark;
 
   @override
   State<AbTestHome> createState() => _AbTestHomeState();
@@ -220,11 +318,23 @@ class AbTestHome extends StatefulWidget {
 class _AbTestHomeState extends State<AbTestHome> {
   final _store = _ResultStore();
   final _testerCtrl = TextEditingController();
+  late final math.Random _random = widget.random ?? math.Random();
   bool _ready = false;
   late WalkthroughVariant _variant;
   bool _variantForced = false;
+  WalkthroughVariant? _forcedVariant;
+  UserRole? _forcedRole;
   UserRole _role = UserRole.parent;
   List<RunResult> _runs = [];
+  String _surveyTemplate = kSurveyUrl;
+
+  /// Manual setup + results screen (`?setup=1`). Off by default: the page
+  /// goes straight into a randomized run.
+  bool _setupMode = false;
+  bool _running = false;
+
+  /// The last run finished in this page visit (for the survey link).
+  RunResult? _lastRun;
 
   @override
   void initState() {
@@ -234,16 +344,31 @@ class _AbTestHomeState extends State<AbTestHome> {
 
   Future<void> _init() async {
     await _store.init();
-    final params = Uri.base.queryParameters;
-    final forced = WalkthroughVariant.parse(params['variant']);
-    if (params['role'] == 'child') _role = UserRole.child;
+    final params = widget.queryParameters ?? Uri.base.queryParameters;
+    _forcedVariant = WalkthroughVariant.parse(params['variant']);
+    _forcedRole = switch (params['role']?.toLowerCase()) {
+      'parent' => UserRole.parent,
+      'child' => UserRole.child,
+      _ => null,
+    };
+    final survey = params['survey'];
+    if (survey != null && survey.isNotEmpty) _surveyTemplate = survey;
+    final setup = params['setup']?.toLowerCase();
     _testerCtrl.text = params['tester'] ?? '';
     setState(() {
-      _variantForced = forced != null;
-      _variant = forced ?? _store.assignedVariant();
+      _setupMode = setup != null && setup != '0' && setup != 'false';
+      _role = _forcedRole ?? UserRole.parent;
+      _variantForced = _forcedVariant != null;
+      // In randomized mode the real pick happens per run in _startRandomRun.
+      _variant = _forcedVariant ?? (_setupMode ? _store.assignedVariant() : WalkthroughVariant.a);
       _runs = _store.loadRuns();
       _ready = true;
     });
+    if (!_setupMode) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _startRandomRun();
+      });
+    }
   }
 
   @override
@@ -252,9 +377,41 @@ class _AbTestHomeState extends State<AbTestHome> {
     super.dispose();
   }
 
+  WalkthroughVariant _pickVariant() =>
+      _forcedVariant ?? (_random.nextBool() ? WalkthroughVariant.a : WalkthroughVariant.b);
+
+  UserRole _pickRole() => _forcedRole ?? (_random.nextBool() ? UserRole.parent : UserRole.child);
+
+  /// Starts a run with a freshly randomized variant and role (unless forced
+  /// by the URL).
+  Future<void> _startRandomRun() async {
+    if (_running) return;
+    setState(() {
+      _variant = _pickVariant();
+      _role = _pickRole();
+    });
+    await _startRun();
+  }
+
   Future<void> _startRun() async {
+    if (_running) return;
+    final watermark = widget.watermark;
+    setState(() => _running = true);
+    watermark?.value = _variant;
+    try {
+      await _runTest();
+    } finally {
+      watermark?.value = null;
+      if (mounted) setState(() => _running = false);
+    }
+  }
+
+  /// Walkthrough, then the demo app until "End test", then save the run.
+  Future<void> _runTest() async {
     final controller = context.read<OnboardingController>();
-    final guide = _variant.guideFor(_role);
+    final variant = _variant;
+    final role = _role;
+    final guide = variant.guideFor(role);
     // A fresh id per run, so every run starts at step 1 with no saved state.
     final userId = 'qa-${DateTime.now().microsecondsSinceEpoch}';
     final total = guide.steps.length;
@@ -291,9 +448,10 @@ class _AbTestHomeState extends State<AbTestHome> {
     }
 
     final result = RunResult(
+      runId: _runCode(started),
       tester: _testerCtrl.text.trim(),
-      variant: _variant,
-      role: _role,
+      variant: variant,
+      role: role,
       outcome: outcome,
       totalSteps: total,
       furthestStep: furthest + 1,
@@ -304,15 +462,71 @@ class _AbTestHomeState extends State<AbTestHome> {
     );
 
     if (!mounted) return;
-    // The real app hands off to the spotlight tour / tab shell here; this
-    // build stops at the hand-off and asks for feedback instead.
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => _FeedbackDialog(result: result),
-    );
-    setState(() => _runs = [..._runs, result]);
+    // Like the real app, hand off to the tabs (and the spotlight tour if
+    // they asked for it), here on sample data.
+    result.appDurationMs = await _openDemoApp(role, tour: outcome == RunOutcome.finishedTour);
+
+    if (!mounted) return;
+    setState(() {
+      _runs = [..._runs, result];
+      _lastRun = result;
+    });
     await _store.saveRuns(_runs);
+  }
+
+  /// Runs the full app as [role] on fresh sample data until "End test" (or
+  /// the browser's back button). Returns how long it was open.
+  Future<int> _openDemoApp(UserRole role, {required bool tour}) async {
+    final session = await DemoSession.start(role);
+    if (!mounted) return 0;
+
+    // Fresh and never load()-ed, so the app doesn't start the walkthrough
+    // again (it was just shown) and nothing is saved between runs.
+    final onboarding = OnboardingController();
+    if (tour) {
+      // The tab shell picks this up once it's on screen.
+      Future.delayed(const Duration(milliseconds: 1200), onboarding.requestTour);
+    }
+
+    final opened = DateTime.now();
+    await Navigator.of(context).push(PageRouteBuilder<void>(
+      transitionDuration: Duration.zero,
+      reverseTransitionDuration: Duration.zero,
+      pageBuilder: (routeContext, _, _) => FamotiveApp(
+        authService: session.authService,
+        navigatorKey: GlobalKey<NavigatorState>(),
+        onboardingController: onboarding,
+        firestore: session.firestore,
+        demoMode: DemoMode(onEndTest: () => Navigator.of(routeContext).pop()),
+      ),
+    ));
+    return DateTime.now().difference(opened).inMilliseconds;
+  }
+
+  /// e.g. "K3F9QZ": short enough to type into a survey.
+  static String _runCode(DateTime t) =>
+      (t.millisecondsSinceEpoch % 2176782336).toRadixString(36).toUpperCase().padLeft(6, '0');
+
+  Uri? _surveyUri(RunResult run) {
+    if (_surveyTemplate.trim().isEmpty) return null;
+    String enc(String s) => Uri.encodeQueryComponent(s);
+    final url = _surveyTemplate
+        .replaceAll('{version}', enc(run.variant.code))
+        .replaceAll('{role}', enc(run.role.name))
+        .replaceAll('{tester}', enc(run.tester))
+        .replaceAll('{run}', enc(run.runId));
+    return Uri.tryParse(url);
+  }
+
+  Future<void> _openSurvey(RunResult run) async {
+    final uri = _surveyUri(run);
+    if (uri == null) return;
+    final ok = await launchUrl(uri, webOnlyWindowName: '_blank');
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Couldn't open the survey: $uri")),
+      );
+    }
   }
 
   Future<void> _copyCsv() async {
@@ -344,8 +558,9 @@ class _AbTestHomeState extends State<AbTestHome> {
   @override
   Widget build(BuildContext context) {
     if (!_ready) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (!_setupMode) return _buildRandomized(context);
     final theme = Theme.of(context);
-    final sampleUser = _role == UserRole.parent ? _SampleFamily.parent : _SampleFamily.child;
+    final sampleUser = _role == UserRole.parent ? DemoFamily.parent : DemoFamily.maya;
     final steps = _variant.guideFor(_role).steps.length;
 
     return Scaffold(
@@ -356,6 +571,14 @@ class _AbTestHomeState extends State<AbTestHome> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              if (_lastRun != null) ...[
+                _SurveyCard(
+                  run: _lastRun!,
+                  surveyReady: _surveyUri(_lastRun!) != null,
+                  onSurvey: () => _openSurvey(_lastRun!),
+                ),
+                const SizedBox(height: 12),
+              ],
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -396,9 +619,7 @@ class _AbTestHomeState extends State<AbTestHome> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        _variantForced
-                            ? 'Forced by the ?variant= URL parameter.'
-                            : 'Randomly assigned to this browser. For a blind test, don\'t tell the tester which one they got.',
+                        _variantForced ? 'Forced by the ?variant= URL parameter.' : 'Pick the variant to test.',
                         style: theme.textTheme.bodySmall,
                       ),
                       const SizedBox(height: 16),
@@ -408,7 +629,7 @@ class _AbTestHomeState extends State<AbTestHome> {
                         width: double.infinity,
                         child: ElevatedButton.icon(
                           key: const Key('qa-start'),
-                          onPressed: _startRun,
+                          onPressed: _running ? null : _startRun,
                           icon: const Icon(Icons.play_arrow),
                           label: Text('Start walkthrough ($steps steps)'),
                         ),
@@ -456,8 +677,8 @@ class _AbTestHomeState extends State<AbTestHome> {
                           subtitle: Text([
                             r.role.name,
                             if (r.tester.isNotEmpty) r.tester,
-                            if (r.clarity != null) 'clarity ${r.clarity}/5',
-                            if (r.comment.isNotEmpty) '"${r.comment}"',
+                            'app ${(r.appDurationMs / 1000).toStringAsFixed(0)}s',
+                            if (r.runId.isNotEmpty) 'run ${r.runId}',
                           ].join(' · ')),
                         ),
                     ],
@@ -466,6 +687,104 @@ class _AbTestHomeState extends State<AbTestHome> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  /// What sits behind the test in the default (randomized) mode: a
+  /// "starting" placeholder before the first run, then the survey card
+  /// with a button for another random run.
+  Widget _buildRandomized(BuildContext context) {
+    final last = _lastRun;
+    return Scaffold(
+      appBar: AppBar(title: const Text('Famotive Test · QA')),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: last == null
+                // Static text, not a spinner: this stays mounted behind the test.
+                ? const Center(child: Text('Starting the test…'))
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _SurveyCard(
+                        run: last,
+                        surveyReady: _surveyUri(last) != null,
+                        onSurvey: () => _openSurvey(last),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          key: const Key('qa-again'),
+                          onPressed: _running ? null : _startRandomRun,
+                          icon: const Icon(Icons.shuffle),
+                          label: const Text('Test again (new random version)'),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        key: const Key('qa-show-results'),
+                        onPressed: () => setState(() => _setupMode = true),
+                        child: const Text('Setup & results'),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// After "End test": thanks, the run's version + code, and the survey button.
+class _SurveyCard extends StatelessWidget {
+  const _SurveyCard({required this.run, required this.surveyReady, required this.onSurvey});
+
+  final RunResult run;
+  final bool surveyReady;
+  final VoidCallback onSurvey;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle_outline, size: 48),
+            const SizedBox(height: 12),
+            Text('Thanks! One last step.', style: theme.textTheme.titleMedium, textAlign: TextAlign.center),
+            const SizedBox(height: 8),
+            Text(
+              'You tested VERSION ${run.variant.code} as a ${run.role.name}. '
+              'Please tell us how it went in the short survey.',
+              key: const Key('qa-survey-text'),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            SelectableText('Run code: ${run.runId}', style: theme.textTheme.bodySmall),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                key: const Key('qa-survey'),
+                onPressed: surveyReady ? onSurvey : null,
+                icon: const Icon(Icons.open_in_new),
+                label: const Text('Take the survey'),
+              ),
+            ),
+            if (!surveyReady) ...[
+              const SizedBox(height: 6),
+              Text('Survey link not set up yet (kSurveyUrl in lib/qa/ab_walkthrough_main.dart).',
+                  style: theme.textTheme.bodySmall, textAlign: TextAlign.center),
+            ],
+          ],
         ),
       ),
     );
@@ -490,13 +809,14 @@ class _SampleFamilyCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Sample data (no login)', style: theme.textTheme.labelLarge),
+          Text('Sample data (no login, nothing is saved)', style: theme.textTheme.labelLarge),
           const SizedBox(height: 4),
-          Text('Signed in as ${user.name} (${user.role.name}) in ${_SampleFamily.householdName}'),
-          Text('Tasks: ${_SampleFamily.tasks.map((t) => '${t.$1} (${t.$2} XP, ${t.$3} coins)').join(', ')}',
-              style: theme.textTheme.bodySmall),
-          Text('Rewards: ${_SampleFamily.rewards.map((r) => '${r.$1} (${r.$2} coins)').join(', ')}',
-              style: theme.textTheme.bodySmall),
+          Text('Signed in as ${user.name} (${user.role.name}) in ${DemoFamily.householdName}'),
+          Text(
+            'Kids: ${DemoFamily.maya.name}, ${DemoFamily.leo.name}. Tasks in every state, '
+            'repeating chores and the starter rewards.',
+            style: theme.textTheme.bodySmall,
+          ),
         ],
       ),
     );
@@ -518,6 +838,9 @@ class _Summary extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('2. A vs. B summary', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text('Ratings and comments are in the survey; match them with the run code.',
+                style: theme.textTheme.bodySmall),
             const SizedBox(height: 8),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -528,8 +851,8 @@ class _Summary extends StatelessWidget {
                   DataColumn(label: Text('Runs'), numeric: true),
                   DataColumn(label: Text('Completed'), numeric: true),
                   DataColumn(label: Text('Skipped'), numeric: true),
-                  DataColumn(label: Text('Avg time'), numeric: true),
-                  DataColumn(label: Text('Avg clarity'), numeric: true),
+                  DataColumn(label: Text('Avg walkthrough'), numeric: true),
+                  DataColumn(label: Text('Avg in app'), numeric: true),
                 ],
                 rows: [
                   for (final v in WalkthroughVariant.values) _row(v, runs.where((r) => r.variant == v).toList()),
@@ -544,88 +867,15 @@ class _Summary extends StatelessWidget {
 
   DataRow _row(WalkthroughVariant v, List<RunResult> rs) {
     String pct(int n) => rs.isEmpty ? '–' : '${(100 * n / rs.length).round()}%';
-    final rated = rs.where((r) => r.clarity != null).toList();
-    final avgTime = rs.isEmpty ? '–' : '${(rs.map((r) => r.durationMs).reduce((a, b) => a + b) / rs.length / 1000).toStringAsFixed(1)}s';
-    final avgClarity = rated.isEmpty
-        ? '–'
-        : (rated.map((r) => r.clarity!).reduce((a, b) => a + b) / rated.length).toStringAsFixed(1);
+    String avg(int Function(RunResult) ms) =>
+        rs.isEmpty ? '–' : '${(rs.map(ms).reduce((a, b) => a + b) / rs.length / 1000).toStringAsFixed(1)}s';
     return DataRow(cells: [
       DataCell(Text('${v.code} · ${v.label}')),
       DataCell(Text('${rs.length}')),
       DataCell(Text(pct(rs.where((r) => r.outcome.completed).length))),
       DataCell(Text(pct(rs.where((r) => r.outcome == RunOutcome.skipped).length))),
-      DataCell(Text(avgTime)),
-      DataCell(Text(avgClarity)),
+      DataCell(Text(avg((r) => r.durationMs))),
+      DataCell(Text(avg((r) => r.appDurationMs))),
     ]);
-  }
-}
-
-class _FeedbackDialog extends StatefulWidget {
-  const _FeedbackDialog({required this.result});
-
-  final RunResult result;
-
-  @override
-  State<_FeedbackDialog> createState() => _FeedbackDialogState();
-}
-
-class _FeedbackDialogState extends State<_FeedbackDialog> {
-  final _comment = TextEditingController();
-  int? _clarity;
-
-  @override
-  void dispose() {
-    _comment.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final r = widget.result;
-    return AlertDialog(
-      title: Text(r.outcome.label),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Left at step ${r.exitStep} of ${r.totalSteps} after '
-                '${(r.durationMs / 1000).toStringAsFixed(1)}s.'),
-            const SizedBox(height: 16),
-            const Text('How clear was the walkthrough? (1 = confusing, 5 = very clear)'),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              children: [
-                for (var i = 1; i <= 5; i++)
-                  ChoiceChip(
-                    key: Key('qa-clarity-$i'),
-                    label: Text('$i'),
-                    selected: _clarity == i,
-                    onSelected: (_) => setState(() => _clarity = i),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _comment,
-              maxLines: 2,
-              decoration: const InputDecoration(labelText: 'Comment (optional)'),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          key: const Key('qa-save'),
-          onPressed: () {
-            r.clarity = _clarity;
-            r.comment = _comment.text.trim();
-            Navigator.pop(context);
-          },
-          child: const Text('Save run'),
-        ),
-      ],
-    );
   }
 }

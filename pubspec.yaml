@@ -68,12 +68,20 @@ dependencies:
   # Derives the purchase's account token (a UUID) from the user id.
   crypto: ^3.0.6
 
+  # In-memory Firestore + mock Firebase Auth. Used by the tests and by the
+  # QA web build (lib/qa/), which runs the whole app on sample data without
+  # ever connecting to Firebase. The real app (lib/main.dart) never imports
+  # them, so they aren't compiled into it.
+  # Patched copy (third_party/fake_cloud_firestore/README.md): the stock
+  # package throws in release builds, which breaks the QA web build.
+  fake_cloud_firestore:
+    path: third_party/fake_cloud_firestore
+  firebase_auth_mocks: ^0.15.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  fake_cloud_firestore: ^4.3.0
-  firebase_auth_mocks: ^0.15.2
 
 flutter:
   uses-material-design: true

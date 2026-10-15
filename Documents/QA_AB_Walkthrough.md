@@ -7,8 +7,13 @@ A small web build for comparing the two first-time onboarding walkthroughs:
 | **A · Verbose** | `dev` (read live from `OnboardingGuides`) | 10 | 7 |
 | **B · Minimal** | `feature/tutorial-final` (snapshot in `lib/qa/walkthrough_variants.dart`) | 4 | 4 |
 
-It uses the real `OnboardingScreen`, but no Firebase and no sign-in. A sample
-family (The Rivera Household) stands in for a logged-in account.
+Each run shows the real `OnboardingScreen`, then opens **the whole app** on
+sample data (The Rivera Household: parent Alex, kids Maya and Leo, tasks in
+every state, repeating chores, the starter rewards). There's no Firebase and no
+sign-in: the QA build never initializes Firebase, and the app runs on an
+in-memory Firestore and a mock sign-in (`lib/qa/demo_family.dart`) that are
+created fresh for each run and thrown away afterwards. Nothing a tester does is
+saved anywhere or reaches real data. Account deletion is turned off in the demo.
 
 ## Run it
 
@@ -46,7 +51,7 @@ The script refuses `--preview`/`--deploy` if any of those site files are missing
 `firebase.json` hosting changes for this:
 
 - `/qa/**` is sent with `X-Robots-Tag: noindex` so search engines skip it.
-- The QA app's `index.html` / bootstrap files are `no-cache`, so testers get new builds right away.
+- The QA app's `index.html`, bootstrap files and `main.dart.js` are `no-cache`, so testers get new builds right away.
 - `/qa/walkthrough/**` rewrites to the app's `index.html`.
 - `ignore` no longer contains `**/.*`. That pattern would have left
   `.well-known/` out of the deploy and broken app links.
@@ -64,42 +69,87 @@ flutter build web -t lib/qa/ab_walkthrough_main.dart --no-web-resources-cdn
 python3 -m http.server 8080 -d build/web
 ```
 
+## How a run works
+
+1. Opening the link starts right away (no setup screen). The variant (A/B)
+   and the role (parent/child) are each picked at random (50/50) for every run.
+2. The walkthrough for that variant and role. A large, faint **VERSION A** /
+   **VERSION B** watermark sits over the screen for the whole run, so
+   screenshots and screen recordings show which version was tested.
+3. When the walkthrough ends (finished, skipped or closed), the full app opens
+   signed in as the demo parent or child, like the real hand-off. If the
+   tester picked the spotlight tour, it plays.
+4. In **Settings**, **Log Out** is replaced by **End test**. Tapping it closes
+   the app and shows a thank-you card with the version, a run code and
+   **Take the survey**, which opens the external survey in a new tab.
+   **Test again** starts a new random run.
+
+## The survey
+
+Ratings and comments are collected in an external survey, not in the app.
+Set its link in `kSurveyUrl` at the top of `lib/qa/ab_walkthrough_main.dart`
+(or per link with `?survey=`). These placeholders are filled in:
+
+| Placeholder | Becomes |
+|---|---|
+| `{version}` | `A` or `B` |
+| `{role}` | `parent` or `child` |
+| `{run}` | the run code shown to the tester (matches the timing log) |
+| `{tester}` | the `?tester=` name, if given |
+
+For a Google Form: **⋮ → Get pre-filled link**, type `VERSION` and `ROLE` as
+answers to the version/role questions, copy the link and replace those words
+with `{version}` and `{role}`, e.g.
+`https://docs.google.com/forms/d/e/<id>/viewform?usp=pp_url&entry.111={version}&entry.222={role}&entry.333={run}`.
+
+The survey is the Tally form **Famotive Walkthrough A/B Test**
+(https://tally.so/r/LD1bez). The app opens it as
+`https://tally.so/r/LD1bez?version={version}&role={role}&run={run}&tester={tester}`.
+Tally only keeps those values if the form has **Hidden fields** with the same
+names (`version`, `role`, `run`, `tester`); add them in the Tally editor
+(type `/hidden`) to get them with every answer.
+
 ## URL options
 
 | Param | Effect |
 |---|---|
-| `?variant=A` / `?variant=B` | Force a variant (e.g. send each tester a fixed link) |
-| `?role=parent` / `?role=child` | Pick the walkthrough role |
-| `?tester=Sam` | Pre-fill the tester's name |
+| `?variant=A` / `?variant=B` | Force a variant instead of picking at random |
+| `?role=parent` / `?role=child` | Force the role instead of picking at random |
+| `?tester=Sam` | Tester's name, passed to the survey (`{tester}`) and saved with the run |
+| `?survey=<url>` | Use this survey link instead of `kSurveyUrl` (URL-encode it) |
+| `?setup=1` | Show the manual setup + results screen instead (pick role/variant by hand) |
 
-Without `variant`, each browser is randomly (50/50) assigned one and keeps it.
-For a blind test, give testers a link without telling them which variant they got.
+The thank-you card also has a **Setup & results** link to the same screen.
 
-## What gets recorded
+## What gets recorded (in the browser)
 
-After each run the tester rates clarity (1–5) and can leave a comment. Each run stores:
+Each run stores, in that browser's local storage:
 
+- **run code**, tester, role, variant
 - **outcome**: finished → tour, finished without tour, skipped, or closed/back
 - **exit step / furthest step** out of total steps
-- **total time** and **time spent on each step**
-- tester name, role, variant, clarity rating, comment
+- **walkthrough time** and **time spent on each step**
+- **time in the app** until End test
 
-The page shows an A vs. B summary (runs, % completed, % skipped, avg time,
-avg clarity). Results live in that browser's local storage only: use
-**Copy CSV** to collect them, then paste into a spreadsheet.
+**Setup & results** shows an A vs. B summary (runs, % completed, % skipped,
+average walkthrough time, average time in the app). Use **Copy CSV** to
+collect the log, and match it to survey answers by run code.
 
 ## Suggested QA script
 
-1. Open the link (parent role), enter your name, tap **Start walkthrough**.
-2. Go through it as a new parent would. Finish or skip, whichever feels natural.
-3. Rate clarity, add a comment, **Save run**.
-4. Repeat with `?role=child`.
-5. **Copy CSV** and paste it into the team's results sheet.
+1. Open https://famotive.org/qa/walkthrough (add `?tester=YourName` if you like).
+2. Go through the walkthrough as a new parent or child would (whichever role
+   you got). Finish or skip, whichever feels natural.
+3. Use the app for a few minutes: try the main things that role does.
+4. Go to **Settings → End test**, then **Take the survey**.
+5. Tap **Test again** for another random version.
 
 ## Files
 
-- `lib/qa/ab_walkthrough_main.dart`: web entry point, recorder, results UI
+- `lib/qa/ab_walkthrough_main.dart`: web entry point, watermark, recorder, survey link, results UI
 - `lib/qa/walkthrough_variants.dart`: variant A/B definitions
+- `lib/qa/demo_family.dart`: the sample household and the in-memory demo session
+- `lib/core/services/demo_mode.dart`: lets the app swap **Log Out** for **End test**
 - `test/qa_ab_walkthrough_test.dart`: widget tests for the QA app
 - `web/`: Flutter web platform folder (needed for `flutter build web`)
 - `tool/deploy_qa_walkthrough.sh`: build into `public/qa/walkthrough/` and (optionally) deploy

@@ -202,12 +202,11 @@ packages:
     source: hosted
     version: "1.3.3"
   fake_cloud_firestore:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
-      name: fake_cloud_firestore
-      sha256: "4276eadc5e2c36663fe393e98d14d4cc413ebe8ce0d02edd8cda57ef7a5a8369"
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/fake_cloud_firestore"
+      relative: true
+    source: path
     version: "4.3.0"
   fake_firebase_security_rules:
     dependency: transitive
@@ -274,7 +273,7 @@ packages:
     source: hosted
     version: "6.7.0"
   firebase_auth_mocks:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: firebase_auth_mocks
       sha256: "98628921966dab6ae097d447799b2f8c6e252b8adc0f4a9fe4b67ce5c165e5fb"

@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/demo_mode.dart';
 import '../../../core/services/theme_controller.dart';
 import '../../../shared/utils/legal_links.dart';
 import '../../../shared/widgets/app_card.dart';
@@ -126,7 +127,16 @@ class ProfileScreen extends StatelessWidget {
         const SizedBox(height: 16),
         AppCard(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          child: ProfileMenuTile(
+          // In the QA demo (lib/qa/) there's no account to log out of.
+          child: DemoMode.maybeOf(context) != null
+              ? ProfileMenuTile(
+                  key: const Key('demo-end-test'),
+                  icon: Icons.flag_outlined,
+                  label: 'End test',
+                  destructive: true,
+                  onTap: DemoMode.maybeOf(context)!.onEndTest,
+                )
+              : ProfileMenuTile(
             icon: Icons.logout,
             label: 'Log Out',
             destructive: true,
