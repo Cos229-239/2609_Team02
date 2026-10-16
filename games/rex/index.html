@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#1b2a55" />
+  <title>Rex's Room</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js" } }
+  </script>
+</head>
+<body>
+  <canvas id="scene" aria-label="Rex's room"></canvas>
+
+  <div id="app">
+    <div id="track">
+      <!-- Swipe right from the room to get here. -->
+      <section class="page page-side page-store" aria-label="Reward store">
+        <div class="panel panel-store">
+          <header class="panel-head store-head">
+            <span class="head-icon">⭐</span>
+            <h2>Reward Store</h2>
+            <span class="coins-pill"><span class="coin"></span><b data-bind="coins">0</b></span>
+          </header>
+          <nav class="tabs" id="storeTabs"></nav>
+          <div class="panel-body"><div class="store-grid" id="storeGrid"></div></div>
+          <footer class="panel-foot store-foot">🎁 <span>Complete more tasks to earn bigger rewards!</span></footer>
+        </div>
+        <button class="back-handle back-right" data-go="1" aria-label="Back to Rex">🦖<span>›</span></button>
+      </section>
+
+      <!-- Rex's room HUD (the 3D canvas shows through). -->
+      <section class="page page-room" aria-label="Rex">
+        <div class="hud-top">
+          <div class="profile">
+            <div class="avatar">🦖</div>
+            <div class="profile-text">
+              <div class="profile-row"><b data-bind="name">Rex</b><span class="lv">Lv <span data-bind="level">1</span></span></div>
+              <div class="bar xp"><i id="xpFill"></i></div>
+              <small><span data-bind="xp">0</span> / <span data-bind="xpNext">50</span> XP</small>
+            </div>
+          </div>
+          <div class="hud-top-right">
+            <span class="coins-pill"><span class="coin"></span><b data-bind="coins">0</b></span>
+            <button class="icon-btn" id="settingsBtn" aria-label="Settings">⚙️</button>
+            <button class="icon-btn embed-only" id="exitBtn" aria-label="Back to Famotive">🏠</button>
+          </div>
+        </div>
+
+        <div class="health-card" id="healthCard">
+          <div class="health-row">
+            <span class="heart" id="heartIcon">❤️</span>
+            <div class="bar health"><i id="healthFill"></i></div>
+            <span class="status-label" id="statusLabel">Happy</span>
+          </div>
+          <div class="needs" id="needs"></div>
+        </div>
+
+        <div class="banner" id="banner" hidden></div>
+
+        <button class="edge-btn edge-left" data-go="0" aria-label="Open reward store">
+          <span class="edge-icon">🛍️</span><span class="edge-label">Store</span>
+        </button>
+        <button class="edge-btn edge-right" data-go="2" aria-label="Open tasks">
+          <span class="edge-icon">📋</span><span class="edge-label">Tasks</span><span class="badge" id="taskBadge" hidden>0</span>
+        </button>
+
+        <div class="swipe-hint" id="swipeHint" hidden>‹ swipe for Store · Tasks ›</div>
+
+        <nav class="dock" id="dock">
+          <button class="act" data-act="feed"><span class="act-icon">🍗</span><span class="act-label">Feed</span><span class="count" data-count="treat">0</span></button>
+          <button class="act" data-act="play"><span class="act-icon">⚽</span><span class="act-label">Play</span></button>
+          <button class="act" data-act="wash"><span class="act-icon">🧼</span><span class="act-label">Wash</span><span class="count" data-count="soap">0</span></button>
+          <button class="act" data-act="medicine"><span class="act-icon">💊</span><span class="act-label">Medicine</span><span class="count" data-count="medicine">0</span></button>
+          <button class="act" data-act="sleep"><span class="act-icon" id="sleepIcon">🌙</span><span class="act-label" id="sleepLabel">Sleep</span></button>
+        </nav>
+      </section>
+
+      <!-- Swipe left from the room to get here. -->
+      <section class="page page-side page-tasks" aria-label="Tasks">
+        <button class="back-handle back-left" data-go="1" aria-label="Back to Rex"><span>‹</span>🦖</button>
+        <div class="panel panel-tasks">
+          <header class="panel-head tasks-head">
+            <span class="head-icon">📋</span>
+            <h2>Chores &amp; Tasks</h2>
+          </header>
+          <nav class="tabs" id="taskTabs"></nav>
+          <div class="panel-body"><div class="task-list" id="taskList"></div></div>
+          <footer class="panel-foot tasks-foot" id="tasksFoot">Every task helps Rex stay healthy! 🦖</footer>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="fx" aria-hidden="true"></div>
+  <div id="bubble" class="bubble" hidden></div>
+  <div id="toasts" aria-live="polite"></div>
+
+  <div class="modal" id="settings" hidden>
+    <div class="modal-card">
+      <header><h3>Settings</h3><button class="icon-btn" data-close aria-label="Close">✕</button></header>
+      <label class="row"><span>🔊 Sound</span><input type="checkbox" id="setSound" /></label>
+      <div class="row"><span>🟩 Pixels</span>
+        <div class="seg" id="setPixel"><button data-v="1">Smooth</button><button data-v="2">Crisp</button><button data-v="3">Chunky</button></div>
+      </div>
+      <div class="row demo-only"><span>⏩ Time speed</span>
+        <div class="seg" id="setSpeed"><button data-v="1">Real</button><button data-v="60">60×</button><button data-v="600">600×</button></div>
+      </div>
+      <p class="hint">Rex gets hungry, bored and messy over time. Neglected for ~2 days he gets sick; much longer and he becomes a fossil. Finish 3 tasks to dig him back up!</p>
+      <div class="debug demo-only">
+        <span class="debug-title">Demo tools</span>
+        <button data-debug="coins">+200 coins</button>
+        <button data-debug="tasks">Refill tasks</button>
+        <button data-debug="sick">Make sick</button>
+        <button data-debug="fossil">Fossilize</button>
+        <button data-debug="reset" class="danger">Reset game</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

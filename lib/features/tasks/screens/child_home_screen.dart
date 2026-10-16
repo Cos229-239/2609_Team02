@@ -11,6 +11,7 @@ import '../../../shared/widgets/coach_mark_tour.dart';
 import '../../../shared/widgets/help_tip.dart';
 import '../../milestones/widgets/family_goal_card.dart';
 import '../../minigames/widgets/bonus_games_card.dart';
+import '../../rex/widgets/rex_room_card.dart';
 import '../task_completion_flow.dart';
 
 /// "Home" tab for a signed-in child: today's progress and task list.
@@ -62,6 +63,8 @@ class ChildHomeScreen extends StatelessWidget {
           completedCount: completedCount,
           totalCount: totalCount,
         ),
+        const SizedBox(height: 10),
+        const RexRoomCard(),
         const SizedBox(height: 10),
         const FamilyGoalCard(isParent: false),
         const SizedBox(height: 10),

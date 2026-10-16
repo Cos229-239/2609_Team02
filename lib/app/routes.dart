@@ -12,6 +12,7 @@ import '../features/milestones/screens/family_board_screen.dart';
 import '../features/milestones/screens/milestone_celebration_screen.dart';
 import '../features/milestones/screens/milestone_editor_screen.dart';
 import '../features/minigames/screens/mini_game_settings_screen.dart';
+import '../features/rex/rex_room_screen.dart';
 import '../features/onboarding/screens/help_center_screen.dart';
 import '../features/premium/screens/premium_screen.dart';
 import '../features/profile/screens/account_settings_screen.dart';
@@ -63,6 +64,9 @@ class AppRoutes {
   static const String milestoneCelebration = '/family-goal/celebrate';
   /// Parent: mini-game difficulty and bonus XP; optional child id argument.
   static const String miniGameSettings = '/minigames/settings';
+
+  /// Child: Rex's Room, the 3D pet game (see games/rex).
+  static const String rexRoom = '/rex';
 
   // Settings sub-screens, pushed from the Settings tab.
   static const String accountSettings = '/settings/account';
@@ -142,6 +146,9 @@ class AppRoutes {
 
       case miniGameSettings:
         return _page(MiniGameSettingsScreen(initialChildId: args as String?), settings);
+
+      case rexRoom:
+        return _page(const RexRoomScreen(), settings);
 
       case accountSettings:
         return _page(const AccountSettingsScreen(), settings);

@@ -78,6 +78,10 @@ dependencies:
     path: third_party/fake_cloud_firestore
   firebase_auth_mocks: ^0.15.2
 
+  # Hosts Rex's Room, the child's 3D pet game (assets/rex/index.html, built
+  # from games/rex). See lib/features/rex/rex_room_screen.dart.
+  webview_flutter: ^4.14.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -85,6 +89,10 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    # Single-file bundle of games/rex (`npm run build` there regenerates it).
+    - assets/rex/
 
   # Uncomment and add font files under assets/fonts/ once branding fonts
   # are finalized.
