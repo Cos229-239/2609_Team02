@@ -199,6 +199,31 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .need { display: flex; align-items: center; gap: 5px; font-size: 16px; }
 .need .bar { flex: 1; height: 7px; margin: 0; }
 .need.low { animation: wobble .8s infinite; }
+.need {
+  position: relative;
+  cursor: pointer;
+}
+
+.need-percent {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #243b65;
+  color: white;
+  padding: 4px 7px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: bold;
+  white-space: nowrap;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.need.show-percent .need-percent {
+  display: block;
+}
 @keyframes wobble { 50% { transform: translateY(-2px); } }
 
 .banner {

@@ -121,6 +121,49 @@ const needColor = (v) => (v > 60 ? 'linear-gradient(90deg,#2fd07a,#8cf0a0)' : v 
 
 // ---------------------------------------------------------------- render
 
+let percentTimer;
+let activePercentKey = null;
+$('#needs').addEventListener('click', (event) => {
+  console.log('Rex care bar tapped!');
+  const need = event.target.closest('.need');
+  if (!need) return;
+  const needs = $$('#needs .need');
+  const index = needs.indexOf(need);
+  if (index === -1) return;
+
+  const key = Object.keys(CARE)[index];
+  activePercentKey = key;
+
+  clearTimeout(percentTimer);
+
+  const showPercent = () => {
+    const currentNeed = $$('needs .need')[index];
+    if (!currentNeed) return;
+
+    const value = Math.round(game.state.needs[key]);
+    const label = currentNeed.querySelector('.need-percent');
+
+    if (label) label.textContent = value + '%';
+
+    $$('#needs .need').forEach(item => 
+      item.classList.remove('show-percent')
+    );
+
+    currentNeed.classList.add('show-percent');
+  };
+
+  showPercent();
+
+  percentTimer = setTimeout(() => {
+    activePercentKey = null;
+
+    $$('#needs .need').forEach(item => {
+      item.classList.remove('show-percent');
+    });
+    render ();
+}, 2000);
+});
+
 function render() {
   const s = game.state;
   $$('[data-bind="coins"]').forEach((e) => (e.textContent = s.coins));
@@ -140,8 +183,10 @@ function render() {
   $('#heartIcon').classList.toggle('beat', !fossil && s.status !== 'sick');
   $('#needs').innerHTML = Object.entries(CARE).map(([k, c]) => {
     const v = Math.round(s.needs[k]);
-    return `<div class="need ${v < 25 && !fossil ? 'low' : ''}" title="${c.label} ${v}%"><span>${c.icon}</span><div class="bar"><i style="width:${fossil ? 0 : v}%;background:${needColor(v)}"></i></div></div>`;
+    const isActive = activePercentKey === k;
+    return `<div class="need ${v < 25 && !fossil ? 'low' : ''} ${isActive ? 'show-percent' : ''}" title="${c.label} ${v}%"><span>${c.icon}</span><div class="bar"><i style="width:${fossil ? 0 : v}%;background:${needColor(v)}"></i></div><span class="need-percent">${v}%</span></div>`;
   }).join('');
+  
 
   // Banner (only touched when its content changes, it has buttons).
   const banner = $('#banner');
