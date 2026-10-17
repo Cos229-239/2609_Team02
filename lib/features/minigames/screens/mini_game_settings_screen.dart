@@ -196,9 +196,9 @@ class _BonusSizeCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('⭐ Bonus size', style: theme.textTheme.titleMedium),
+          Text('⭐ Bonus XP Multiplier', style: theme.textTheme.titleMedium),
           Text(
-            'From ${_x(settings.minPct)} for trying to ${_x(settings.maxPct)} for a perfect game. '
+            'Earn between ${_x(settings.minPct)} and ${_x(settings.maxPct)} XP based on mini-game performance. '
             'A perfect game turns a 20 XP task into ${example.finalXp} XP.',
             style: theme.textTheme.bodySmall,
           ),
@@ -218,9 +218,9 @@ class _BonusSizeCard extends StatelessWidget {
             spacing: 8,
             children: [
               for (final (curve, label) in const [
-                (MultiplierCurve.gentle, 'Easy to earn'),
+                (MultiplierCurve.gentle, 'Easy Rewards'),
                 (MultiplierCurve.balanced, 'Balanced'),
-                (MultiplierCurve.challenging, 'For great play'),
+                (MultiplierCurve.challenging, 'High Achievement'),
               ])
                 ChoiceChip(
                   label: Text(label),
@@ -332,6 +332,7 @@ class _GameCard extends StatelessWidget {
       child: Theme(
         data: theme.copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
+          visualDensity: const VisualDensity(vertical: -8),
           tilePadding: EdgeInsets.zero,
           childrenPadding: EdgeInsets.zero,
           leading: Text(id.emoji, style: const TextStyle(fontSize: 28)),
