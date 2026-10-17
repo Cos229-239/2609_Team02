@@ -298,14 +298,14 @@ export function buildRoom() {
   ballGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   api.ball = new THREE.Mesh(ballGeo, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
   api.ball.castShadow = true;
-  api.ball.position.set(1.0, 0.42, 3.3);
+  api.ball.position.set(1.75, 0.42, 1.8); // beside the bed, clear of the dock
   api.ballHome = api.ball.position.clone();
   api.ball.visible = false;
   room.add(api.ball);
 
   // Decor unlocks.
   api.decor = {};
-  api.decor.plant = potPlant(1.6, -7.6, 0, 3.2);
+  api.decor.plant = potPlant(2.2, 2.3, 0, -5.3); // by the window, right of Rex
   room.add(api.decor.plant);
   api.decor.plush = (() => {
     const g = new VoxelGrid()
@@ -314,7 +314,7 @@ export function buildRoom() {
       .set(-1, 7, 3, 0x111111).set(1, 7, 3, 0x111111)
       .box(-1, 2, 2, 1, 4, 2, 0xf3e7b5);
     const m = g.build({ size: 0.1, material: mat(0xffffff) });
-    m.position.set(6.6, 2.95, -5);
+    m.position.set(1.4, 2.33, -5.9); // on the window sill
     return m;
   })();
   room.add(api.decor.plush);
@@ -325,7 +325,7 @@ export function buildRoom() {
     grp.add(m);
     const light = new THREE.PointLight(0x6fffd0, 2.5, 4, 1.6);
     grp.add(light);
-    grp.position.set(-5.4, 2.4, -4.6);
+    grp.position.set(-1.75, 0.34, 1.75); // beside the bed
     grp.userData.light = light;
     grp.userData.mesh = m;
     return grp;

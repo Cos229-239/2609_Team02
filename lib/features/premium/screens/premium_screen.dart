@@ -15,6 +15,7 @@ import '../../../core/services/premium_service.dart';
 import '../../../shared/utils/legal_links.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 /// Famotive Premium: what it unlocks, the plans (with the 7-day free trial),
 /// restore, and the current subscription for parents who have one.
@@ -133,15 +134,13 @@ class _PremiumScreenState extends State<PremiumScreen> {
   }
 
   static Future<void> _openManage(BuildContext context, String? productId) async {
-    final messenger = ScaffoldMessenger.of(context);
+    final notices = AppNotice.of(context);
     final opened = await launchUrl(
       PremiumService.manageSubscriptionsUri(productId: productId),
       mode: LaunchMode.externalApplication,
     );
     if (!opened) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('Open your $_storeName account settings to manage your subscription.')),
-      );
+      notices.show('Open your $_storeName account settings to manage your subscription.');
     }
   }
 }

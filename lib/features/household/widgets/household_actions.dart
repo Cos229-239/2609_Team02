@@ -7,11 +7,12 @@ import '../../../core/models/join_request.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/database_service.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 String _message(Object e) => e.toString().replaceFirst('Exception: ', '');
 
 void showHouseholdSnack(BuildContext context, String text) {
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  showAppNotice(context, text);
 }
 
 /// "Enter an invite code" card: files a join request that the household's

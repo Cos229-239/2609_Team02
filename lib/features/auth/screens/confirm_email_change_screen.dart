@@ -6,6 +6,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/loading_indicator.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 enum _ConfirmEmailStatus { verifying, valid, invalid, done }
 
@@ -69,9 +70,7 @@ class _ConfirmEmailChangeScreenState extends State<ConfirmEmailChangeScreen> {
       setState(() => _status = _ConfirmEmailStatus.done);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-      );
+      showAppNotice(context, e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

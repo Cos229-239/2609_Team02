@@ -6,6 +6,7 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/utils/validators.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../widgets/auth_text_field.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 /// Reached from the login screen's "Forgot Password?" link. Collects the
 /// account email and asks [AuthService] to send a Firebase Auth password
@@ -44,9 +45,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       setState(() => _emailSent = true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-      );
+      showAppNotice(context, e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

@@ -14,7 +14,9 @@ const RECOVER_ABOVE = 60;
 const DIGS_TO_REVIVE = 3;
 const NEED_BOOST_PER_TASK = 20;
 
-export const xpToNext = (level) => 100 * level - 50;
+// Shared with the app: one level per 500 XP (AppConstants.levelUpXpThreshold).
+export const LEVEL_XP = 500;
+export const xpToNext = () => LEVEL_XP;
 
 // Famotive tasks don't carry a "care" stat, so infer one from the title.
 export function careFor(title = '') {
@@ -147,7 +149,14 @@ export class Game {
   markDone(id) {
     const t = this.state.tasks.find((x) => x.id === id);
     if (!t || t.status !== 'pending') return;
+    // Photo tasks stay "To Do" until the app's camera screen sends the photo;
+    // the next setTasks() moves them to Waiting.
+    if (t.needsPhoto && this.embedded) {
+      this.emit('photoNeeded', { task: t });
+      return;
+    }
     t.status = 'completed';
+    if (t.needsPhoto) t.photoSent = true; // demo: pretend the photo went
     this.emit('taskCompleted', { task: t });
     this.changed();
   }
@@ -184,6 +193,8 @@ export class Game {
   }
 
   addXp(amount) {
+    // In the app, XP is the child's real XP (setPlayer); nothing is added here.
+    if (this.embedded) return;
     const s = this.state;
     s.xp += amount;
     while (s.xp >= xpToNext(s.level)) {
@@ -191,6 +202,19 @@ export class Game {
       s.level += 1;
       this.emit('levelUp', { level: s.level });
     }
+  }
+
+  // The child's real total XP from the app: Rex shares the child's level.
+  setPlayer({ xp } = {}) {
+    if (typeof xp !== 'number' || !Number.isFinite(xp)) return;
+    const s = this.state;
+    const level = 1 + Math.floor(Math.max(0, xp) / LEVEL_XP);
+    const leveled = this.playerSynced && level > s.level;
+    s.level = level;
+    s.xp = Math.max(0, xp) % LEVEL_XP;
+    this.playerSynced = true;
+    if (leveled) this.emit('levelUp', { level });
+    this.changed();
   }
 
   revive() {
@@ -218,6 +242,9 @@ export class Game {
       rewardXp: t.rewardXp ?? 10,
       coinReward: t.coinReward ?? 10,
       care: t.care || careFor(t.title),
+      needsPhoto: !!t.needsPhoto,
+      photoSent: !!t.photoSent,
+      photoCheck: !!t.photoCheck,
       status: t.status === 'approved' && claimed.has(String(t.id)) ? 'claimed' : t.status || 'pending',
     }));
     this.state.settings.demo = false;
@@ -239,6 +266,15 @@ export class Game {
     this.emit('bought', { item });
     this.changed();
     return { ok: true, item };
+  }
+
+  // Cosmetics can be taken off and put back on. Returns the new state.
+  toggleWear(id) {
+    const s = this.state;
+    if (!s.owned[id]) return false;
+    s.wearing = { ...s.wearing, [id]: s.wearing?.[id] === false };
+    this.changed();
+    return s.wearing[id];
   }
 
   canAct() {

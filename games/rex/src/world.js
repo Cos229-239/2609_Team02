@@ -85,7 +85,11 @@ export class World {
     // Keep the bed + Rex framed on any screen shape.
     const tan = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
     const wide = w >= 1100 && h >= 560;
-    const W = wide ? 9 : 4.9, H = 7;
+    const landscapePhone = w > h && h < 560;
+    const W = wide ? 9 : landscapePhone ? 8 : 4.9, H = landscapePhone ? 6.6 : 7;
+    // Landscape phones: centre Rex + bed in the band between top bar and dock.
+    this.target.y = landscapePhone ? 2.05 : 2.3;
+    this.overlay?.resize?.();
     this.dist = Math.min(26, Math.max(W / (2 * tan * this.camera.aspect), H / (2 * tan)));
   }
 
@@ -96,7 +100,7 @@ export class World {
   // Syncs visuals that follow persistent state (owned items, night, etc).
   applyState(s) {
     const o = s.owned;
-    this.rex.hat.visible = !!o.hat;
+    this.rex.hat.visible = !!o.hat && s.wearing?.hat !== false;
     this.room.ball.visible = !!o.ball;
     this.room.decor.plant.visible = !!o.plant;
     this.room.decor.plush.visible = !!o.plush;
@@ -157,7 +161,18 @@ export class World {
     return this.screenPos(this.fossil.visible ? this.fossil : this.rex.anchor);
   }
 
+  // A minigame scene replaces the room while it's set.
+  setOverlay(o) {
+    this.overlay = o;
+    o?.resize?.();
+  }
+
   update(dt, t) {
+    if (this.overlay) {
+      this.overlay.update(dt, t);
+      this.renderer.render(this.overlay.scene, this.overlay.camera);
+      return;
+    }
     // Camera: slow idle drift + parallax toward the open panel.
     const px = this.panelProgress;
     const sway = Math.sin(t * 0.25) * 0.25;
@@ -195,7 +210,7 @@ export class World {
 
     if (this.ptero.visible) {
       const a = t * 0.6;
-      this.ptero.position.set(Math.cos(a) * 4.2, 6 + Math.sin(t * 1.3) * 0.4, Math.sin(a) * 2.2 - 1);
+      this.ptero.position.set(Math.cos(a) * 3.4, 4.4 + Math.sin(t * 1.3) * 0.35, Math.sin(a) * 1.8 - 0.6);
       this.ptero.rotation.y = -a;
       const flap = Math.sin(t * 9) * 0.6;
       this.ptero.userData.wings[0].rotation.z = -flap;

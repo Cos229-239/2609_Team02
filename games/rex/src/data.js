@@ -8,7 +8,7 @@ export const DEMO_TASKS = [
   { id: 't3', title: 'Put Away Laundry', icon: '🧺', rewardXp: 15, coinReward: 15, care: 'clean', status: 'pending' },
   { id: 't4', title: 'Help Set the Table', icon: '🍽️', rewardXp: 10, coinReward: 10, care: 'hunger', status: 'pending' },
   { id: 't5', title: 'Clean Room', icon: '🧸', rewardXp: 20, coinReward: 20, care: 'clean', status: 'pending' },
-  { id: 't6', title: 'Read for 20 Minutes', icon: '📚', rewardXp: 15, coinReward: 10, care: 'fun', status: 'pending' },
+  { id: 't6', title: 'Water the Plants', icon: '🪴', rewardXp: 15, coinReward: 10, care: 'fun', status: 'pending', needsPhoto: true },
   { id: 't7', title: 'Take Out Trash', icon: '🗑️', rewardXp: 10, coinReward: 10, care: 'clean', status: 'completed' },
   { id: 't8', title: 'Brush Teeth', icon: '🪥', rewardXp: 5, coinReward: 5, care: 'clean', status: 'claimed' },
 ];
@@ -27,12 +27,12 @@ export const STORE_ITEMS = [
   { id: 'soap', name: 'Bubble Bath', icon: '🧼', cost: 30, kind: 'consumable', cat: 'care', tint: '#dff2ff', desc: 'Cleans Rex (+40 clean)' },
   { id: 'medicine', name: 'Dino Medicine', icon: '💊', cost: 60, kind: 'consumable', cat: 'care', tint: '#ffe0ea', desc: 'Makes a sick Rex better' },
   { id: 'ball', name: 'Ball', icon: '⚽', cost: 75, kind: 'toy', cat: 'toys', tint: '#dbe8ff', desc: 'Unlocks Play' },
-  { id: 'hat', name: 'New Hat', icon: '🧢', cost: 100, kind: 'cosmetic', cat: 'toys', tint: '#ffe0e0', desc: 'A cool red cap' },
+  { id: 'hat', name: 'New Hat', icon: '🧢', cost: 100, kind: 'cosmetic', cat: 'toys', tint: '#ffe0e0', desc: 'A cool blue cap (tap to take it off)' },
   { id: 'plush', name: 'T-Rex Plush', icon: '🦖', cost: 150, kind: 'decor', cat: 'decor', tint: '#e2f6dc', desc: 'Sits on the shelf' },
   { id: 'plant', name: 'Room Plant', icon: '🪴', cost: 200, kind: 'decor', cat: 'decor', tint: '#e5f3e0', desc: 'A big leafy plant' },
   { id: 'glowEgg', name: 'Glow Egg', icon: '🥚', cost: 250, kind: 'decor', cat: 'decor', tint: '#dcfaf0', desc: 'Glows in the dark' },
   { id: 'background', name: 'Sunset View', icon: '🌄', cost: 400, kind: 'decor', cat: 'decor', tint: '#ffe9d6', desc: 'New window view' },
-  { id: 'ptero', name: 'Ptero Pal', icon: '🦅', cost: 600, kind: 'pet', cat: 'toys', tint: '#ece3ff', desc: 'A flying friend' },
+  { id: 'ptero', name: 'Ptero Pal', icon: '🦕', cost: 600, kind: 'pet', cat: 'toys', tint: '#ece3ff', desc: 'A flying friend' },
   { id: 'screen30', name: '30 min Screen Time', icon: '📱', cost: 200, kind: 'family', cat: 'family', tint: '#fff4cc', desc: 'Ask a parent' },
   { id: 'dinner', name: 'Pick Dinner', icon: '🍕', cost: 300, kind: 'family', cat: 'family', tint: '#fff4cc', desc: 'Ask a parent' },
 ];

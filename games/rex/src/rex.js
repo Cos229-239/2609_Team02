@@ -212,10 +212,32 @@ export class Rex {
     let headPitch = Math.sin(t * 1.1) * 0.05, jawOpen = 0, bodyLean = 0;
     let hop = 0, sink = 0, eyeOpen = 1, shiver = 0, armSwing = Math.sin(t * 2.2) * 0.15;
     let tint = this.white;
+    let legSwing = 0, armsUp = 0, sway = 0, holdArm = 0;
 
     if (mode === 'happy') {
       hop = Math.abs(Math.sin(this.modeTime * 9)) * 0.35;
       tailAmp = 0.55; tailSpd = 9; jawOpen = 0.35; armSwing = Math.sin(t * 18) * 0.6;
+    } else if (mode === 'run') {
+      const k = t * 16;
+      legSwing = Math.sin(k) * 0.85;
+      hop = Math.abs(Math.sin(k)) * 0.08;
+      armSwing = Math.sin(k) * 0.8;
+      tailAmp = 0.3; tailSpd = 16; headPitch = 0.08; bodyLean = 0.18; jawOpen = 0.15;
+    } else if (mode === 'jump') {
+      legSwing = 0; armsUp = 0.9; jawOpen = 0.35; tailAmp = 0.2; headPitch = -0.15;
+    } else if (mode === 'lookUp') {
+      headPitch = -0.85; bodyLean = -0.12; tailAmp = 0.3; tailSpd = 3; jawOpen = 0.2;
+    } else if (mode === 'cheer') {
+      hop = Math.abs(Math.sin(this.modeTime * 9)) * 0.4;
+      armsUp = 1.4; jawOpen = 0.4; tailAmp = 0.6; tailSpd = 10; headPitch = -0.2;
+    } else if (mode === 'sad') {
+      headPitch = 0.45; bodyLean = 0.1; eyeOpen = 0.5; tailAmp = 0.05; tailSpd = 1; armSwing = 0;
+    } else if (mode === 'dance') {
+      hop = Math.abs(Math.sin(t * 6)) * 0.22;
+      sway = Math.sin(t * 3) * 0.18;
+      armsUp = 0.6 + Math.sin(t * 6) * 0.5; tailAmp = 0.5; tailSpd = 6; jawOpen = 0.2;
+    } else if (mode === 'hold') {
+      holdArm = 1.5; headPitch = 0.4; tailAmp = 0.2;
     } else if (mode === 'eat') {
       headPitch = 0.4 + Math.sin(t * 4) * 0.05;
       bodyLean = 0.25;
@@ -256,14 +278,18 @@ export class Rex {
     this.head.rotation.x = lerp(this.head.rotation.x, headPitch, 8);
     this.head.rotation.y = this.lookYaw;
     this.jaw.rotation.x = lerp(this.jaw.rotation.x, jawOpen, 18);
-    this.arms[0].rotation.x = armSwing;
-    this.arms[1].rotation.x = -armSwing;
+    this.arms[0].rotation.x = armSwing - armsUp * 1.6;
+    this.arms[1].rotation.x = -armSwing - armsUp * 1.6 - holdArm;
+    this.body.rotation.z = lerp(this.body.rotation.z, sway, 8);
     this.tail.forEach((seg, i) => {
       seg.rotation.y = Math.sin(t * tailSpd - i * 0.7) * tailAmp;
       seg.rotation.x = mode === 'sleep' ? 0.1 : -0.04 * i;
     });
-    const legFold = mode === 'sleep' ? 0.9 : 0;
-    this.legs.forEach((l) => (l.rotation.x = lerp(l.rotation.x, -legFold, 5)));
+    const legFold = mode === 'sleep' ? 0.9 : mode === 'jump' ? 0.7 : 0;
+    this.legs.forEach((l, i) => {
+      const target = -legFold + (i ? -legSwing : legSwing);
+      l.rotation.x = legSwing ? target : lerp(l.rotation.x, target, 10);
+    });
     this.root.position.y = lerp(this.root.position.y, hop - sink, hop ? 30 : 5);
     this.root.position.x = shiver;
     this.root.rotation.y = this.baseYaw;

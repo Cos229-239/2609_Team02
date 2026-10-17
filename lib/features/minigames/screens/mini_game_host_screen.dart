@@ -12,6 +12,7 @@ import '../../../core/services/mini_game_service.dart';
 import '../../../core/services/xp_multiplier.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../mini_game_framework.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 enum _Phase { intro, playing, result }
 
@@ -112,7 +113,7 @@ class _MiniGameHostScreenState extends State<MiniGameHostScreen> {
   }
 
   void _showError(Object e) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+    showAppNotice(context, e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
   }
 
   Future<void> _skip() async {

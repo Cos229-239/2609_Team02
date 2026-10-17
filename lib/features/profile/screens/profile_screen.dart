@@ -10,6 +10,7 @@ import '../../../shared/utils/legal_links.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../widgets/profile_menu_tile.dart';
 import '../../../core/services/accessibility_settings.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -24,11 +25,7 @@ class ProfileScreen extends StatelessWidget {
     );
     final launched = await launchUrl(uri);
     if (!launched && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Couldn't open your email app — reach us at support@famotive.org"),
-        ),
-      );
+      showAppNotice(context, "Couldn't open your email app — reach us at support@famotive.org", tone: NoticeTone.error);
     }
   }
 

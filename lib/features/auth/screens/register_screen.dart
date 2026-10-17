@@ -10,6 +10,7 @@ import '../../../shared/utils/legal_links.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/social_sign_in_buttons.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 /// Account creation screen, reached from the login screen's "Sign Up"
 /// link (`features/auth/screens/register_screen.dart` per the project
@@ -66,9 +67,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.home, (route) => false);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-      );
+      showAppNotice(context, e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

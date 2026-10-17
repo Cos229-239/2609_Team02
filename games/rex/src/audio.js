@@ -53,4 +53,15 @@ export const sfx = {
   dig: () => { noise(0.08, 0.15); tone(140, 0.1, { at: 0.02, vol: 0.08 }); },
   revive: () => [392, 523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.16, { at: i * 0.08, type: 'triangle', vol: 0.1 })),
   whoosh: () => noise(0.12, 0.03),
+  // Minigames
+  note: (i) => tone([392, 523, 659, 784][i % 4], 0.28, { type: 'triangle', vol: 0.12 }),
+  pop: () => { noise(0.07, 0.14); tone(900, 0.06, { slide: -500, vol: 0.05 }); },
+  flip: () => tone(520, 0.05, { type: 'triangle', vol: 0.06, slide: 200 }),
+  jump: () => tone(330, 0.16, { type: 'square', vol: 0.05, slide: 420 }),
+  hit: () => { noise(0.15, 0.12); tone(160, 0.2, { slide: -80, vol: 0.07 }); },
+  star: () => { tone(1175, 0.06, { vol: 0.05 }); tone(1568, 0.1, { vol: 0.05, at: 0.05 }); },
+  win: () => [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, 0.14, { at: i * 0.09, type: 'triangle', vol: 0.1 })),
+  lose: () => [392, 330, 262].forEach((f, i) => tone(f, 0.22, { at: i * 0.16, type: 'triangle', vol: 0.09 })),
+  tick: () => tone(1200, 0.03, { vol: 0.03 }),
+  iris: () => tone(600, 0.35, { type: 'sine', slide: -450, vol: 0.06 }),
 };

@@ -4,6 +4,8 @@ import { World } from './world.js';
 import { Game, xpToNext, DIGS_TO_REVIVE } from './game.js';
 import { STORE_ITEMS, STORE_TABS, CARE } from './data.js';
 import { sfx, unlockAudio, setSound } from './audio.js';
+import { renderIcons } from './icons.js';
+import { Director } from './minigames/director.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -21,10 +23,14 @@ const game = new Game({ player: embedCfg?.player || params.get('player') || '', 
 const storeItems = embedded ? STORE_ITEMS.filter((i) => i.kind !== 'family') : STORE_ITEMS;
 const storeTabs = embedded ? STORE_TABS.filter((t) => t.id !== 'family') : STORE_TABS;
 if (embedded) document.body.classList.add('embedded');
+// Applied once the bridge exists, below.
+const initialInsets = embedCfg?.insets;
 if (params.get('reset') === '1') game.reset();
 if (params.get('demo') === '0') game.state.settings.demo = false;
 
 const world = new World($('#scene'));
+// Voxel thumbnails of Rex items (family rewards keep their emoji).
+const icons = renderIcons(world, STORE_ITEMS.filter((i) => i.kind !== 'family').map((i) => i.id));
 world.setPixel(game.state.settings.pixel);
 setSound(game.state.settings.sound);
 
@@ -34,13 +40,43 @@ const isWide = () => wideMQ.matches;
 
 // ---------------------------------------------------------------- helpers
 
+// Centre-screen notice card: big emoji, the message, colour by kind
+// (good / bad / plain). One at a time, queued; tap to dismiss.
+const notices = [];
+let noticeTimer = 0;
+const EMOJI = /(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*)/u;
+
 function toast(text, kind = '') {
-  const el = document.createElement('div');
-  el.className = 'toast ' + kind;
-  el.textContent = text;
-  $('#toasts').append(el);
-  setTimeout(() => el.remove(), 2800);
-  while ($('#toasts').children.length > 3) $('#toasts').firstChild.remove();
+  const last = notices[notices.length - 1];
+  if (last && last.text === text) return; // ignore rapid repeats
+  notices.push({ text, kind });
+  if (notices.length > 3) notices.splice(0, notices.length - 3);
+  if (!$('#notice').classList.contains('show')) showNotice();
+}
+
+function showNotice() {
+  const n = notices.shift();
+  const el = $('#notice');
+  if (!n) { el.classList.remove('show'); return; }
+  const m = n.text.match(EMOJI);
+  const icon = m ? m[1] : n.kind === 'good' ? '🎉' : n.kind === 'bad' ? '🙈' : '🦖';
+  const body = (m ? n.text.replace(m[1], '') : n.text).replace(/\s{2,}/g, ' ').trim();
+  const ms = Math.min(4200, 1600 + body.length * 35);
+  el.className = 'notice show ' + n.kind;
+  el.innerHTML = `<div class="notice-card" role="status"><div class="notice-icon">${icon}</div>
+    <p>${esc(body)}</p><i class="notice-timer" style="animation-duration:${ms}ms"></i></div>`;
+  clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(hideNotice, ms);
+}
+
+function hideNotice() {
+  const el = $('#notice');
+  clearTimeout(noticeTimer);
+  el.classList.add('leaving');
+  setTimeout(() => {
+    el.classList.remove('leaving', 'show');
+    if (notices.length) setTimeout(showNotice, 120);
+  }, 220);
 }
 
 function fx(emoji, x, y, count = 1, spread = 60) {
@@ -148,7 +184,9 @@ function render() {
 }
 
 function taskButton(t) {
+  if (t.status === 'pending' && t.needsPhoto) return `<button class="btn photo" data-done="${esc(t.id)}">📸 Photo</button>`;
   if (t.status === 'pending') return `<button class="btn" data-done="${esc(t.id)}">Done!</button>`;
+  if (t.status === 'completed' && t.photoSent) return `<span class="btn wait">${t.photoCheck ? '📸 Checking' : '📸 Sent'}</span>`;
   if (t.status === 'completed') return `<span class="btn wait">⏳ Waiting</span>`;
   if (t.status === 'approved') return `<button class="btn green claim" data-claim="${esc(t.id)}">Claim</button>`;
   return `<span class="btn wait">✓</span>`;
@@ -160,7 +198,7 @@ let tasksKey = '', storeKey = '';
 
 function renderTasks(force) {
   const tasks = game.state.tasks;
-  const key = JSON.stringify([ui.taskTab, tasks.map((t) => t.id + t.status), game.state.status, game.state.digs, game.state.settings.demo]);
+  const key = JSON.stringify([ui.taskTab, tasks.map((t) => [t.id, t.status, t.needsPhoto, t.photoSent, t.photoCheck]), game.state.status, game.state.digs, game.state.settings.demo]);
   if (!force && key === tasksKey) return;
   tasksKey = key;
   const groups = {
@@ -205,7 +243,7 @@ function renderTasks(force) {
 
 function renderStore(force) {
   const s = game.state;
-  const key = JSON.stringify([ui.storeTab, ui.confirmId, s.coins, s.owned, s.inventory]);
+  const key = JSON.stringify([ui.storeTab, ui.confirmId, s.coins, s.owned, s.inventory, s.wearing]);
   if (!force && key === storeKey) return;
   storeKey = key;
   $('#storeTabs').innerHTML = storeTabs.map((t) => `<button class="tab ${ui.storeTab === t.id ? 'on' : ''}" data-storetab="${t.id}">${t.label}</button>`).join('');
@@ -213,13 +251,14 @@ function renderStore(force) {
   $('#storeGrid').innerHTML = items.map((i) => {
     const owned = i.kind !== 'consumable' && i.kind !== 'family' && s.owned[i.id];
     const qty = i.kind === 'consumable' ? s.inventory[i.id] || 0 : 0;
-    const cant = s.coins < i.cost;
+    const cant = !owned && s.coins < i.cost;
+    const worn = i.id === 'hat' && owned ? (s.wearing?.hat !== false ? 'Wearing' : 'Off') : '';
     const confirm = ui.confirmId === i.id && !owned
       ? `<div class="confirm">${esc(i.desc)}<button class="btn green" data-buy="${i.id}">${i.kind === 'family' ? 'Ask' : 'Buy'} · ${i.cost}</button><button class="x" data-cancel>Cancel</button></div>`
       : '';
-    return `<div class="item ${owned ? 'owned' : ''} ${cant ? 'cant' : ''}" style="--tint:${i.tint}" data-item="${i.id}" role="button" tabindex="0">
+    return `<div class="item ${owned ? 'owned' : ''} ${cant ? 'cant' : ''}" style="--tint:${i.tint}" data-item="${i.id}" ${worn ? `data-worn="${worn}"` : ''} role="button" tabindex="0">
       ${qty ? `<span class="qty">×${qty}</span>` : ''}
-      <span class="ico">${i.icon}</span><span class="nm">${esc(i.name)}</span>
+      ${icons[i.id] ? `<img class="ico-img" src="${icons[i.id]}" alt="">` : `<span class="ico">${i.icon}</span>`}<span class="nm">${esc(i.name)}</span>
       <span class="price"><span class="coin"></span>${i.cost}</span>${confirm}
     </div>`;
   }).join('');
@@ -283,9 +322,14 @@ function handleTap(x, y) {
 game.onChange(render);
 
 game.onEvent((type, d) => {
+  if (type === 'photoNeeded') {
+    sfx.tap();
+    toast('📸 Take a photo to show it\'s done!');
+    bridge.post('taskCompleted', { taskId: d.task.id, photo: true });
+  }
   if (type === 'taskCompleted') {
     sfx.tap();
-    toast(`Nice! “${d.task.title}” sent to a grown-up ✅`, 'good');
+    toast(d.task.needsPhoto ? `📸 Photo sent! A grown-up will check “${d.task.title}”` : `Nice! “${d.task.title}” sent to a grown-up ✅`, 'good');
     bridge.post('taskCompleted', { taskId: d.task.id });
     if (game.state.settings.demo) setTimeout(() => { game.approve(d.task.id); }, 2500);
   }
@@ -344,7 +388,7 @@ let synthetic = false;
 window.addEventListener('pointerdown', (e) => {
   unlockAudio();
   if (e.button !== 0) return;
-  drag = { x: e.clientX, y: e.clientY, t: performance.now(), lock: null, dx: 0, target: e.target, noSwipe: !!e.target.closest('.modal') };
+  drag = { x: e.clientX, y: e.clientY, t: performance.now(), lock: null, dx: 0, target: e.target, noSwipe: !!e.target.closest('.modal') || director.active };
 });
 
 window.addEventListener('pointermove', (e) => {
@@ -388,6 +432,7 @@ function endDrag(e) {
     try { control.click(); } finally { synthetic = false; }
     return;
   }
+  if (director.active) return; // game taps go through #gameLayer
   // A tap: on the room → interact; on the empty strip beside a panel → go back.
   if (tgt.closest('.panel, .health-card, .profile, .dock, .banner, .modal')) return;
   if (ui.page === 1 || isWide()) handleTap(e.clientX, e.clientY);
@@ -406,13 +451,14 @@ document.addEventListener('click', (e) => {
 window.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowLeft') setPage(ui.page - 1);
   if (e.key === 'ArrowRight') setPage(ui.page + 1);
-  if (e.key === 'Escape') { $('#settings').hidden = true; setPage(1); }
+  if (director.active && (e.key === ' ' || e.key === 'ArrowUp')) { director.pointer(innerWidth / 2, innerHeight / 2); e.preventDefault(); return; }
+  if (e.key === 'Escape') { $('#settings').hidden = true; director.closeMenu(); setPage(1); }
 });
 
 // ---------------------------------------------------------------- clicks
 
 document.addEventListener('click', (e) => {
-  const el = e.target.closest('[data-go],[data-act],[data-done],[data-claim],[data-tasktab],[data-storetab],[data-item],[data-buy],[data-cancel],[data-debug],[data-close],#settingsBtn,#exitBtn');
+  const el = e.target.closest('[data-go],[data-act],[data-done],[data-claim],[data-tasktab],[data-storetab],[data-item],[data-buy],[data-cancel],[data-debug],[data-close],[data-game],[data-game-act],[data-close-games],#gamesBtn,#settingsBtn,#exitBtn');
   if (!el) return;
   unlockAudio();
   const ds = el.dataset;
@@ -439,7 +485,18 @@ document.addEventListener('click', (e) => {
   else if (ds.item) {
     const item = STORE_ITEMS.find((i) => i.id === ds.item);
     const owned = item.kind !== 'consumable' && item.kind !== 'family' && game.state.owned[item.id];
-    if (owned) { toast(`${item.icon} ${item.name} — ${item.desc}`); return; }
+    if (owned && item.id === 'hat') {
+      const on = game.toggleWear('hat');
+      sfx.tap();
+      toast(on ? '🧢 Hat on!' : 'Hat off');
+      return;
+    }
+    if (owned) { toast(`${item.name}: ${item.desc}`); return; }
+    if (game.state.coins < item.cost) {
+      sfx.bad();
+      toast(`You need ${item.cost - game.state.coins} more coins. Finish a task! 📋`, 'bad');
+      return;
+    }
     ui.confirmId = ds.item;
     sfx.tap();
     renderStore();
@@ -447,6 +504,10 @@ document.addEventListener('click', (e) => {
   else if (ds.close != null) $('#settings').hidden = true;
   else if (el.id === 'settingsBtn') openSettings();
   else if (el.id === 'exitBtn') bridge.post('close');
+  else if (el.id === 'gamesBtn') director.openMenu();
+  else if (ds.closeGames != null) director.closeMenu();
+  else if (ds.game) director.choose(ds.game, ds.session);
+  else if (ds.gameAct) director.act(ds.gameAct);
 });
 
 function debug(k) {
@@ -465,6 +526,15 @@ function openSettings() {
   $('#settings').hidden = false;
 }
 $('#settings').addEventListener('click', (e) => { if (e.target.id === 'settings') $('#settings').hidden = true; });
+$('#gamesModal').addEventListener('click', (e) => { if (e.target.id === 'gamesModal') director.closeMenu(); });
+$('#notice').addEventListener('click', () => hideNotice());
+// Game input: taps go straight to the game (fast, for jumping) unless they
+// land on a button.
+$('#gameLayer').addEventListener('pointerdown', (e) => {
+  unlockAudio();
+  if (e.target.closest('button, [role=button]')) return;
+  director.pointer(e.clientX, e.clientY);
+});
 $('#setSound').addEventListener('change', (e) => { game.setSetting('sound', e.target.checked); setSound(e.target.checked); });
 $('#setPixel').addEventListener('click', (e) => {
   const v = +e.target.dataset.v; if (!v) return;
@@ -486,14 +556,34 @@ const bridge = {
     if (window.parent !== window) window.parent.postMessage(msg, '*');
   },
 };
+const director = new Director({ world, game, bridge, sfx, toast, embedded });
+director.renderBadge();
+
 // Incoming: the host app calls these.
 window.RexGame = {
   setTasks: (list) => game.setTasks(list),
   approveTask: (id) => game.approve(String(id)),
   setCoins: (n) => { game.state.coins = n; game.changed(); },
   setName: (n) => { game.state.name = n; game.changed(); },
+  // Safe-area padding (CSS px) from the host, e.g. the notch in landscape.
+  setInsets: ({ top = 0, right = 0, bottom = 0, left = 0 } = {}) => {
+    const st = document.documentElement.style;
+    st.setProperty('--host-safe-t', top + 'px');
+    st.setProperty('--host-safe-r', right + 'px');
+    st.setProperty('--host-safe-b', bottom + 'px');
+    st.setProperty('--host-safe-l', left + 'px');
+  },
   getState: () => JSON.parse(JSON.stringify(game.state)),
+  // Shared level: the child's real total XP.
+  setPlayer: (p) => game.setPlayer(p),
+  // { bonus: [{ sessionId, gameId, taskTitle, baseXp }], settings, enabled }
+  setGames: (data) => director.setGames(data),
+  launchGame: (payload) => director.launch(payload),
+  gameResult: (data) => director.gameResult(data),
+  chooseGame: (gameId, sessionId) => director.choose(gameId, sessionId),
 };
+
+if (initialInsets) window.RexGame.setInsets(initialInsets);
 
 // ---------------------------------------------------------------- loop
 
@@ -542,10 +632,10 @@ function frame(now) {
       setTimeout(() => { sfx.sneeze(); fxAtRex('🦠', 3, 90); }, 450);
     }
   }
+  director.update(dt);
   world.update(dt, now / 1000);
   updateBubble(now);
   requestAnimationFrame(frame);
-bridge.post('ready');
 }
 
 window.addEventListener('resize', () => { world.resize(); setPage(ui.page, false); });

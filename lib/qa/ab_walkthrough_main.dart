@@ -15,6 +15,7 @@ import '../features/onboarding/onboarding_controller.dart';
 import '../features/onboarding/screens/onboarding_screen.dart';
 import 'demo_family.dart';
 import 'walkthrough_variants.dart';
+import '../shared/widgets/app_notice.dart';
 
 /// QA-only web build for A/B testing the first-time walkthrough.
 ///
@@ -523,9 +524,7 @@ class _AbTestHomeState extends State<AbTestHome> {
     if (uri == null) return;
     final ok = await launchUrl(uri, webOnlyWindowName: '_blank');
     if (!ok && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Couldn't open the survey: $uri")),
-      );
+      showAppNotice(context, "Couldn't open the survey: $uri", tone: NoticeTone.error);
     }
   }
 
@@ -533,9 +532,7 @@ class _AbTestHomeState extends State<AbTestHome> {
     final csv = [RunResult.csvHeader, ..._runs.map((r) => r.toCsvRow())].join('\n');
     await Clipboard.setData(ClipboardData(text: csv));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Copied ${_runs.length} run(s) as CSV')),
-    );
+    showAppNotice(context, 'Copied ${_runs.length} run(s) as CSV', tone: NoticeTone.success);
   }
 
   Future<void> _clear() async {

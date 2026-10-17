@@ -13,6 +13,7 @@ import '../../auth/widgets/auth_text_field.dart';
 import '../widgets/avatar_picker_sheet.dart';
 import '../widgets/change_password_dialog.dart';
 import '../widgets/current_password_prompt.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 class AccountSettingsScreen extends StatefulWidget {
   const AccountSettingsScreen({super.key});
@@ -93,20 +94,12 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       }
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            emailChanged
+      showAppNotice(context, emailChanged
                 ? 'Profile saved. Tap the confirmation link we sent to $newEmail to finish the change.'
-                : 'Profile saved.',
-          ),
-        ),
-      );
+                : 'Profile saved.', tone: NoticeTone.success);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-      );
+      showAppNotice(context, e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }

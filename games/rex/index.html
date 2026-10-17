@@ -70,6 +70,10 @@
           <span class="edge-icon">📋</span><span class="edge-label">Tasks</span><span class="badge" id="taskBadge" hidden>0</span>
         </button>
 
+        <button class="play-fab" id="gamesBtn" aria-label="Play games with Rex">
+          <span class="play-ico">🎮</span><span>Games</span><span class="badge go" id="gamesBadge" hidden>0</span>
+        </button>
+
         <div class="swipe-hint" id="swipeHint" hidden>‹ swipe for Store · Tasks ›</div>
 
         <nav class="dock" id="dock">
@@ -99,7 +103,32 @@
 
   <div id="fx" aria-hidden="true"></div>
   <div id="bubble" class="bubble" hidden></div>
-  <div id="toasts" aria-live="polite"></div>
+  <div id="notice" class="notice" aria-live="polite" role="button"></div>
+
+  <div class="modal" id="gamesModal" hidden>
+    <div class="modal-card games-card">
+      <header><h3>🎮 Play with Rex</h3><button class="icon-btn" data-close-games aria-label="Close">✕</button></header>
+      <h4 class="games-sub">⭐ Bonus games <small>earn extra XP</small></h4>
+      <div id="bonusList" class="bonus-list"></div>
+      <h4 class="games-sub">🎯 Practice <small>just for fun</small></h4>
+      <div id="practiceGrid" class="practice-grid"></div>
+    </div>
+  </div>
+
+  <div id="gameLayer" aria-live="polite">
+    <div class="game-top">
+      <div class="game-title" id="gameTitle"></div>
+      <div class="game-stats" id="gameStats"></div>
+      <button class="icon-btn" data-game-act="quit" aria-label="Leave game">✕</button>
+    </div>
+    <div class="game-progress" id="gameProgress" hidden><i></i></div>
+    <div class="game-msg" id="gameMsg" hidden></div>
+    <div class="game-extra" id="gameExtra" hidden></div>
+    <div class="game-result" id="gameResult" hidden></div>
+    <div class="game-result" id="gameConfirm" hidden></div>
+  </div>
+
+  <div id="iris" hidden><span id="irisLabel" hidden>Loading…</span></div>
 
   <div class="modal" id="settings" hidden>
     <div class="modal-card">
