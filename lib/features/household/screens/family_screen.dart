@@ -73,7 +73,7 @@ class FamilyScreen extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             isAdmin
-                ? "You're the admin: you approve anyone who asks to join."
+                ? "Manage your family, approve new members, and celebrate milestones together."
                 : (adminName == null ? 'Manage your family members and reward store' : 'Admin: $adminName'),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.grey.shade600,
@@ -184,7 +184,7 @@ class FamilyScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'What kids can redeem their coins for.',
+                  'Turn hard-earned coins into exciting rewards!',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600, fontSize: 13),
                 ),
                 const SizedBox(height: 10),
@@ -216,7 +216,7 @@ class FamilyScreen extends StatelessWidget {
                           children: [
                             Text('Mini-games & bonus XP', style: Theme.of(context).textTheme.titleMedium),
                             Text(
-                              'Difficulty for each child and how big the XP bonus can be.',
+                              'Customize game difficulty and XP rewards for each child.',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
                             ),
                           ],
@@ -244,7 +244,7 @@ class FamilyScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Every reward redeemed by any child, most recent first.',
+                  'Keep track of your family\'s rewards and every coin spent.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600, fontSize: 13),
                 ),
                 const SizedBox(height: 10),

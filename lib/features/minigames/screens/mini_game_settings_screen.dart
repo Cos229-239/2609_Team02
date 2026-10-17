@@ -99,21 +99,33 @@ class _MiniGameSettingsScreenState extends State<MiniGameSettingsScreen> {
                 ),
                 for (final child in db.children)
                   ChoiceChip(
-                    avatar: Text(child.avatarEmoji),
-                    label: Text(child.name),
-                    selected: _childId == child.id,
-                    onSelected: (_) => setState(() {
-                      _childId = child.id;
-                      _load();
-                    }),
-                  ),
+                    label: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(child.avatarEmoji),
+                        const SizedBox(width: 8),
+                        Text(child.name),
+                      ],
+                    ),
+                  selected: _childId == child.id,
+                  onSelected: (_) => setState(() {
+                        _childId = child.id;
+                        _load();
+                      }),
+            ),
               ],
             ),
             if (_childId != null)
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Use the family settings'),
-                subtitle: const Text('Turn off to give this child their own difficulty.'),
+                title: const Text('Use Family-Wide Settings'),
+                subtitle: const Text(
+                  'Turn off to customize the children individually.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
+                ),
                 value: _useFamily,
                 onChanged: (v) => setState(() {
                   _useFamily = v;
@@ -131,8 +143,14 @@ class _MiniGameSettingsScreenState extends State<MiniGameSettingsScreen> {
                   children: [
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Bonus games after approved tasks'),
-                      subtitle: const Text('A random game can multiply the task\'s XP.'),
+                      title: const Text('Unlock Bonus Games'),
+                      subtitle: const Text(
+                        'Complete a fun mini-game after finishing a task to earn bonus XP.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
                       value: _draft.rewardedGamesEnabled,
                       onChanged: (v) => _edit(_draft.copyWith(rewardedGamesEnabled: v)),
                     ),
