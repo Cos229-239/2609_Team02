@@ -332,7 +332,7 @@ class _GameCard extends StatelessWidget {
       child: Theme(
         data: theme.copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          visualDensity: const VisualDensity(vertical: -8),
+          visualDensity: const VisualDensity(vertical: -3),
           tilePadding: EdgeInsets.zero,
           childrenPadding: EdgeInsets.zero,
           leading: Text(id.emoji, style: const TextStyle(fontSize: 28)),

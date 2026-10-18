@@ -112,7 +112,7 @@ children: [
                     Text('${child.coins}'),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 1),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(AppConstants.radiusSm),
                   child: LinearProgressIndicator(
@@ -144,7 +144,7 @@ children: [
         ),
         const SizedBox(height: 4),
         Text(
-          '${AccessibilitySettings.swipesEnabled(context) ? 'Tap a task to see it. Swipe right to approve (or archive), swipe left to delete.' : 'Tap a task to see it.'} '
+          '${AccessibilitySettings.swipesEnabled(context) ? 'Tap a task to see it. Swipe right to approve/archive, left to delete.' : 'Tap to view tasks.'} '
           'Completed tasks show for '
           '${AppConstants.doneTaskVisibleDays} days; all tasks are deleted '
           'after ${AppConstants.taskDeleteAfterDays} days.',

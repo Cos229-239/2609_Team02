@@ -163,7 +163,11 @@ class _FamilyBoardState extends State<FamilyBoard> with SingleTickerProviderStat
               Text(
                 text,
                 maxLines: 1,
-                style: TextStyle(fontSize: math.max(9, r * 0.3), fontWeight: FontWeight.w800, color: Colors.white),
+                style: TextStyle(
+                  fontSize: math.max(10, r * 0.35),
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+              ),
               ),
             ],
           ),

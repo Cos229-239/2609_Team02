@@ -167,6 +167,7 @@ class _SwipeActionsTile extends StatelessWidget {
       key: const Key('swipe-actions-switch'),
       contentPadding: const EdgeInsets.symmetric(horizontal: 4),
       dense: true,
+      visualDensity: const VisualDensity(vertical: -4),
       secondary: Icon(Icons.swipe_outlined, color: color, size: 24),
       title: Text(
         'Swipe Actions',
@@ -174,8 +175,8 @@ class _SwipeActionsTile extends StatelessWidget {
       ),
       subtitle: Text(
         on
-            ? 'On - swipe tasks to approve, complete or delete'
-            : 'Off - tap a task to see its actions',
+            ? 'On - Swipe to manage tasks'
+            : 'Off - Tap to manage tasks',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
       ),
       value: on,
@@ -200,13 +201,14 @@ class _DarkModeTile extends StatelessWidget {
       key: const Key('dark-mode-switch'),
       contentPadding: const EdgeInsets.symmetric(horizontal: 4),
       dense: true,
+      visualDensity: const VisualDensity(vertical: -4),
       secondary: Icon(isDark ? Icons.dark_mode : Icons.dark_mode_outlined, color: color, size: 24),
       title: Text(
         'Dark Mode',
         style: TextStyle(color: color, fontWeight: FontWeight.w500, fontSize: 16),
       ),
       subtitle: Text(
-        isDark ? 'On - easier on the eyes at night' : 'Off',
+        isDark ? 'On' : 'Off',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
       ),
       value: isDark,

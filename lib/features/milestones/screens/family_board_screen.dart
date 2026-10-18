@@ -96,7 +96,7 @@ class _BoardBody extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Family reward', style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade600)),
+                    Text('Your family is working towards:', style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade600)),
                     Text(milestone.rewardTitle, style: theme.textTheme.titleMedium),
                   ],
                 ),
@@ -169,8 +169,9 @@ class _BoardBody extends StatelessWidget {
                       '${db.userById(c.childId)?.name ?? 'Family member'} · ${DateFormat('MMM d, h:mm a').format(c.approvedAt)}',
                     ),
                     trailing: Text(
-                      '+${c.spaces}',
-                      style: const TextStyle(color: AppColors.growthGreen, fontWeight: FontWeight.w800, fontSize: 16),
+                      '${c.spaces == 1 ? "+1 Space Earned!" : "+${c.spaces} Spaces Earned!"}',
+                      style: const TextStyle(
+                      color: AppColors.growthGreen, fontWeight: FontWeight.w800, fontSize: 13),
                     ),
                   ),
               ],
@@ -201,7 +202,10 @@ class _ProgressHeader extends StatelessWidget {
           children: [
             Text(
               '${milestone.position} of ${milestone.boardLength} spaces',
-              style: theme.textTheme.titleLarge,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontSize: 23,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const Spacer(),
             Text(
