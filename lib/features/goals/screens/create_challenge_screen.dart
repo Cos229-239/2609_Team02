@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/models/goal.dart';
 import '../models/challenge_draft.dart';
 import 'challenge_task_selection_screen.dart';
+import 'review_challenge_screen.dart';
 
 import 'package:provider/provider.dart';
 
@@ -18,7 +19,6 @@ class CreateChallengeScreen extends StatefulWidget {
 class _CreateChallengeScreenState extends State<CreateChallengeScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
-  final _targetController = TextEditingController();
   GoalType _selectedType = GoalType.family;
   GoalMetric _selectedMetric = GoalMetric.tasksCompleted;
   GoalPeriod _selectedPeriod = GoalPeriod.weekly;
@@ -27,7 +27,6 @@ class _CreateChallengeScreenState extends State<CreateChallengeScreen> {
   @override
   void dispose() {
     _titleController.dispose();
-    _targetController.dispose();
     super.dispose();
   }
 
@@ -105,23 +104,24 @@ class _CreateChallengeScreenState extends State<CreateChallengeScreen> {
             DropdownButtonFormField<GoalMetric>(
               initialValue: _selectedMetric,
               decoration: const InputDecoration(
-                labelText: 'Progress Metric',
-                border: OutlineInputBorder(),
-              ),
+  labelText: 'Challenge Goal',
+  helperText: 'Choose how this challenge will be completed.',
+  border: OutlineInputBorder(),
+),
               items: const [
-                DropdownMenuItem(
-                  value: GoalMetric.tasksCompleted,
-                  child: Text('Tasks Completed'),
-                ),
-                DropdownMenuItem(
-                  value: GoalMetric.xpEarned,
-                  child: Text('XP Earned'),
-                ),
-                DropdownMenuItem(
-                  value: GoalMetric.coinsEarned,
-                  child: Text('Coins Earned'),
-                ),
-              ],
+  DropdownMenuItem(
+    value: GoalMetric.tasksCompleted,
+    child: Text('Complete Specific Chores'),
+  ),
+  DropdownMenuItem(
+    value: GoalMetric.xpEarned,
+    child: Text('Earn XP'),
+  ),
+  DropdownMenuItem(
+    value: GoalMetric.coinsEarned,
+    child: Text('Earn Coins'),
+  ),
+],
               onChanged: (value) {
                 if (value != null) {
                   setState(() {
@@ -130,25 +130,7 @@ class _CreateChallengeScreenState extends State<CreateChallengeScreen> {
                 }
               },
             ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _targetController,
-              decoration: const InputDecoration(
-                labelText: 'Target Value',
-                hintText: 'e.g. 5',
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                final target = int.tryParse(value?.trim() ?? '');
-
-                if (target == null || target <= 0) {
-                  return 'Enter a positive whole number';
-                }
-
-                return null;
-              },
-            ),
+          
             const SizedBox(height: 16),
             DropdownButtonFormField<GoalPeriod>(
               initialValue: _selectedPeriod,
@@ -224,7 +206,7 @@ final draft = ChallengeDraft(
   title: _titleController.text.trim(),
   type: _selectedType,
   metric: _selectedMetric,
-  targetValue: int.parse(_targetController.text.trim()),
+  targetValue: 0,
   period: _selectedPeriod,
   participantIds: List<String>.of(_selectedParticipantIds),
 );
@@ -232,9 +214,9 @@ final draft = ChallengeDraft(
 
 Navigator.of(context).push(
   MaterialPageRoute<void>(
-    builder: (_) => ChallengeTaskSelectionScreen(
-      draft: draft,
-    ),
+    builder: (_) => _selectedMetric == GoalMetric.tasksCompleted
+        ? ChallengeTaskSelectionScreen(draft: draft)
+        : ReviewChallengeScreen(draft: draft),
   ),
 );
 

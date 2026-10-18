@@ -41,6 +41,26 @@ class GoalService {
 
   final FirebaseFirestore _firestore;
 
+  /// Finds XP and coin accumulation challenges for a household.
+  ///
+  /// The caller must still validate activity dates and participant eligibility
+  /// before recording contributions.
+  Future<List<Goal>> findAccumulationGoals({
+    required String householdId,
+  }) async {
+    final snapshot = await _firestore
+        .collection('households')
+        .doc(householdId)
+        .collection('goals')
+        .where(
+          'metric',
+          whereIn: [GoalMetric.xpEarned.name, GoalMetric.coinsEarned.name],
+        )
+        .get();
+
+    return snapshot.docs.map(Goal.fromFirestore).toList();
+  }
+
   /// Validates and prepares a contribution without writing anything.
   ///
   /// This allows other services to include goal progress in their

@@ -26,17 +26,44 @@ class _ChallengeTaskSelectionScreenState
   late final Set<String> _selectedTaskIds =
       widget.draft.selectedTaskIds.toSet();
 
-  ChallengeDraft _buildUpdatedDraft() {
-    return ChallengeDraft(
-      title: widget.draft.title,
-      type: widget.draft.type,
-      metric: widget.draft.metric,
-      targetValue: widget.draft.targetValue,
-      period: widget.draft.period,
-      participantIds: widget.draft.participantIds,
-      selectedTaskIds: _selectedTaskIds.toList(),
-    );
+  int _calculateSuggestedTarget(List<TaskModel> selectedTasks) {
+  switch (widget.draft.metric) {
+    case GoalMetric.tasksCompleted:
+      return selectedTasks.length;
+
+    case GoalMetric.xpEarned:
+      return selectedTasks.fold<int>(
+        0,
+        (total, task) => total + task.rewardXp,
+      );
+
+    case GoalMetric.coinsEarned:
+      return selectedTasks.fold<int>(
+        0,
+        (total, task) => total + task.coinReward,
+      );
   }
+}
+
+  ChallengeDraft _buildUpdatedDraft() {
+  final database = context.read<DatabaseService>();
+
+  final selectedTasks = database.tasks
+      .where((task) => _selectedTaskIds.contains(task.id))
+      .toList();
+
+  final suggestedTarget = _calculateSuggestedTarget(selectedTasks);
+
+  return ChallengeDraft(
+    title: widget.draft.title,
+    type: widget.draft.type,
+    metric: widget.draft.metric,
+    targetValue: suggestedTarget,
+    period: widget.draft.period,
+    participantIds: widget.draft.participantIds,
+    selectedTaskIds: _selectedTaskIds.toList(),
+  );
+}
 
   bool _isEligibleTask(TaskModel task) {
     return task.status == TaskStatus.pending &&
@@ -64,6 +91,15 @@ class _ChallengeTaskSelectionScreenState
     padding: const EdgeInsets.all(20),
     child: FilledButton(
       onPressed: () {
+  if (_selectedTaskIds.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Select at least one task to continue.'),
+      ),
+    );
+    return;
+  }
+
   final updatedDraft = _buildUpdatedDraft();
 
   Navigator.of(context).push(

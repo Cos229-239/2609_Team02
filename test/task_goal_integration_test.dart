@@ -718,5 +718,441 @@ test('parent completing a linked pending task advances its challenge', () async 
   expect(child.data()?['xp'], 50);
   expect(child.data()?['coins'], 10);
 });
+test(
+  'approving an unlinked task advances XP and coin challenges once',
+  () async {
+    final now = DateTime.now();
+
+    final goalsCollection = firestore
+        .collection('households')
+        .doc(householdId)
+        .collection('goals');
+
+    final xpGoalRef = goalsCollection.doc('xp-accumulation');
+    final coinGoalRef = goalsCollection.doc('coin-accumulation');
+
+    await xpGoalRef.set(
+      Goal(
+        id: 'xp-accumulation',
+        title: 'Earn 200 XP',
+        type: GoalType.family,
+        metric: GoalMetric.xpEarned,
+        period: GoalPeriod.weekly,
+        targetValue: 200,
+        startsAt: now.subtract(const Duration(days: 1)),
+        endsAt: now.add(const Duration(days: 6)),
+      ).toFirestore(),
+    );
+
+    await coinGoalRef.set(
+      Goal(
+        id: 'coin-accumulation',
+        title: 'Earn 100 Coins',
+        type: GoalType.family,
+        metric: GoalMetric.coinsEarned,
+        period: GoalPeriod.weekly,
+        targetValue: 100,
+        startsAt: now.subtract(const Duration(days: 1)),
+        endsAt: now.add(const Duration(days: 6)),
+      ).toFirestore(),
+    );
+
+    const task = TaskModel(
+      id: 'unlinked-task',
+      title: 'Clean the Kitchen',
+      assignedToUserId: childId,
+      rewardXp: 50,
+      coinReward: 15,
+      status: TaskStatus.completed,
+    );
+
+    final taskId = await databaseService.addTask(task);
+
+    await databaseService.approveTask(taskId);
+    await databaseService.approveTask(taskId);
+
+    final xpGoal = await xpGoalRef.get();
+    final coinGoal = await coinGoalRef.get();
+    final child = await firestore.collection('users').doc(childId).get();
+
+    expect(xpGoal.data()?['currentProgress'], 50);
+    expect(coinGoal.data()?['currentProgress'], 15);
+
+    expect(
+      (await xpGoalRef.collection('contributions').get()).docs,
+      hasLength(1),
+    );
+    expect(
+      (await coinGoalRef.collection('contributions').get()).docs,
+      hasLength(1),
+    );
+
+    expect(child.data()?['xp'], 50);
+    expect(child.data()?['coins'], 15);
+  },
+);
+
+test(
+  'one approval advances fixed chore XP and coin challenges',
+  () async {
+    final now = DateTime.now();
+
+    final goals = firestore
+        .collection('households')
+        .doc(householdId)
+        .collection('goals');
+
+    Future<void> createGoal(
+      String id,
+      GoalMetric metric,
+      int target,
+    ) async {
+      await goals.doc(id).set(
+        Goal(
+          id: id,
+          title: id,
+          type: GoalType.family,
+          metric: metric,
+          period: GoalPeriod.weekly,
+          targetValue: target,
+          startsAt: now.subtract(const Duration(days: 1)),
+          endsAt: now.add(const Duration(days: 6)),
+        ).toFirestore(),
+      );
+    }
+
+    await createGoal('fixed-goal', GoalMetric.tasksCompleted, 3);
+    await createGoal('xp-goal', GoalMetric.xpEarned, 200);
+    await createGoal('coin-goal', GoalMetric.coinsEarned, 100);
+
+    const task = TaskModel(
+      id: 'combined-task',
+      title: 'Clean the Kitchen',
+      assignedToUserId: childId,
+      goalId: 'fixed-goal',
+      rewardXp: 50,
+      coinReward: 15,
+      status: TaskStatus.completed,
+    );
+
+    final taskId = await databaseService.addTask(task);
+
+    await databaseService.approveTask(taskId);
+    await databaseService.approveTask(taskId);
+
+    expect(
+      (await goals.doc('fixed-goal').get()).data()?['currentProgress'],
+      1,
+    );
+    expect(
+      (await goals.doc('xp-goal').get()).data()?['currentProgress'],
+      50,
+    );
+    expect(
+      (await goals.doc('coin-goal').get()).data()?['currentProgress'],
+      15,
+    );
+
+    for (final id in ['fixed-goal', 'xp-goal', 'coin-goal']) {
+      final contributions =
+          await goals.doc(id).collection('contributions').get();
+
+      expect(contributions.docs, hasLength(1));
+      expect(contributions.docs.first.id, taskId);
+    }
+
+    final child = await firestore.collection('users').doc(childId).get();
+
+    expect(child.data()?['xp'], 50);
+    expect(child.data()?['coins'], 15);
+  },
+);
+
+test(
+  'approving a task does not advance an expired XP challenge',
+  () async {
+    final now = DateTime.now();
+
+    final goalRef = firestore
+        .collection('households')
+        .doc(householdId)
+        .collection('goals')
+        .doc('expired-xp-goal');
+
+    await goalRef.set(
+      Goal(
+        id: 'expired-xp-goal',
+        title: 'Expired XP Challenge',
+        type: GoalType.family,
+        metric: GoalMetric.xpEarned,
+        period: GoalPeriod.weekly,
+        targetValue: 200,
+        startsAt: now.subtract(const Duration(days: 8)),
+        endsAt: now.subtract(const Duration(days: 1)),
+      ).toFirestore(),
+    );
+
+    const task = TaskModel(
+      id: 'expired-task',
+      title: 'Wash the Dishes',
+      assignedToUserId: childId,
+      rewardXp: 50,
+      coinReward: 10,
+      status: TaskStatus.completed,
+    );
+
+    final taskId = await databaseService.addTask(task);
+
+    await databaseService.approveTask(taskId);
+
+    final updatedGoal = await goalRef.get();
+    final contribution = await goalRef
+        .collection('contributions')
+        .doc(taskId)
+        .get();
+
+    final child = await firestore.collection('users').doc(childId).get();
+
+    expect(updatedGoal.data()?['currentProgress'], 0);
+    expect(contribution.exists, isFalse);
+
+    // Normal chore rewards must still be awarded.
+    expect(child.data()?['xp'], 50);
+    expect(child.data()?['coins'], 10);
+  },
+);
+
+test(
+  'unlinked task does not advance another child individual XP challenge',
+  () async {
+    final now = DateTime.now();
+    const otherChildId = 'child-2';
+
+    await firestore.collection('households').doc(householdId).update({
+      'memberIds': ['parent-1', childId, otherChildId],
+    });
+
+    final goalRef = firestore
+        .collection('households')
+        .doc(householdId)
+        .collection('goals')
+        .doc('other-child-xp-goal');
+
+    await goalRef.set(
+      Goal(
+        id: 'other-child-xp-goal',
+        title: 'Child 2 XP Challenge',
+        type: GoalType.individual,
+        metric: GoalMetric.xpEarned,
+        period: GoalPeriod.weekly,
+        targetValue: 200,
+        participantIds: [otherChildId],
+        startsAt: now.subtract(const Duration(days: 1)),
+        endsAt: now.add(const Duration(days: 6)),
+      ).toFirestore(),
+    );
+
+    const task = TaskModel(
+      id: 'child-1-task',
+      title: 'Clean the Bedroom',
+      assignedToUserId: childId,
+      rewardXp: 50,
+      coinReward: 10,
+      status: TaskStatus.completed,
+    );
+
+    final taskId = await databaseService.addTask(task);
+
+    await databaseService.approveTask(taskId);
+
+    final updatedGoal = await goalRef.get();
+    final contribution = await goalRef
+        .collection('contributions')
+        .doc(taskId)
+        .get();
+
+    final child = await firestore.collection('users').doc(childId).get();
+
+    expect(updatedGoal.data()?['currentProgress'], 0);
+    expect(contribution.exists, isFalse);
+
+    // Child 1 still receives normal chore rewards.
+    expect(child.data()?['xp'], 50);
+    expect(child.data()?['coins'], 10);
+  },
+);
+
+test(
+  'unlinked task does not advance another household XP challenge',
+  () async {
+    final now = DateTime.now();
+    const otherHouseholdId = 'household-2';
+
+    await firestore.collection('households').doc(otherHouseholdId).set({
+      'name': 'Second Household',
+      'ownerId': 'parent-2',
+      'memberIds': ['parent-2', 'child-2'],
+    });
+
+    final otherGoalRef = firestore
+        .collection('households')
+        .doc(otherHouseholdId)
+        .collection('goals')
+        .doc('other-household-xp');
+
+    await otherGoalRef.set(
+      Goal(
+        id: 'other-household-xp',
+        title: 'Other Household XP Challenge',
+        type: GoalType.family,
+        metric: GoalMetric.xpEarned,
+        period: GoalPeriod.weekly,
+        targetValue: 200,
+        startsAt: now.subtract(const Duration(days: 1)),
+        endsAt: now.add(const Duration(days: 6)),
+      ).toFirestore(),
+    );
+
+    const task = TaskModel(
+      id: 'household-1-task',
+      title: 'Vacuum the Living Room',
+      assignedToUserId: childId,
+      rewardXp: 50,
+      coinReward: 10,
+      status: TaskStatus.completed,
+    );
+
+    final taskId = await databaseService.addTask(task);
+
+    await databaseService.approveTask(taskId);
+
+    final otherGoal = await otherGoalRef.get();
+    final contribution = await otherGoalRef
+        .collection('contributions')
+        .doc(taskId)
+        .get();
+
+    final child = await firestore.collection('users').doc(childId).get();
+
+    expect(otherGoal.data()?['currentProgress'], 0);
+    expect(contribution.exists, isFalse);
+
+    expect(child.data()?['xp'], 50);
+    expect(child.data()?['coins'], 10);
+  },
+);
+
+test(
+  'XP accumulation challenge completes when its target is reached',
+  () async {
+    final now = DateTime.now();
+
+    final goalRef = firestore
+        .collection('households')
+        .doc(householdId)
+        .collection('goals')
+        .doc('xp-completion-goal');
+
+    await goalRef.set(
+      Goal(
+        id: 'xp-completion-goal',
+        title: 'Earn 100 XP',
+        type: GoalType.family,
+        metric: GoalMetric.xpEarned,
+        period: GoalPeriod.weekly,
+        targetValue: 100,
+        startsAt: now.subtract(const Duration(days: 1)),
+        endsAt: now.add(const Duration(days: 6)),
+      ).toFirestore(),
+    );
+
+    const task = TaskModel(
+      id: 'completion-task',
+      title: 'Clean the Kitchen',
+      assignedToUserId: childId,
+      rewardXp: 150,
+      coinReward: 10,
+      status: TaskStatus.completed,
+    );
+
+    final taskId = await databaseService.addTask(task);
+
+    await databaseService.approveTask(taskId);
+
+    final updatedGoal = await goalRef.get();
+    final child = await firestore.collection('users').doc(childId).get();
+
+    expect(updatedGoal.data()?['currentProgress'], 100);
+    expect(updatedGoal.data()?['completedAt'], isNotNull);
+
+    // The challenge caps progress, but the child earns the full task reward.
+    expect(child.data()?['xp'], 150);
+    expect(child.data()?['coins'], 10);
+  },
+);
+
+test(
+  'completed XP challenge does not accept additional task contributions',
+  () async {
+    final now = DateTime.now();
+
+    final goalRef = firestore
+        .collection('households')
+        .doc(householdId)
+        .collection('goals')
+        .doc('completed-xp-goal');
+
+    await goalRef.set(
+      Goal(
+        id: 'completed-xp-goal',
+        title: 'Earn 100 XP',
+        type: GoalType.family,
+        metric: GoalMetric.xpEarned,
+        period: GoalPeriod.weekly,
+        targetValue: 100,
+        startsAt: now.subtract(const Duration(days: 1)),
+        endsAt: now.add(const Duration(days: 6)),
+      ).toFirestore(),
+    );
+
+    const firstTask = TaskModel(
+      id: 'first-task',
+      title: 'Clean the Kitchen',
+      assignedToUserId: childId,
+      rewardXp: 100,
+      coinReward: 10,
+      status: TaskStatus.completed,
+    );
+
+    const secondTask = TaskModel(
+      id: 'second-task',
+      title: 'Wash the Dishes',
+      assignedToUserId: childId,
+      rewardXp: 50,
+      coinReward: 5,
+      status: TaskStatus.completed,
+    );
+
+    final firstTaskId = await databaseService.addTask(firstTask);
+    final secondTaskId = await databaseService.addTask(secondTask);
+
+    await databaseService.approveTask(firstTaskId);
+    await databaseService.approveTask(secondTaskId);
+
+    final updatedGoal = await goalRef.get();
+    final contributions = await goalRef.collection('contributions').get();
+    final child = await firestore.collection('users').doc(childId).get();
+
+    expect(updatedGoal.data()?['currentProgress'], 100);
+    expect(updatedGoal.data()?['completedAt'], isNotNull);
+
+    expect(contributions.docs, hasLength(1));
+    expect(contributions.docs.first.id, firstTaskId);
+
+    // Both chores still award their normal rewards.
+    expect(child.data()?['xp'], 150);
+    expect(child.data()?['coins'], 15);
+  },
+);
   });
 }

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/models/goal.dart';
 import '../../../app/routes.dart';
+import 'package:flutter/services.dart';
 
 import '../models/challenge_draft.dart';
 import 'package:provider/provider.dart';
@@ -22,6 +23,23 @@ class ReviewChallengeScreen extends StatefulWidget {
 
 class _ReviewChallengeScreenState extends State<ReviewChallengeScreen> {
   bool _isCreating = false;
+  late final TextEditingController _targetController;
+
+  @override
+  void initState() {
+    super.initState();
+    _targetController = TextEditingController(
+      text: widget.draft.targetValue > 0
+          ? widget.draft.targetValue.toString()
+          : '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _targetController.dispose();
+    super.dispose();
+  }
 
 DateTime _calculateEndDate(DateTime startsAt) {
   switch (widget.draft.period) {
@@ -36,6 +54,26 @@ DateTime _calculateEndDate(DateTime startsAt) {
 Future<void> _createChallenge() async {
   if (_isCreating) return;
 
+  final isFixedChoreChallenge =
+    widget.draft.metric == GoalMetric.tasksCompleted;
+
+final target = isFixedChoreChallenge
+    ? widget.draft.selectedTaskIds.length
+    : int.tryParse(_targetController.text.trim());
+
+if (target == null || target <= 0) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        isFixedChoreChallenge
+            ? 'Select at least one chore for this challenge.'
+            : 'Enter a positive whole number for the target.',
+      ),
+    ),
+  );
+  return;
+}
+
   final startsAt = DateTime.now();
   final endsAt = _calculateEndDate(startsAt);
 
@@ -45,7 +83,7 @@ Future<void> _createChallenge() async {
     type: widget.draft.type,
     metric: widget.draft.metric,
     period: widget.draft.period,
-    targetValue: widget.draft.targetValue,
+    targetValue: target,
     startsAt: startsAt,
     endsAt: endsAt,
     participantIds: widget.draft.participantIds,
@@ -143,9 +181,30 @@ Text(
   }}',
 ),
 const SizedBox(height: 12),
-Text(
-  'Target: ${widget.draft.targetValue}',
-),
+if (widget.draft.metric == GoalMetric.tasksCompleted)
+  InputDecorator(
+    decoration: const InputDecoration(
+      labelText: 'Required Chores',
+      helperText: 'Automatically calculated from selected chores.',
+      border: OutlineInputBorder(),
+    ),
+    child: Text('${selectedTasks.length}'),
+  )
+else
+  TextFormField(
+    controller: _targetController,
+    keyboardType: TextInputType.number,
+    inputFormatters: [
+      FilteringTextInputFormatter.digitsOnly,
+    ],
+    decoration: InputDecoration(
+      labelText: widget.draft.metric == GoalMetric.xpEarned
+          ? 'Target XP'
+          : 'Target Coins',
+      helperText: 'Enter the amount to earn during this challenge.',
+      border: const OutlineInputBorder(),
+    ),
+  ),
 const SizedBox(height: 12),
 Text(
   'Duration: ${switch (widget.draft.period) {
@@ -166,20 +225,33 @@ if (widget.draft.type != GoalType.family)
       ),
     ),
 const SizedBox(height: 12),
-Text(
-  'Selected Tasks: ${widget.draft.selectedTaskIds.length}',
-),
-const SizedBox(height: 8),
-if (selectedTasks.isEmpty)
-  const Text('No existing tasks selected.')
-else
-  for (final task in selectedTasks)
-    Padding(
-      padding: const EdgeInsets.only(left: 16, bottom: 8),
-      child: Text(
-        '• ${task.title} (${task.rewardXp} XP, ${task.coinReward} Coins)',
+if (widget.draft.metric == GoalMetric.tasksCompleted) ...[
+  Text(
+    'Challenge Tasks',
+    style: Theme.of(context).textTheme.titleMedium,
+  ),
+  const SizedBox(height: 8),
+  Text(
+    'Total XP: ${selectedTasks.fold<int>(0, (total, task) => total + task.rewardXp)}',
+  ),
+  const SizedBox(height: 4),
+  Text(
+    'Total Coins: ${selectedTasks.fold<int>(0, (total, task) => total + task.coinReward)}',
+  ),
+  const SizedBox(height: 8),
+],
+if (widget.draft.metric == GoalMetric.tasksCompleted) ...[
+  if (selectedTasks.isEmpty)
+    const Text('No existing tasks selected.')
+  else
+    for (final task in selectedTasks)
+      Padding(
+        padding: const EdgeInsets.only(left: 16, bottom: 8),
+        child: Text(
+          '• ${task.title} (${task.rewardXp} XP, ${task.coinReward} Coins)',
+        ),
       ),
-    ),
+],
   ],
 ),
       ),

@@ -895,6 +895,13 @@ class DatabaseService extends ChangeNotifier {
     required Set<TaskStatus> from,
   }) async {
     final taskRef = _tasksCollection.doc(taskId);
+    final householdId = _householdId;
+
+    // Discover accumulation challenges before starting the approval transaction.
+    final accumulationGoals = householdId == null
+        ? <Goal>[]
+        : await GoalService(firestore: _firestore)
+              .findAccumulationGoals(householdId: householdId);
 
     await _firestore.runTransaction<void>((transaction) async {
       // Read the task first.
@@ -927,9 +934,9 @@ class DatabaseService extends ChangeNotifier {
       }
 
       // Prepare an eligible challenge contribution in this same transaction.
-      PreparedGoalContribution? preparedContribution;
+      final preparedContributions = <PreparedGoalContribution>[];
+      final goalService = GoalService(firestore: _firestore);
 
-      final householdId = _householdId;
       final goalId = task.goalId;
 
       if (householdId != null && assignedTo != null && goalId != null) {
@@ -941,7 +948,9 @@ class DatabaseService extends ChangeNotifier {
 
         final goalSnapshot = await transaction.get(goalRef);
 
-        if (goalSnapshot.exists) {
+        if (goalSnapshot.exists &&
+            Goal.fromFirestore(goalSnapshot).metric ==
+                GoalMetric.tasksCompleted) {
           final goal = Goal.fromFirestore(goalSnapshot);
 
           final amount = switch (goal.metric) {
@@ -950,23 +959,53 @@ class DatabaseService extends ChangeNotifier {
             GoalMetric.coinsEarned => task.coinReward,
           };
 
-          preparedContribution = await GoalService(firestore: _firestore)
-              .prepareContribution(
-                transaction: transaction,
-                householdId: householdId,
-                goalId: goalId,
-                existingGoalSnapshot: goalSnapshot,
-                contribution: GoalContribution(
-                  activityId: taskId,
-                  userId: assignedTo,
-                  amount: amount,
-                  activityType: GoalActivityType.taskApproval,
-                  recordedAt: approvalTime,
-                ),
-              );
+          final fixedChoreContribution = await goalService.prepareContribution(
+            transaction: transaction,
+            householdId: householdId,
+            goalId: goalId,
+            existingGoalSnapshot: goalSnapshot,
+            contribution: GoalContribution(
+              activityId: taskId,
+              userId: assignedTo,
+              amount: amount,
+              activityType: GoalActivityType.taskApproval,
+              recordedAt: approvalTime,
+            ),
+          );
+          if (fixedChoreContribution != null) {
+            preparedContributions.add(fixedChoreContribution);
+          }
         }
       }
+      // Prepare contributions for eligible XP and coin accumulation challenges.
+      if (householdId != null && assignedTo != null) {
+        for (final candidate in accumulationGoals) {
+          final amount = switch (candidate.metric) {
+            GoalMetric.xpEarned => task.rewardXp,
+            GoalMetric.coinsEarned => task.coinReward,
+            GoalMetric.tasksCompleted => 0,
+          };
 
+          if (amount <= 0) continue;
+
+          final contribution = await goalService.prepareContribution(
+            transaction: transaction,
+            householdId: householdId,
+            goalId: candidate.id,
+            contribution: GoalContribution(
+              activityId: taskId,
+              userId: assignedTo,
+              amount: amount,
+              activityType: GoalActivityType.taskApproval,
+              recordedAt: approvalTime,
+            ),
+          );
+
+          if (contribution != null) {
+            preparedContributions.add(contribution);
+          }
+        }
+      }
       // All Firestore reads are complete. Begin transaction writes.
       transaction.update(taskRef, approval);
 
@@ -981,7 +1020,9 @@ class DatabaseService extends ChangeNotifier {
       }
 
       // Challenge progress commits together with task approval and rewards.
-      preparedContribution?.apply(transaction);
+      for (final contribution in preparedContributions) {
+        contribution.apply(transaction);
+      }
     });
   }
 
