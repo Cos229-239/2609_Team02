@@ -100,6 +100,7 @@ export class World {
   // Syncs visuals that follow persistent state (owned items, night, etc).
   applyState(s) {
     const o = s.owned;
+    this.rex.setLevel(s.level);
     this.rex.hat.visible = !!o.hat && s.wearing?.hat !== false;
     this.room.ball.visible = !!o.ball;
     this.room.decor.plant.visible = !!o.plant;

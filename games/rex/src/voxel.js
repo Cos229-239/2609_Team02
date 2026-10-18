@@ -94,8 +94,25 @@ export class VoxelGrid {
     mesh.castShadow = shadow;
     mesh.receiveShadow = true;
     mesh.frustumCulled = false;
+    // Kept so repaint() can recolour the mesh later without rebuilding it.
+    mesh.userData.voxels = list;
+    mesh.userData.jitter = jitter;
     return mesh;
   }
+}
+
+// Recolours a mesh made by VoxelGrid.build: fn(originalColor) → new colour.
+// Always maps from the colours the grid was built with, so it can be re-run.
+export function repaint(mesh, fn) {
+  const { voxels, jitter } = mesh.userData;
+  if (!voxels || !mesh.isInstancedMesh) return;
+  const col = new THREE.Color();
+  voxels.forEach((v, i) => {
+    col.set(fn(v.c));
+    if (jitter) col.offsetHSL(0, 0, (hash3(v.x, v.y, v.z) - 0.5) * jitter);
+    mesh.setColorAt(i, col);
+  });
+  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
 }
 
 // Builds `grid` as a child group whose origin sits at `pivot` (voxel coords),

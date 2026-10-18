@@ -1,7 +1,7 @@
 // Rex: a jointed voxel T-rex (hips → body → head/jaw/eyes/arms, legs, 4-part
 // tail) plus the fossil he turns into and the optional Ptero Pal.
 import * as THREE from 'three';
-import { VoxelGrid, jointPart } from './voxel.js';
+import { VoxelGrid, jointPart, repaint } from './voxel.js';
 
 const S = 0.1; // world units per voxel
 
@@ -14,6 +14,25 @@ const WHITE = 0xffffff;
 const BLACK = 0x141414;
 const CAP = 0x2f7be6; // matches the 🧢 store icon
 const CAP_DARK = 0x1d55b0;
+
+// Rex's scales change colour as he levels up (he shares the child's level).
+// Only the green scales change; belly, teeth, eyes and the cap stay put.
+export const REX_COLORS = [
+  { level: 1, name: 'Green', base: GREEN, dark: GREEN_DARK, light: GREEN_LIGHT },
+  { level: 2, name: 'Teal', base: 0x1fa89a, dark: 0x13736a, light: 0x4ccbbb },
+  { level: 3, name: 'Purple', base: 0x8a4fd6, dark: 0x5e329e, light: 0xac80f0 },
+  { level: 4, name: 'Red', base: 0xd8433a, dark: 0x9a2923, light: 0xf0736a },
+  { level: 5, name: 'Gold', base: 0xe6b12a, dark: 0xb07f16, light: 0xf6d566 },
+];
+
+export function rexColorFor(level = 1) {
+  let pick = REX_COLORS[0];
+  for (const c of REX_COLORS) if (level >= c.level) pick = c;
+  return pick;
+}
+
+// Latest level seen, so Rexes built later (minigames) start in the right colour.
+let currentLevel = 1;
 
 const skin = (x, y, z, nx, ny, nz) => {
   if (nz > 0.6 && ny < 0.5 && Math.abs(nx) < 0.5) return BELLY;
@@ -59,6 +78,17 @@ export class Rex {
     this.sickTint = new THREE.Color(0.7, 0.84, 0.42);
     this.white = new THREE.Color(1, 1, 1);
     this.build();
+    this.setLevel(currentLevel);
+  }
+
+  // Repaints the scales for this level's colour (no-op if it hasn't changed).
+  setLevel(level) {
+    currentLevel = level;
+    const color = rexColorFor(level);
+    if (color === this.color) return;
+    this.color = color;
+    const swap = { [GREEN]: color.base, [GREEN_DARK]: color.dark, [GREEN_LIGHT]: color.light };
+    this.root.traverse((o) => { if (o.isInstancedMesh) repaint(o, (c) => swap[c] ?? c); });
   }
 
   build() {

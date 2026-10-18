@@ -6,6 +6,7 @@ import { STORE_ITEMS, STORE_TABS, CARE } from './data.js';
 import { sfx, unlockAudio, setSound } from './audio.js';
 import { renderIcons } from './icons.js';
 import { Director } from './minigames/director.js';
+import { rexColorFor } from './rex.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -383,7 +384,14 @@ game.onEvent((type, d) => {
     sfx.coin();
     if (game.state.status !== 'fossil') { animate('happy', 1.4); fxAtRex(CARE[d.care]?.icon || '⭐', 3, 90); }
   }
-  if (type === 'levelUp') { sfx.levelUp(); toast(`🎉 Level up! Rex is now level ${d.level}!`, 'good'); fxAtRex('⭐', 6, 140); }
+  if (type === 'levelUp') {
+    sfx.levelUp();
+    const color = rexColorFor(d.level);
+    const newColor = color !== rexColorFor(d.level - 1);
+    toast(newColor ? `🎉 Level ${d.level}! Rex turned ${color.name.toLowerCase()}!` : `🎉 Level up! Rex is now level ${d.level}!`, 'good');
+    fxAtRex(newColor ? '✨' : '⭐', newColor ? 10 : 6, 140);
+    if (newColor && game.state.status !== 'fossil') animate('happy', 1.6);
+  }
   if (type === 'dig') { sfx.dig(); world.shakeFossil(); toast(`⛏️ Digging… ${d.digs} / ${d.needed}`); }
   if (type === 'revived') {
     sfx.revive();
@@ -557,6 +565,7 @@ document.addEventListener('click', (e) => {
 
 function debug(k) {
   if (k === 'coins') { game.state.coins += 200; game.changed(); }
+  if (k === 'level') { game.state.level += 1; game.emit('levelUp', { level: game.state.level }); game.changed(); }
   if (k === 'tasks') game.refillDemoTasks();
   if (k === 'sick') game.debugSick();
   if (k === 'fossil') game.debugFossil();
