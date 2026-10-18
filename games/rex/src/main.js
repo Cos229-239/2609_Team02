@@ -215,11 +215,11 @@ function render() {
     e.textContent = n;
     e.classList.toggle('zero', n === 0);
   });
-  const dis = { feed: !inv.treat, play: !s.owned.ball || s.status === 'sick', wash: !inv.soap, medicine: !inv.medicine, sleep: false };
+  const dis = { feed: !inv.treat, play: !s.owned.ball || s.status === 'sick', wash: !inv.soap, medicine: false, sleep: false };
   $$('.act').forEach((b) => {
     const a = b.dataset.act;
     b.classList.toggle('disabled', fossil || dis[a] || (s.sleeping && a !== 'sleep'));
-    b.classList.toggle('alert', a === 'medicine' && s.status === 'sick' && !!inv.medicine);
+    b.classList.toggle('alert', a === 'medicine' && s.status === 'sick');
   });
   $('#sleepIcon').textContent = s.sleeping ? '☀️' : '🌙';
   $('#sleepLabel').textContent = s.sleeping ? 'Wake' : 'Sleep';
@@ -326,6 +326,11 @@ const FAIL = {
 };
 
 function doAction(act) {
+  if (['feed', 'play', 'wash', 'medicine'].includes(act)) {
+    const reason = director.startCare(act);
+    if (reason && reason !== 'busy') { sfx.bad(); toast(FAIL[reason] || 'Not now', 'bad'); }
+    return;
+  }
   let r;
   if (act === 'feed') r = game.feed();
   else if (act === 'play') r = game.playBall();
@@ -589,6 +594,9 @@ $('#gameLayer').addEventListener('pointerdown', (e) => {
   if (e.target.closest('button, [role=button]')) return;
   director.pointer(e.clientX, e.clientY);
 });
+window.addEventListener('pointermove', (e) => { if (director.active) director.pointerMove(e.clientX, e.clientY); });
+window.addEventListener('pointerup', (e) => { if (director.active) director.pointerUp(e.clientX, e.clientY); });
+window.addEventListener('pointercancel', (e) => { if (director.active) director.pointerUp(e.clientX, e.clientY); });
 $('#setSound').addEventListener('change', (e) => { game.setSetting('sound', e.target.checked); setSound(e.target.checked); });
 $('#setPixel').addEventListener('click', (e) => {
   const v = +e.target.dataset.v; if (!v) return;
@@ -612,6 +620,9 @@ const bridge = {
 };
 const director = new Director({ world, game, bridge, sfx, toast, embedded });
 director.renderBadge();
+director.onGoStore = () => setPage(0);
+// ?test=1 exposes the director for automated play-tests.
+if (params.get('test') === '1') window.__rex = { director, game, world };
 
 // Incoming: the host app calls these.
 window.RexGame = {

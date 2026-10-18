@@ -5,11 +5,13 @@
 // it answers RexGame.launchGame({ ok, gameId, sessionId, seed, settings,
 // baseXp, attempt }), and we post `gameFinished` with the outcome counters
 // (the same ones the old Flutter games sent; the server validates them).
-import { GAMES, GAME_IDS, GameHud, readSettings, readMultiplier, performance as perfOf, xpPreview } from './common.js';
+import { GAMES, GAME_IDS, GameHud, readSettings, readMultiplier, performance as perfOf, xpPreview, DIFFICULTIES, difficultyOf, practiceSettings } from './common.js';
 import { RunGame } from './run.js';
 import { MemoryGame } from './memory.js';
 import { BalloonGame } from './balloons.js';
 import { DanceGame } from './dance.js';
+import { CARE_SCENES } from '../care/index.js';
+import { CARE_INFO } from '../care/common.js';
 
 const CLASSES = { jumpAndRun: RunGame, matchPairs: MemoryGame, balloonPopper: BalloonGame, memoryRun: DanceGame };
 const MAX_ATTEMPTS = 2; // MiniGameSession.maxAttempts
@@ -64,15 +66,114 @@ export class Director {
           <span class="btn green">Play</span></button>`;
       }).join('')
       : `<div class="empty small"><span class="big">📋</span>Finish a task and a grown-up's approval unlocks a bonus game!</div>`;
+    $('#practiceDifficulty').innerHTML = this.difficultyPicker();
     $('#practiceGrid').innerHTML = GAME_IDS.map((id) => {
       const g = GAMES[id];
       return `<button class="practice-tile" data-game="${id}" style="--c:${g.color}"><span class="g-ico">${g.icon}</span><b>${g.title}</b><small>${g.blurb}</small></button>`;
     }).join('');
   }
 
+  get difficulty() { return difficultyOf(this.game.state.settings.practiceDifficulty).id; }
+
+  difficultyPicker() {
+    const cur = this.difficulty;
+    return DIFFICULTIES.map((d) => `<button class="${d.id === cur ? 'on' : ''}" data-game-act="diff-${d.id}" aria-pressed="${d.id === cur}"><span>${d.icon}</span>${d.label}</button>`).join('');
+  }
+
+  setDifficulty(id) {
+    const d = difficultyOf(id).id;
+    if (d === this.difficulty) return;
+    this.game.state.settings.practiceDifficulty = d;
+    this.game.save();
+    this.sfx.tap();
+    if (!$('#gamesModal').hidden) $('#practiceDifficulty').innerHTML = this.difficultyPicker();
+    // On a practice result card: the next "Play again" uses the new level.
+    const c = this.current;
+    if (c && !c.rewarded && this.phase === 'result') {
+      c.difficulty = d;
+      c.settings = practiceSettings(c.gameId, d);
+      this.showResult();
+    }
+  }
+
   maxMultLabel() {
     const m = readMultiplier(this.games.settings);
     return `${(m.maxPct / 100).toString()}×`;
+  }
+
+  // ---------------------------------------------------------------- care scenes
+
+  // Feed / Play / Wash / Medicine: Rex bounces, the shutter closes on him and
+  // a care scene opens. Returns a FAIL reason when the scene can't open.
+  startCare(act) {
+    if (this.active || !CARE_SCENES[act]) return 'busy';
+    const reason = this.game.careCheck(act);
+    if (reason) return reason;
+    this.closeMenu();
+    this.phase = 'launching';
+    this.trans = null;
+    this.payload = null;
+    this.entered = false;
+    document.body.classList.add('launching');
+    const rex = this.world.rex;
+    rex.actionUntil = null;
+    rex.play('bounce', 1.6, 'bounce');
+    this.sfx.happy();
+    setTimeout(() => {
+      if (this.phase !== 'launching') return;
+      this.sfx.iris();
+      this.iris(0, this.world.rexHeadScreen(), 560).then(() => this.enterCare(act));
+    }, 750);
+    return null;
+  }
+
+  enterCare(act) {
+    if (this.phase !== 'launching') return;
+    const info = CARE_INFO[act];
+    this.current = { care: act, rewarded: false };
+    this.layer.querySelector('#gameResult').hidden = true;
+    this.hud.setExtra('');
+    this.hud.setProgress(null);
+    this.hud.setStats('');
+    this.hud.clearCare();
+    this.hud.setHeader(info.icon, info.title, info.color);
+    this.instance = new CARE_SCENES[act]({
+      game: this.game,
+      hud: this.hud,
+      sfx: this.sfx,
+      onFinish: (r) => this.careFinish(r),
+    });
+    this.world.setOverlay(this.instance);
+    this.resetRoomRex();
+    document.body.classList.remove('launching');
+    document.body.classList.add('in-game');
+    this.phase = 'playing';
+    this.iris(1.5, null, 520).then(() => this.instance?.start());
+  }
+
+  // r: { icon, title, line, gain } shows a card; { back: true } goes home.
+  careFinish(r = {}) {
+    if (this.phase !== 'playing') return;
+    if (r.back) { this.backToRoom(); return; }
+    this.phase = 'result';
+    this.hud.clearCare();
+    this.hud.setProgress(null);
+    const el = this.layer.querySelector('#gameResult');
+    el.innerHTML = `<div class="result-card">
+      <div class="care-big">${r.icon || '⭐'}</div>
+      <h3>${esc(r.title || 'Great job!')}</h3>
+      <p class="result-line">${esc(r.line || '')}</p>
+      ${r.gain ? `<div class="care-gain">${r.gain}</div>` : ''}
+      <div class="result-actions"><button class="btn green" data-game-act="back">Back to Rex</button></div></div>`;
+    el.hidden = false;
+  }
+
+  pointerMove(x, y) {
+    if (this.phase === 'playing') this.instance?.pointerMove?.(x, y);
+  }
+
+  pointerUp(x, y) {
+    if (this.phase === 'playing') this.instance?.pointerUp?.(x, y);
   }
 
   // ---------------------------------------------------------------- launch
@@ -129,9 +230,13 @@ export class Director {
     if (!this.payload || !this.trans?.closed || this.entered) return;
     this.entered = true;
     const p = this.payload;
-    const settings = readSettings(p.gameId, p.settings || {});
+    // Practice uses the child's chosen difficulty; bonus games use the
+    // parent's settings (the server checks those results).
+    const difficulty = p.sessionId ? null : this.difficulty;
+    const settings = difficulty ? practiceSettings(p.gameId, difficulty) : readSettings(p.gameId, p.settings || {});
     this.current = {
       ...p,
+      difficulty,
       settings,
       multiplier: readMultiplier(p.settings || {}),
       rewarded: !!p.sessionId,
@@ -196,11 +301,14 @@ export class Director {
 
   act(name) {
     if (name === 'replay') this.instance?.replay?.();
+    if (name.startsWith('care-')) { if (this.phase === 'playing') this.instance?.act?.(name.slice(5)); return; }
+    if (name === 'store') { this.backToRoom(); this.onGoStore?.(); return; }
     if (name === 'quit') this.quit();
     if (name === 'back') this.backToRoom();
     if (name === 'again') this.playAgain();
     if (name === 'leave') this.leave();
     if (name === 'stay') this.layer.querySelector('#gameConfirm').hidden = true;
+    if (name.startsWith('diff-')) this.setDifficulty(name.slice(5));
   }
 
   // ---------------------------------------------------------------- results
@@ -241,7 +349,11 @@ export class Director {
     }[c.gameId];
     const stars = r.perf >= 0.99 ? 3 : r.perf >= 0.5 ? 2 : r.perf > 0 ? 1 : 0;
     let xp;
-    if (!c.rewarded) xp = '<p class="xp-line muted">Practice round: no XP. Finish tasks to unlock bonus games!</p>';
+    if (!c.rewarded) {
+      const d = difficultyOf(c.difficulty);
+      xp = `<p class="xp-line muted">${d.icon} ${d.label} practice: no XP. Finish tasks to unlock bonus games!</p>
+        <div class="seg diff-seg result-diff">${this.difficultyPicker()}</div>`;
+    }
     else if (r.host?.error) xp = `<p class="xp-line bad">${esc(r.host.error)}</p>`;
     else {
       const pct = r.host?.multiplierPct ?? r.preview.pct;
@@ -272,7 +384,8 @@ export class Director {
   }
 
   quit() {
-    if (this.phase !== 'playing') { this.backToRoom(); return; }
+    // Care scenes: nothing is used up until the end, so just go home.
+    if (this.phase !== 'playing' || this.current?.care) { this.backToRoom(); return; }
     const c = this.current;
     const last = c.rewarded && (c.attempt || 1) >= MAX_ATTEMPTS;
     const msg = !c.rewarded
@@ -322,6 +435,9 @@ export class Director {
       this.world.setOverlay(null);
       this.layer.querySelector('#gameResult').hidden = true;
       this.layer.querySelector('#gameConfirm').hidden = true;
+      this.hud.clearCare();
+      this.hud.setStats('');
+      this.current = null;
       document.body.classList.remove('in-game');
       this.resetRoomRex();
       this.phase = 'idle';

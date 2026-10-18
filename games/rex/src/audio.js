@@ -64,4 +64,13 @@ export const sfx = {
   lose: () => [392, 330, 262].forEach((f, i) => tone(f, 0.22, { at: i * 0.16, type: 'triangle', vol: 0.09 })),
   tick: () => tone(1200, 0.03, { vol: 0.03 }),
   iris: () => tone(600, 0.35, { type: 'sine', slide: -450, vol: 0.06 }),
+  // Care scenes
+  sizzle: () => noise(0.14, 0.03),
+  ding: () => { tone(1568, 0.25, { type: 'sine', vol: 0.08 }); tone(2093, 0.4, { type: 'sine', vol: 0.06, at: 0.12 }); },
+  water: () => noise(0.09, 0.025),
+  scrub: () => noise(0.05, 0.035),
+  squeak: () => tone(1500, 0.05, { type: 'triangle', slide: 400, vol: 0.03 }),
+  throw: () => { noise(0.1, 0.05); tone(500, 0.15, { type: 'sine', slide: 300, vol: 0.04 }); },
+  bounce: () => tone(220, 0.08, { type: 'sine', slide: -60, vol: 0.08 }),
+  heartbeat: () => { tone(70, 0.1, { type: 'sine', vol: 0.18 }); tone(65, 0.12, { type: 'sine', vol: 0.14, at: 0.2 }); },
 };

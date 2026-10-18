@@ -392,6 +392,10 @@ body.in-game #bubble, body.launching #bubble { display: none !important; }
 .bonus-row small { color: var(--ink-soft); font-size: 12px; }
 .bonus-row .btn { padding: 8px 14px; }
 .g-ico { font-size: 30px; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 14px; background: color-mix(in srgb, var(--c) 22%, transparent); flex: none; }
+.diff-seg { margin-bottom: 8px; }
+.diff-seg button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 8px 6px; font-size: 14px; }
+.diff-seg button.on { background: var(--green, #43a047); }
+.result-diff { margin: 10px auto 0; max-width: 300px; }
 .practice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .practice-tile {
   display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px; border-radius: 16px; text-align: center;
@@ -442,6 +446,52 @@ body.in-game #gameLayer { display: block; }
 .xp-line .mult { background: #7b5cf0; color: #fff; border-radius: 999px; padding: 2px 8px; font-size: 13px; margin-left: 4px; }
 .xp-note { margin: 4px 0 0; font-size: 13px; color: var(--ink-soft); }
 .result-actions { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
+
+/* Care scenes */
+.game-coach {
+  position: absolute; left: 50%; top: calc(80px + var(--safe-t)); transform: translateX(-50%); max-width: calc(100% - 32px);
+  background: color-mix(in srgb, var(--card) 94%, transparent); color: var(--ink); font-weight: 700; font-size: 16px; text-align: center;
+  padding: 8px 16px; border-radius: 999px; box-shadow: var(--shadow); pointer-events: none;
+}
+.game-coach[hidden] { display: none; }
+.game-coach.pop { animation: coachPop .3s; }
+@keyframes coachPop { 0% { transform: translateX(-50%) scale(.85); opacity: 0; } }
+.game-tools {
+  position: absolute; left: 50%; bottom: calc(16px + var(--safe-b)); transform: translateX(-50%);
+  display: flex; gap: 6px; padding: 6px; border-radius: 22px; background: rgba(19,33,74,.72); box-shadow: var(--shadow); pointer-events: none;
+}
+.game-tools[hidden] { display: none; }
+.game-tools .tool { width: 58px; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 5px 0 4px; border-radius: 16px; color: #fff; opacity: .55; }
+.game-tools .tool span { font-size: 24px; line-height: 1.1; }
+.game-tools .tool small { font-size: 11px; font-weight: 700; }
+.game-tools .tool.now { background: var(--game-color); opacity: 1; transform: scale(1.08); }
+.game-tools .tool.done { opacity: .9; }
+.game-dialog {
+  position: absolute; left: 50%; bottom: calc(14px + var(--safe-b)); transform: translateX(-50%); width: min(calc(100% - 24px), 520px);
+  display: flex; gap: 10px; align-items: flex-start; background: var(--card); color: var(--ink);
+  border-radius: 22px; padding: 12px 14px; box-shadow: var(--shadow);
+}
+.game-dialog[hidden] { display: none; }
+.game-dialog.pop { animation: toastIn .3s; }
+.dlg-who { font-size: 40px; line-height: 1; flex: none; }
+.dlg-main { flex: 1; min-width: 0; }
+.dlg-main b { color: var(--game-color); font-size: 14px; }
+.dlg-main p { margin: 2px 0 0; font-size: 16px; line-height: 1.35; font-weight: 600; }
+.dlg-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; justify-content: flex-end; }
+.dlg-btns .btn { padding: 9px 16px; }
+.game-cursor {
+  position: absolute; left: -100px; top: -100px; transform: translate(-50%, -60%) rotate(-12deg); font-size: 46px; pointer-events: none;
+  filter: drop-shadow(0 3px 2px rgba(0,0,0,.3)); transition: transform .1s;
+}
+.game-cursor[hidden] { display: none; }
+.game-cursor.active { transform: translate(-50%, -60%) rotate(8deg) scale(1.12); }
+.game-cursor.towel {
+  width: 64px; height: 44px; border-radius: 10px;
+  background: repeating-linear-gradient(90deg, #ff9db5 0 10px, #fff 10px 14px, #ffc2d1 14px 24px);
+  box-shadow: inset 0 -6px 0 rgba(0,0,0,.08);
+}
+.care-big { font-size: 64px; line-height: 1; margin-top: 4px; }
+.care-gain { display: inline-flex; gap: 10px; margin: 2px 0 0; padding: 6px 14px; border-radius: 999px; background: color-mix(in srgb, var(--game-color) 16%, transparent); font-weight: 700; }
 
 /* Iris shutter */
 #iris {

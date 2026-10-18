@@ -46,7 +46,7 @@ function freshState(embedded) {
     // only knows pending/completed/approved) doesn't offer them again.
     claimedIds: [],
     lastTick: Date.now(),
-    settings: { sound: true, pixel: 2, speed: 1, demo: !embedded },
+    settings: { sound: true, pixel: 2, speed: 1, demo: !embedded, practiceDifficulty: 'medium' },
     seenHint: false,
   };
 }
@@ -281,6 +281,31 @@ export class Game {
     return this.state.status !== 'fossil';
   }
 
+  // Can this care scene open? Returns a FAIL reason, or null. Nothing is
+  // used up here: the item is spent when the child finishes the scene.
+  careCheck(act) {
+    const s = this.state;
+    if (!this.canAct()) return 'fossil';
+    if (s.sleeping) return 'sleeping';
+    if (act === 'feed') {
+      if (s.needs.hunger > 95) return 'full';
+      if (!s.inventory.treat) return 'noTreat';
+    } else if (act === 'play') {
+      if (!s.owned.ball) return 'noBall';
+      if (s.status === 'sick') return 'sick';
+      if (s.needs.energy < 15) return 'tired';
+    } else if (act === 'wash') {
+      if (!s.inventory.soap) return 'noSoap';
+    }
+    // The nurse always sees Rex, medicine or not.
+    return null;
+  }
+
+  // The nurse's check-up: sick, or health low enough to treat.
+  needsMedicine() {
+    return this.state.status === 'sick' || this.state.health < 60;
+  }
+
   feed() {
     const s = this.state;
     if (!this.canAct()) return { ok: false, reason: 'fossil' };
@@ -326,7 +351,7 @@ export class Game {
     const s = this.state;
     if (!this.canAct()) return { ok: false, reason: 'fossil' };
     if (!s.inventory.medicine) return { ok: false, reason: 'noMedicine' };
-    if (s.status !== 'sick' && s.health > 90) return { ok: false, reason: 'healthy' };
+    if (!this.needsMedicine()) return { ok: false, reason: 'healthy' };
     s.inventory.medicine -= 1;
     s.health = clamp(Math.max(s.health + 35, RECOVER_ABOVE + 1));
     this.updateStatus();

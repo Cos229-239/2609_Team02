@@ -33,6 +33,28 @@ auto-approval, and `?debug=1` shows an input-event log.
 - Settings has a time-speed switch (60× / 600×) and demo tools: add coins,
   make Rex sick, fossilize him, or reset the game.
 
+## Care scenes (`src/care/`)
+
+Feed, Play, Wash and Medicine each open a short scene: Rex bounces, the
+shutter closes on him, and the scene plays in place of the room. The item
+(treat, soap, medicine) is only used up when the child finishes; leaving
+early (✕) costs nothing. `Game.careCheck(act)` decides whether a scene can
+open (e.g. no treats → toast).
+
+- **Kitchen** (`kitchen.js`): tap the leg bone into the pan, press and hold
+  to heat it (release at "Just right!" for a perfect cook; too long and it's
+  crispy), then drag it to Rex or tap him.
+- **Backyard** (`yard.js`): swipe up to throw (or tap a spot on the grass);
+  Rex fetches and drops the ball back. Three fetches.
+- **Bath** (`bath.js`): rub over Rex for each step: hose, soap (mud turns to
+  foam), hose the foam off, brush teeth (mouth open), towel dry.
+- **Nurse's office** (`nurse.js`): always opens, medicine or not. Nurse Penny
+  explains that Rex gets sick when tasks aren't done, checks him, then says
+  he's healthy, explains how to get Dino Medicine, or asks to treat him.
+
+`?test=1` exposes `window.__rex` (director, game, world) for automated
+play-tests.
+
 ## In the Flutter app
 
 The Home tab shows a "Visit Rex" card (`lib/features/rex/widgets/rex_room_card.dart`)

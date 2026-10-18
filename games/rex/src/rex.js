@@ -288,6 +288,17 @@ export class Rex {
       bodyLean = 0.12; eyeOpen = 0.45; tailAmp = 0.06; tailSpd = 0.9;
       breatheSpd = 1.3; shiver = Math.sin(t * 30) * 0.012; armSwing = 0;
       tint = this.sickTint;
+    } else if (mode === 'bounce') {
+      // Big excited hops (before a care scene).
+      hop = Math.abs(Math.sin(this.modeTime * 7)) * 0.9;
+      armsUp = 1.1; jawOpen = 0.35; tailAmp = 0.6; tailSpd = 10; headPitch = -0.15;
+    } else if (mode === 'brush') {
+      headPitch = -0.3; jawOpen = 0.6; eyeOpen = 0.35; tailAmp = 0.3; tailSpd = 4; armSwing = 0;
+    } else if (mode === 'shake') {
+      sway = Math.sin(t * 34) * 0.16; shiver = Math.sin(t * 40) * 0.03;
+      eyeOpen = 0.2; tailAmp = 0.7; tailSpd = 18; jawOpen = 0.1;
+    } else if (mode === 'sit') {
+      tailAmp = 0.15; tailSpd = 1.6; headPitch = Math.sin(t * 1.1) * 0.04 - 0.05;
     } else if (mode === 'sneeze') {
       const k = this.modeTime;
       headPitch = k < 0.5 ? -0.35 * (k / 0.5) : 0.45;

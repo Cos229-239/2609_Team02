@@ -65,6 +65,40 @@ export function readSettings(gameId, raw = {}) {
   return {};
 }
 
+// Practice rounds (no XP) let the child pick a difficulty. Values go through
+// readSettings, so they stay inside the same ranges as bonus games.
+// Same numbers as DifficultyPreset in lib/core/models/mini_game_settings.dart;
+// Medium matches the default settings.
+export const DIFFICULTIES = [
+  { id: 'easy', label: 'Easy', icon: '🐣' },
+  { id: 'medium', label: 'Medium', icon: '🦖' },
+  { id: 'hard', label: 'Hard', icon: '🔥' },
+];
+const PRACTICE = {
+  easy: {
+    balloonPopper: { targetCount: 10, timeLimitSec: 40 },
+    matchPairs: { pairs: 4, maxMisses: 4 },
+    jumpAndRun: { durationSec: 25, obstacleDensity: 1, collectibleFrequency: 3 },
+    memoryRun: { targetLength: 5, speed: 1 },
+  },
+  medium: {
+    balloonPopper: { targetCount: 15, timeLimitSec: 30 },
+    matchPairs: { pairs: 6, maxMisses: 3 },
+    jumpAndRun: { durationSec: 30, obstacleDensity: 2, collectibleFrequency: 2 },
+    memoryRun: { targetLength: 8, speed: 2 },
+  },
+  hard: {
+    balloonPopper: { targetCount: 25, timeLimitSec: 30 },
+    matchPairs: { pairs: 8, maxMisses: 3 },
+    jumpAndRun: { durationSec: 40, obstacleDensity: 3, collectibleFrequency: 2 },
+    memoryRun: { targetLength: 15, speed: 3 },
+  },
+};
+export const difficultyOf = (id) => DIFFICULTIES.find((d) => d.id === id) || DIFFICULTIES[1];
+export function practiceSettings(gameId, difficulty) {
+  return readSettings(gameId, { [gameId]: PRACTICE[difficultyOf(difficulty).id][gameId] });
+}
+
 export function readMultiplier(raw = {}) {
   const m = section(raw.multiplier);
   const minPct = readInt(m.minPct, 100, 150, 100);
@@ -193,6 +227,75 @@ export class GameHud {
     this.msg = root.querySelector('#gameMsg');
     this.extra = root.querySelector('#gameExtra');
     this.progress = root.querySelector('#gameProgress');
+    this.coachEl = root.querySelector('#gameCoach');
+    this.toolsEl = root.querySelector('#gameTools');
+    this.dialogEl = root.querySelector('#gameDialog');
+    this.cursorEl = root.querySelector('#gameCursor');
+  }
+
+  // ---- care scenes
+
+  setHeader(icon, title, color) {
+    this.root.querySelector('#gameTitle').innerHTML = `<span>${icon}</span>${title}`;
+    this.root.style.setProperty('--game-color', color);
+  }
+
+  // Persistent instruction under the top bar.
+  setCoach(text) {
+    if (!this.coachEl) return;
+    if (this.coachEl.textContent === (text || '') && !this.coachEl.hidden === !!text) return;
+    this.coachEl.textContent = text || '';
+    this.coachEl.hidden = !text;
+    this.coachEl.classList.remove('pop');
+    void this.coachEl.offsetWidth;
+    this.coachEl.classList.add('pop');
+  }
+
+  // Step chips at the bottom: [{ icon, label, state: 'done'|'now'|'todo' }].
+  setTools(list) {
+    if (!this.toolsEl) return;
+    this.toolsEl.hidden = !list;
+    this.toolsEl.innerHTML = (list || []).map((s) =>
+      `<div class="tool ${s.state}"><span>${s.state === 'done' ? '✅' : s.icon}</span><small>${s.label}</small></div>`).join('');
+  }
+
+  // Speech card: { who, name, text, buttons: [{ label, act, kind }] } or null.
+  setDialog(d) {
+    if (!this.dialogEl) return;
+    this.dialogEl.hidden = !d;
+    if (!d) { this.dialogEl.innerHTML = ''; return; }
+    const btns = (d.buttons || []).map((b) => `<button class="btn ${b.kind || ''}" data-game-act="${b.act}">${b.label}</button>`).join('');
+    this.dialogEl.innerHTML = `<div class="dlg-who">${d.who || ''}</div>
+      <div class="dlg-main">${d.name ? `<b>${d.name}</b>` : ''}<p>${d.text}</p>${btns ? `<div class="dlg-btns">${btns}</div>` : ''}</div>`;
+    this.dialogEl.classList.remove('pop');
+    void this.dialogEl.offsetWidth;
+    this.dialogEl.classList.add('pop');
+  }
+
+  // A tool (emoji, or 'towel') that follows the finger; null hides it.
+  setCursor(tool) {
+    if (!this.cursorEl) return;
+    this.cursorTool = tool;
+    this.cursorEl.hidden = !tool;
+    this.cursorEl.className = 'game-cursor' + (tool === 'towel' ? ' towel' : '');
+    this.cursorEl.textContent = tool && tool !== 'towel' ? tool : '';
+  }
+
+  moveCursor(x, y) {
+    if (!this.cursorEl || !this.cursorTool) return;
+    this.cursorEl.style.left = x + 'px';
+    this.cursorEl.style.top = y + 'px';
+  }
+
+  setCursorActive(on) {
+    this.cursorEl?.classList.toggle('active', !!on);
+  }
+
+  clearCare() {
+    this.setCoach('');
+    this.setTools(null);
+    this.setDialog(null);
+    this.setCursor(null);
   }
 
   setTitle(gameId) {

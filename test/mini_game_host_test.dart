@@ -2,6 +2,7 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:famotive/core/models/mini_game.dart';
 import 'package:famotive/core/models/mini_game_session.dart';
@@ -36,7 +37,13 @@ class _FakeGame extends MiniGameDefinition {
           // A second report (e.g. double tap) is ignored by the host.
           play.onFinished(MiniGameOutcome(gameId: id, details: const {}, performance: 0, elapsed: Duration.zero));
         },
-        child: Text('seed ${play.seed}'),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('seed ${play.seed}'),
+            Text('target ${play.settings.balloonPopper.targetCount}'),
+          ],
+        ),
       ),
     );
   }
@@ -84,6 +91,51 @@ void main() {
     expect(find.textContaining('1.5×'), findsOneWidget);
     expect(find.text('Play again'), findsOneWidget);
     expect((await firestore.collectionGroup('miniGameSessions').get()).size, 0);
+  });
+
+  testWidgets('casual play: the child picks Easy / Medium / Hard', (tester) async {
+    tallScreen(tester);
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(app(const MiniGameHostScreen(
+      gameId: MiniGameId.balloonPopper,
+      casualSettings: MiniGameSettings(),
+      casualSeed: 7,
+      definition: _FakeGame(0.5),
+    )));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('practice-difficulty')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('practice-difficulty-hard')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('minigame-play')));
+    await tester.pump();
+    expect(find.text('target 25'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('fake-finish')));
+    await tester.pump();
+    // Switch to Easy on the result screen; Play again uses it.
+    await tester.tap(find.byKey(const Key('practice-difficulty-easy')));
+    await tester.pump();
+    await tester.tap(find.text('Play again'));
+    await tester.pump();
+    expect(find.text('target 10'), findsOneWidget);
+    expect((await SharedPreferences.getInstance()).getString('minigames.practiceDifficulty'), 'easy');
+  });
+
+  testWidgets('rewarded play: no difficulty picker', (tester) async {
+    tallScreen(tester);
+    final ref = firestore.collection('households').doc(householdId).collection('miniGameSessions').doc('t0');
+    await ref.set(MiniGameSession.offer(
+      childId: 'kid',
+      taskId: 't0',
+      taskTitle: 'Dishes',
+      gameId: MiniGameId.balloonPopper,
+      seed: 1,
+      baseXp: 20,
+      settings: const MiniGameSettings(),
+      now: DateTime.now(),
+    ));
+    final session = MiniGameSession.fromFirestore(await ref.get());
+    await tester.pumpWidget(app(MiniGameHostScreen.rewarded(session: session, definition: const _FakeGame(0.5))));
+    expect(find.byKey(const Key('practice-difficulty')), findsNothing);
   });
 
   testWidgets('rewarded play: start and finish are recorded; the bonus is shown once confirmed', (tester) async {
