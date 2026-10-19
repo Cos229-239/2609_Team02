@@ -1,5 +1,5 @@
 import '../../../core/models/goal.dart';
-
+import '../../../core/models/task.dart';
 
 class ChallengeDraft {
   final String title;
@@ -10,6 +10,9 @@ class ChallengeDraft {
   final List<String> participantIds;
   final List<String> selectedTaskIds;
 
+  // New chores remain unsaved until the parent creates the challenge.
+  final List<TaskModel> newTasks;
+
   const ChallengeDraft({
     required this.title,
     required this.type,
@@ -18,5 +21,6 @@ class ChallengeDraft {
     required this.period,
     required this.participantIds,
     this.selectedTaskIds = const [],
+    this.newTasks = const [],
   });
 }

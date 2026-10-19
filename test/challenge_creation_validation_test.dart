@@ -141,7 +141,7 @@ void main() {
     );
 
     expect(find.text('Required Chores'), findsOneWidget);
-    expect(find.text('No existing tasks selected.'), findsOneWidget);
+    expect(find.text('No chores selected or created.'), findsOneWidget);
 
     await tester.tap(find.text('Create Challenge'));
     await tester.pump();

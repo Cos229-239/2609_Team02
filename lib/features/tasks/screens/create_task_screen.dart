@@ -24,7 +24,13 @@ enum _AssignTarget { household, child }
 /// Creating with a repeat other than "Does not repeat" saves a
 /// [TaskSchedule]; the server then creates one task per occurrence.
 class CreateTaskScreen extends StatefulWidget {
-  const CreateTaskScreen({super.key, this.initialChildId, this.taskId, this.scheduleId});
+  const CreateTaskScreen({
+    super.key,
+    this.initialChildId,
+    this.taskId,
+    this.scheduleId,
+    this.challengeDraftMode = false,
+  });
 
   /// Pre-selects a child instead of defaulting to "household". Ignored
   /// when editing.
@@ -36,6 +42,9 @@ class CreateTaskScreen extends StatefulWidget {
   /// When set, edits this repeating task.
   final String? scheduleId;
 
+  /// When true, returns a configured task without saving it to Firestore.
+  final bool challengeDraftMode;
+
   @override
   State<CreateTaskScreen> createState() => _CreateTaskScreenState();
 }
@@ -44,6 +53,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   late final TextEditingController _titleController;
   late final TextEditingController _descriptionController;
   late String _selectedIconKey;
+
   /// Due date (one-time) or start date (repeating).
   DateTime? _dueDate;
 
@@ -70,7 +80,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   /// Editing one occurrence of a repeating task: its cadence lives on the schedule.
   bool get _isOccurrence => _originalTask?.isRecurring ?? false;
 
-  bool get _canChooseRepeat => !_isOccurrence;
+  bool get _canChooseRepeat => !_isOccurrence && !widget.challengeDraftMode;
 
   @override
   void initState() {
@@ -87,22 +97,36 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
       }
     }
     _originalTask = existing;
-    final schedule = widget.scheduleId == null ? null : db.scheduleById(widget.scheduleId);
+    final schedule = widget.scheduleId == null
+        ? null
+        : db.scheduleById(widget.scheduleId);
     _originalSchedule = schedule;
 
-    _titleController = TextEditingController(text: schedule?.title ?? existing?.title ?? '');
-    _descriptionController = TextEditingController(text: schedule?.description ?? existing?.description ?? '');
-    _selectedIconKey = schedule?.icon ?? existing?.icon ?? TaskIconCatalog.defaultKey;
+    _titleController = TextEditingController(
+      text: schedule?.title ?? existing?.title ?? '',
+    );
+    _descriptionController = TextEditingController(
+      text: schedule?.description ?? existing?.description ?? '',
+    );
+    _selectedIconKey =
+        schedule?.icon ?? existing?.icon ?? TaskIconCatalog.defaultKey;
     _dueDate = schedule?.startDate ?? existing?.dueDate;
     _repeat = schedule?.repeat ?? existing?.repeat;
     _weekdays = {...?schedule?.effectiveWeekdays};
-    _xp = schedule?.rewardXp ?? existing?.rewardXp ?? AppConstants.defaultTaskXp;
-    _coins = schedule?.coinReward ?? existing?.coinReward ?? AppConstants.defaultTaskCoins;
-    _requiresPhoto = schedule?.requiresPhoto ?? existing?.requiresPhoto ?? false;
+    _xp =
+        schedule?.rewardXp ?? existing?.rewardXp ?? AppConstants.defaultTaskXp;
+    _coins =
+        schedule?.coinReward ??
+        existing?.coinReward ??
+        AppConstants.defaultTaskCoins;
+    _requiresPhoto =
+        schedule?.requiresPhoto ?? existing?.requiresPhoto ?? false;
     _selectedChildId = schedule != null
         ? schedule.assignedToUserId
         : (existing?.assignedToUserId ?? widget.initialChildId);
-    _assignTarget = _selectedChildId != null ? _AssignTarget.child : _AssignTarget.household;
+    _assignTarget = _selectedChildId != null
+        ? _AssignTarget.child
+        : _AssignTarget.household;
   }
 
   @override
@@ -132,8 +156,11 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     if (picked == null) return;
     setState(() {
       // Weekly cadences follow the start day until the parent picks days.
-      if (_repeat != null && _repeat!.usesWeekdays && _dueDate != null &&
-          _weekdays.length == 1 && _weekdays.single == _dueDate!.weekday) {
+      if (_repeat != null &&
+          _repeat!.usesWeekdays &&
+          _dueDate != null &&
+          _weekdays.length == 1 &&
+          _weekdays.single == _dueDate!.weekday) {
         _weekdays = {picked.weekday};
       }
       _dueDate = picked;
@@ -143,9 +170,13 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   void _setRepeat(TaskRepeat? repeat) {
     setState(() {
       _repeat = repeat;
+
       if (repeat != null) {
         _dueDate ??= _today; // repeating tasks need a start date
-        if (repeat.usesWeekdays && _weekdays.isEmpty) _weekdays = {_dueDate!.weekday};
+
+        if (repeat.usesWeekdays && _weekdays.isEmpty) {
+          _weekdays = {_dueDate!.weekday};
+        }
       }
     });
   }
@@ -160,7 +191,12 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     });
   }
 
-  TaskSchedule _buildSchedule({required String id, required String title, required String description, String? assignedToUserId}) {
+  TaskSchedule _buildSchedule({
+    required String id,
+    required String title,
+    required String description,
+    String? assignedToUserId,
+  }) {
     return TaskSchedule(
       id: id,
       title: title,
@@ -192,12 +228,43 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     final title = _titleController.text.trim();
     if (title.isEmpty) return;
 
-    final assignedToUserId = _assignTarget == _AssignTarget.household ? null : _selectedChildId;
+    final assignedToUserId = _assignTarget == _AssignTarget.household
+        ? null
+        : _selectedChildId;
     final description = _descriptionController.text.trim();
     final original = _originalTask;
     final originalSchedule = _originalSchedule;
+    if (widget.challengeDraftMode) {
+      if (_repeat != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Repeating chores are not yet supported in challenges.',
+            ),
+          ),
+        );
+        return;
+      }
+
+      final newTask = TaskModel(
+        id: '',
+        title: title,
+        description: description,
+        icon: _selectedIconKey,
+        assignedToUserId: assignedToUserId,
+        dueDate: _dueDate,
+        rewardXp: _xp,
+        coinReward: _coins,
+        createdAt: DateTime.now(),
+        requiresPhoto: _photoOn,
+      );
+
+      Navigator.of(context).pop(newTask);
+      return;
+    }
     void done(String message) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
       Navigator.of(context).pop();
     }
 
@@ -217,14 +284,28 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
     if (original != null && !original.isRecurring && _repeat != null) {
       // A one-time task turned into a repeating one: the schedule replaces it.
-      db.addSchedule(_buildSchedule(id: '', title: title, description: description, assignedToUserId: assignedToUserId));
+      db.addSchedule(
+        _buildSchedule(
+          id: '',
+          title: title,
+          description: description,
+          assignedToUserId: assignedToUserId,
+        ),
+      );
       db.removeTask(original.id);
       done('"$title" now repeats: $_repeatSummary.');
       return;
     }
 
     if (original == null && _repeat != null) {
-      db.addSchedule(_buildSchedule(id: '', title: title, description: description, assignedToUserId: assignedToUserId));
+      db.addSchedule(
+        _buildSchedule(
+          id: '',
+          title: title,
+          description: description,
+          assignedToUserId: assignedToUserId,
+        ),
+      );
       done('"$title" created - repeats: $_repeatSummary.');
       return;
     }
@@ -243,9 +324,8 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         requiresPhoto: _photoOn,
       );
       db.updateTask(original.id, updated);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('"$title" updated!')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('"$title" updated!')));
     } else {
       db.addTask(
         TaskModel(
@@ -261,9 +341,8 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
           requiresPhoto: _photoOn,
         ),
       );
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('"$title" created!')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('"$title" created!')));
     }
 
     Navigator.of(context).pop();
@@ -293,7 +372,10 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Stop Repeating', style: TextStyle(color: Colors.red)),
+            child: const Text(
+              'Stop Repeating',
+              style: TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -350,17 +432,24 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   /// (listen: false rather than context.read, since _repeatSummary reaches
   /// this during build.)
   bool get _photoOn =>
-      _requiresPhoto && Provider.of<DatabaseService>(context, listen: false).householdHasPremium;
+      _requiresPhoto &&
+      Provider.of<DatabaseService>(context, listen: false).householdHasPremium;
 
   @override
   Widget build(BuildContext context) {
     final db = context.watch<DatabaseService>();
     final children = db.children;
-    final isHouseholdAdmin = db.household?.isAdmin(context.watch<AuthService>().currentUser?.id) ?? false;
+    final isHouseholdAdmin =
+        db.household?.isAdmin(context.watch<AuthService>().currentUser?.id) ??
+        false;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditingSchedule ? 'Edit Repeating Task' : (_isEditing ? 'Edit Task' : 'Create Task')),
+        title: Text(
+          _isEditingSchedule
+              ? 'Edit Repeating Task'
+              : (_isEditing ? 'Edit Task' : 'Create Task'),
+        ),
         actions: [
           if (_isEditingSchedule)
             IconButton(
@@ -380,11 +469,17 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                   child: Row(
                     children: [
                       Icon(
-                        _originalTask!.archived ? Icons.unarchive_outlined : Icons.archive_outlined,
+                        _originalTask!.archived
+                            ? Icons.unarchive_outlined
+                            : Icons.archive_outlined,
                         size: 20,
                       ),
                       const SizedBox(width: 10),
-                      Text(_originalTask!.archived ? 'Unarchive Task' : 'Archive Task'),
+                      Text(
+                        _originalTask!.archived
+                            ? 'Unarchive Task'
+                            : 'Archive Task',
+                      ),
                     ],
                   ),
                 ),
@@ -429,7 +524,8 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                         _originalTask!.archived
                             ? 'This task is archived.'
                             : 'This task auto-archived - it\'s more than ${AppConstants.taskArchiveAfterDays} days old.',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.orange.shade900),
+                        style: Theme.of(context).textTheme.bodyMedium
+                            ?.copyWith(color: Colors.orange.shade900),
                       ),
                     ),
                   ],
@@ -437,10 +533,10 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               ),
               const SizedBox(height: 16),
             ],
-            Text('Choose an Icon:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-            ),
+            Text(
+              'Choose an Icon:',
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontSize: 20, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
             _IconPicker(
@@ -448,16 +544,18 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               onSelected: (key) => setState(() => _selectedIconKey = key),
             ),
             const SizedBox(height: 16),
-            Text('Name this Task:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+            Text(
+              'Name this Task:',
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             TextField(
               controller: _titleController,
               autofocus: !_isEditing,
-              decoration: const InputDecoration(hintText: 'e.g. Take Out the Trash'),
+              decoration: const InputDecoration(
+                hintText: 'e.g. Take Out the Trash',
+              ),
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 16),
@@ -465,10 +563,11 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
-                  child: Text('Description (optional):', style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  )),
+                  child: Text(
+                    'Description (optional):',
+                    style: Theme.of(context).textTheme.titleMedium
+                        ?.copyWith(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
                 ),
                 TextButton.icon(
                   onPressed: _canSubmit ? _applySuggestedDescription : null,
@@ -487,16 +586,19 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
             const SizedBox(height: 4),
             Text(
               'Suggestions come from an on-device assistant - nothing leaves this device.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500, fontSize: 11),
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(color: Colors.grey.shade500, fontSize: 11),
             ),
             const SizedBox(height: 20),
             HeadingWithHelp(
-              heading: Text('Rewards for Completing This Task:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              )),
+              heading: Text(
+                'Rewards for Completing This Task:',
+                style: Theme.of(context).textTheme.titleMedium
+                    ?.copyWith(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
               helpTitle: 'XP vs. coins',
-              help: 'XP is never spent - it levels kids up and ranks the leaderboard. '
+              help:
+                  'XP is never spent - it levels kids up and ranks the leaderboard. '
                   'Coins are spent in your reward store. Both are paid when you approve the task.',
             ),
             const SizedBox(height: 8),
@@ -534,7 +636,8 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                     'Your child takes a photo when done. It is checked on their device for a match '
                     'with this task, and you review it before approving. Photos are deleted after '
                     '${AppConstants.taskPhotoRetentionDays} days.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+                    style: Theme.of(context).textTheme.bodySmall
+                        ?.copyWith(color: Colors.grey.shade600),
                   ),
                   value: _requiresPhoto,
                   onChanged: (value) => setState(() => _requiresPhoto = value),
@@ -543,12 +646,14 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
             const SizedBox(height: 20),
             if (_canChooseRepeat) ...[
               HeadingWithHelp(
-                heading: Text('Repeat:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                )),
+                heading: Text(
+                  'Repeat:',
+                  style: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
                 helpTitle: 'Repeating chores',
-                help: 'Set it up once: a fresh copy appears on each scheduled day, '
+                help:
+                    'Set it up once: a fresh copy appears on each scheduled day, '
                     'and reminders go out that morning.',
               ),
               const SizedBox(height: 8),
@@ -565,14 +670,16 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               const SizedBox(height: 20),
             ],
             HeadingWithHelp(
-              heading: Text(_repeat != null && _canChooseRepeat ? 'Starts On:' : 'Select a Due Date:',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+              heading: Text(
+                _repeat != null && _canChooseRepeat
+                    ? 'Starts On:'
+                    : 'Select a Due Date:',
+                style: Theme.of(context).textTheme.titleMedium
+                    ?.copyWith(fontSize: 16, fontWeight: FontWeight.w600),
               ),
               helpTitle: 'Due dates',
-              help: 'Optional. Tasks without a date show as "Due Today". '
+              help:
+                  'Optional. Tasks without a date show as "Due Today". '
                   'For a repeating task this is the first day it appears.',
             ),
             const SizedBox(height: 8),
@@ -581,15 +688,21 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               onTap: _pickDueDate,
               child: Row(
                 children: [
-                  Icon(Icons.calendar_today_outlined, color: Theme.of(context).colorScheme.primary),
+                  Icon(
+                    Icons.calendar_today_outlined,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      _dueDate == null ? 'No due date - tap to set one' : _formatDate(_dueDate!),
+                      _dueDate == null
+                          ? 'No due date - tap to set one'
+                          : _formatDate(_dueDate!),
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ),
-                  if (_dueDate != null && (_repeat == null || !_canChooseRepeat))
+                  if (_dueDate != null &&
+                      (_repeat == null || !_canChooseRepeat))
                     IconButton(
                       icon: const Icon(Icons.clear, size: 18),
                       onPressed: () => setState(() => _dueDate = null),
@@ -601,9 +714,13 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
             ),
             const SizedBox(height: 20),
             HeadingWithHelp(
-              heading: Text('Assign To:', style: Theme.of(context).textTheme.titleMedium),
+              heading: Text(
+                'Assign To:',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               helpTitle: 'Assigning',
-              help: 'Pick a child to give it straight to them, or choose Household Task '
+              help:
+                  'Pick a child to give it straight to them, or choose Household Task '
                   'so any child can claim it from their Tasks tab.',
             ),
             const SizedBox(height: 8),
@@ -612,7 +729,8 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               title: 'Household Task',
               subtitle: 'Left open - any child can claim it',
               selected: _assignTarget == _AssignTarget.household,
-              onTap: () => setState(() => _assignTarget = _AssignTarget.household),
+              onTap: () =>
+                  setState(() => _assignTarget = _AssignTarget.household),
             ),
             const SizedBox(height: 8),
             for (final child in children) ...[
@@ -620,7 +738,9 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                 avatarEmoji: child.avatarEmoji,
                 title: child.name,
                 subtitle: 'Age ${child.age ?? '-'}',
-                selected: _assignTarget == _AssignTarget.child && _selectedChildId == child.id,
+                selected:
+                    _assignTarget == _AssignTarget.child &&
+                    _selectedChildId == child.id,
                 onTap: () => setState(() {
                   _assignTarget = _AssignTarget.child;
                   _selectedChildId = child.id;
@@ -630,9 +750,13 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
             ],
             const SizedBox(height: 24),
             AppButton(
-              label: _isEditing ? 'Save Changes' : (_repeat != null ? 'Create Repeating Task' : 'Create Task'),
+              label: _isEditing
+                  ? 'Save Changes'
+                  : (_repeat != null ? 'Create Repeating Task' : 'Create Task'),
               icon: _isEditing ? Icons.save_outlined : Icons.add_task,
-              onPressed: _canSubmit ? () => _submit(context.read<DatabaseService>()) : null,
+              onPressed: _canSubmit
+                  ? () => _submit(context.read<DatabaseService>())
+                  : null,
             ),
           ],
         ),
@@ -642,8 +766,18 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
   String _formatDate(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
@@ -676,7 +810,11 @@ class _IconPicker extends StatelessWidget {
 }
 
 class _IconOption extends StatelessWidget {
-  const _IconOption({required this.entry, required this.selected, required this.onTap});
+  const _IconOption({
+    required this.entry,
+    required this.selected,
+    required this.onTap,
+  });
 
   final TaskIconEntry entry;
   final bool selected;
@@ -687,11 +825,17 @@ class _IconOption extends StatelessWidget {
     return Tooltip(
       message: entry.label,
       child: Material(
-        color: selected ? AppColors.primaryBlue : (context.isDarkMode ? context.mutedFill : Colors.grey.shade100),
+        color: selected
+            ? AppColors.primaryBlue
+            : (context.isDarkMode ? context.mutedFill : Colors.grey.shade100),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(
-            color: selected ? AppColors.primaryBlue : (context.isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300),
+            color: selected
+                ? AppColors.primaryBlue
+                : (context.isDarkMode
+                      ? Colors.grey.shade700
+                      : Colors.grey.shade300),
           ),
         ),
         child: InkWell(
@@ -699,7 +843,11 @@ class _IconOption extends StatelessWidget {
           onTap: onTap,
           child: Icon(
             entry.icon,
-            color: selected ? Colors.white : (context.isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700),
+            color: selected
+                ? Colors.white
+                : (context.isDarkMode
+                      ? Colors.grey.shade300
+                      : Colors.grey.shade700),
           ),
         ),
       ),
@@ -738,7 +886,10 @@ class _AssignOptionCard extends StatelessWidget {
             radius: 20,
             backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
             child: avatarEmoji != null
-                ? Text(avatarEmoji!, style: const TextStyle(fontSize: AppConstants.emojiIconXs))
+                ? Text(
+                    avatarEmoji!,
+                    style: const TextStyle(fontSize: AppConstants.emojiIconXs),
+                  )
                 : Icon(icon, color: theme.colorScheme.primary),
           ),
           const SizedBox(width: 12),
@@ -747,7 +898,12 @@ class _AssignOptionCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title, style: theme.textTheme.titleMedium),
-                Text(subtitle, style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600)),
+                Text(
+                  subtitle,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey.shade600,
+                  ),
+                ),
               ],
             ),
           ),
@@ -777,7 +933,9 @@ class _InfoBanner extends StatelessWidget {
         children: [
           Icon(icon, color: color),
           const SizedBox(width: 10),
-          Expanded(child: Text(text, style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(
+            child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
+          ),
           ?action,
         ],
       ),
@@ -793,7 +951,9 @@ class _OccurrenceBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final schedule = context.watch<DatabaseService>().scheduleById(task.scheduleId);
+    final schedule = context.watch<DatabaseService>().scheduleById(
+      task.scheduleId,
+    );
     final cadence = schedule?.describe() ?? task.repeat?.label ?? 'Repeats';
     return _InfoBanner(
       icon: Icons.repeat,
@@ -853,9 +1013,15 @@ class _RepeatPicker extends StatelessWidget {
                     },
                     items: [
                       if (allowNone)
-                        const DropdownMenuItem<TaskRepeat?>(value: null, child: Text('Does not repeat')),
+                        const DropdownMenuItem<TaskRepeat?>(
+                          value: null,
+                          child: Text('Does not repeat'),
+                        ),
                       for (final r in TaskRepeat.values)
-                        DropdownMenuItem<TaskRepeat?>(value: r, child: Text(r.label)),
+                        DropdownMenuItem<TaskRepeat?>(
+                          value: r,
+                          child: Text(r.label),
+                        ),
                     ],
                   ),
                 ),
@@ -864,7 +1030,12 @@ class _RepeatPicker extends StatelessWidget {
           ),
           if (repeat != null && repeat!.usesWeekdays) ...[
             const SizedBox(height: 4),
-            Text('On these days:', style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade600)),
+            Text(
+              'On these days:',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: Colors.grey.shade600,
+              ),
+            ),
             const SizedBox(height: 6),
             Wrap(
               spacing: 6,
@@ -881,7 +1052,13 @@ class _RepeatPicker extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 6),
-          Text(summary, style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade600, fontSize: 12)),
+          Text(
+            summary,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: Colors.grey.shade600,
+              fontSize: 12,
+            ),
+          ),
         ],
       ),
     );
@@ -898,7 +1075,8 @@ class _PremiumPhotoProofTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final subtitleStyle = Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600);
+    final subtitleStyle = Theme.of(context).textTheme.bodySmall
+        ?.copyWith(color: Colors.grey.shade600);
     return AppCard(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       child: ListTile(
@@ -909,7 +1087,7 @@ class _PremiumPhotoProofTile extends StatelessWidget {
         subtitle: Text(
           isHouseholdAdmin
               ? 'A Premium feature: your child takes a photo when done and you review it. '
-                  'Try it free for ${AppConstants.premiumTrialDays} days.'
+                    'Try it free for ${AppConstants.premiumTrialDays} days.'
               : "A Premium feature. It's unlocked when your household's admin has Premium.",
           style: subtitleStyle,
         ),
@@ -920,7 +1098,9 @@ class _PremiumPhotoProofTile extends StatelessWidget {
             if (isHouseholdAdmin) const Icon(Icons.chevron_right),
           ],
         ),
-        onTap: isHouseholdAdmin ? () => Navigator.of(context).pushNamed(AppRoutes.premium) : null,
+        onTap: isHouseholdAdmin
+            ? () => Navigator.of(context).pushNamed(AppRoutes.premium)
+            : null,
       ),
     );
   }
