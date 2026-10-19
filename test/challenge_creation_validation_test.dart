@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:famotive/app/routes.dart';
 
 import 'package:famotive/core/models/goal.dart';
 import 'package:famotive/core/services/database_service.dart';
@@ -179,7 +180,13 @@ void main() {
     await tester.pumpWidget(
       ChangeNotifierProvider<DatabaseService>.value(
         value: db,
-        child: MaterialApp(home: ReviewChallengeScreen(draft: draft)),
+        child: MaterialApp(
+          home: ReviewChallengeScreen(draft: draft),
+          routes: {
+            AppRoutes.home: (context) =>
+                const Scaffold(body: Center(child: Text('Mock Parent Home'))),
+          },
+        ),
       ),
     );
 
@@ -214,6 +221,14 @@ void main() {
     expect(savedGoals.docs.single.data()['title'], 'Earn 500 XP');
     expect(savedGoals.docs.single.data()['targetValue'], 500);
     expect(savedGoals.docs.single.data()['metric'], GoalMetric.xpEarned.name);
+    // Allow navigation to complete after successful challenge creation.
+    await tester.pumpAndSettle();
+
+    // Verify the parent is redirected to Home.
+    expect(find.text('Mock Parent Home'), findsOneWidget);
+
+    // Verify the challenge review screen is no longer in the widget tree.
+    expect(find.byType(ReviewChallengeScreen), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
     db.dispose();
