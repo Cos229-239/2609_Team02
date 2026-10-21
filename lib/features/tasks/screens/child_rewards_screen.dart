@@ -10,6 +10,7 @@ import '../../../core/models/user.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/database_service.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../minigames/widgets/mini_games_store_section.dart';
 import '../../rewards/widgets/reward_progress_tile.dart';
 import '../../../core/models/reward.dart';
 
@@ -160,6 +161,8 @@ class ChildRewardsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
           ],
+        const SizedBox(height: 24),
+        MiniGamesStoreSection(childId: child.id),
         const SizedBox(height: 24),
         Row(
           children: [

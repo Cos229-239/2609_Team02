@@ -84,5 +84,58 @@ void main() {
         expect(taskListScreen.childId, 'child-1');
       },
     );
+
+    testWidgets('task categories are drawers that open and close', (
+      tester,
+    ) async {
+      final db = DatabaseService(firestore: FakeFirebaseFirestore());
+      db.familyMembers = [
+        const AppUser(
+          id: 'child-1',
+          name: 'Sally Simmons',
+          email: 'sally@test.com',
+          role: UserRole.child,
+          householdId: 'household-1',
+        ),
+      ];
+      db.tasks = [
+        TaskModel(
+          id: 'pending-task',
+          title: 'Feed the Dog',
+          description: '',
+          rewardXp: 25,
+          status: TaskStatus.pending,
+          assignedToUserId: 'child-1',
+        ),
+        TaskModel(
+          id: 'awaiting-task',
+          title: 'Make the Bed',
+          description: '',
+          rewardXp: 25,
+          status: TaskStatus.completed,
+          assignedToUserId: 'child-1',
+        ),
+      ];
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<DatabaseService>.value(
+          value: db,
+          child: const MaterialApp(home: Scaffold(body: ProgressScreen())),
+        ),
+      );
+      await tester.pump();
+
+      // Awaiting Approval needs action, so it starts open; Pending starts closed.
+      expect(find.text('Make the Bed'), findsOneWidget);
+      expect(find.text('Feed the Dog'), findsNothing);
+
+      await tester.tap(find.text('Pending'));
+      await tester.pumpAndSettle();
+      expect(find.text('Feed the Dog'), findsOneWidget);
+
+      await tester.tap(find.text('Pending'));
+      await tester.pumpAndSettle();
+      expect(find.text('Feed the Dog'), findsNothing);
+    });
   });
 }

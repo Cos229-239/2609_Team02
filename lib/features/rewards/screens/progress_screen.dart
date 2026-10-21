@@ -11,12 +11,12 @@ import '../../../core/models/user.dart';
 import '../../../core/services/database_service.dart';
 import '../../tasks/widgets/task_swipe.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../tasks/widgets/task_view_card.dart';
+import '../../../core/services/accessibility_settings.dart';
 
 /// Distinct from `null` (dialog dismissed without a choice).
-const String _householdPoolSentinel = '__household_pool__';
 
 /// What a task row's trailing action does, based on its section.
-enum _RowActions { edit, approveOrReassign, duplicateOnly }
 
 /// "Progress" tab: each child's XP, and every task grouped into
 /// Overdue, Pending, Awaiting Approval, Completed and Archived.
@@ -112,7 +112,7 @@ children: [
                     Text('${child.coins}'),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 1),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(AppConstants.radiusSm),
                   child: LinearProgressIndicator(
@@ -139,18 +139,28 @@ children: [
             fontWeight: FontWeight.w600,
           )),
           helpTitle: 'All Tasks',
-          help: 'Every task in the household, grouped by status. Use the ⋮ menu on a task '
-              'to approve, re-assign or duplicate it.',
+          help: 'Every task in the household, grouped by status. Tap a task to approve, '
+              'edit, re-assign or duplicate it.',
         ),
         const SizedBox(height: 4),
         Text(
-          'Tap a task to edit it. Swipe right to approve (or archive), '
-          'swipe left to delete. Completed tasks show for '
+          '${AccessibilitySettings.swipesEnabled(context) ? 'Tap a task to see it. Swipe right to approve/archive, left to delete.' : 'Tap to view tasks.'} '
+          'Completed tasks show for '
           '${AppConstants.doneTaskVisibleDays} days; all tasks are deleted '
           'after ${AppConstants.taskDeleteAfterDays} days.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
         ),
         const SizedBox(height: 12),
+        _TaskSection(
+          icon: Icons.hourglass_bottom,
+          title: 'Awaiting Approval',
+          color: Colors.orange,
+          tasks: awaitingApproval,
+          db: db,
+          emptyLabel: 'No tasks waiting for approval.',
+          initiallyExpanded: awaitingApproval.isNotEmpty,
+        ),
+        const SizedBox(height: 10),
         _TaskSection(
           icon: Icons.error_outline,
           title: 'Overdue',
@@ -158,9 +168,9 @@ children: [
           tasks: overdue,
           db: db,
           emptyLabel: 'Nothing overdue - nice work!',
-          actions: _RowActions.edit,
+          initiallyExpanded: overdue.isNotEmpty,
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 10),
         _TaskSection(
           icon: Icons.schedule,
           title: 'Pending',
@@ -168,20 +178,8 @@ children: [
           tasks: pending,
           db: db,
           emptyLabel: 'No pending tasks right now.',
-          actions: _RowActions.edit,
         ),
-
-        const SizedBox(height: 28),
-        _TaskSection(
-        icon: Icons.hourglass_bottom,
-        title: 'Awaiting Approval',
-        color: Colors.orange,
-        tasks: awaitingApproval,
-        db: db,
-        emptyLabel: 'No tasks waiting for approval.',
-        actions: _RowActions.approveOrReassign,
-),
-        const SizedBox(height: 28),
+        const SizedBox(height: 10),
         _TaskSection(
           icon: Icons.check_circle_outline,
           title: 'Completed',
@@ -189,9 +187,8 @@ children: [
           tasks: completed,
           db: db,
           emptyLabel: 'Nothing completed yet.',
-          actions: _RowActions.duplicateOnly,
         ),
-        const SizedBox(height: 28),
+        const SizedBox(height: 10),
         _TaskSection(
           icon: Icons.archive_outlined,
           title: 'Archived',
@@ -200,7 +197,6 @@ children: [
           db: db,
           emptyLabel: 'No archived tasks.',
           archivedDisplay: true,
-          actions: _RowActions.duplicateOnly,
         ),
       ],
     );
@@ -215,7 +211,10 @@ children: [
   }
 }
 
-class _TaskSection extends StatelessWidget {
+/// A collapsible "drawer" for one status group: tapping the header slides
+/// its tasks open or closed. The header always shows the task count, so a
+/// closed drawer still tells the parent whether anything is inside.
+class _TaskSection extends StatefulWidget {
   const _TaskSection({
     required this.icon,
     required this.title,
@@ -223,8 +222,8 @@ class _TaskSection extends StatelessWidget {
     required this.tasks,
     required this.db,
     required this.emptyLabel,
-    required this.actions,
     this.archivedDisplay = false,
+    this.initiallyExpanded = false,
   });
 
   final IconData icon;
@@ -233,63 +232,97 @@ class _TaskSection extends StatelessWidget {
   final List<TaskModel> tasks;
   final DatabaseService db;
   final String emptyLabel;
-  final _RowActions actions;
   final bool archivedDisplay;
+  final bool initiallyExpanded;
+
+  @override
+  State<_TaskSection> createState() => _TaskSectionState();
+}
+
+class _TaskSectionState extends State<_TaskSection> {
+  late bool _expanded = widget.initiallyExpanded;
 
   @override
   Widget build(BuildContext context) {
+    final color = widget.color;
+    final tasks = widget.tasks;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.08),
+        Material(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+          child: InkWell(
             borderRadius: BorderRadius.circular(14),
-          ),
-          child: Row(
-            children: [
-              CircleAvatar(radius: 12, backgroundColor: color, child: Icon(icon, size: 14, color: Colors.white)),
-              const SizedBox(width: 10),
-              Expanded(child: Text(title, style: Theme.of(context).textTheme.titleMedium)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 2),
-                decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(999)),
-                child: Text('${tasks.length}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
-              ),
-            ],
-          ),
-        ),
-        if (tasks.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-            child: Text(emptyLabel, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600)),
-          )
-        else ...[
-          const SizedBox(height: 2),
-
-          for (final task in tasks) ...[
-            const SizedBox(height:12),
-            ParentTaskSwipe(
-              task: task,
-              child: _TaskProgressRow(
-                task: task,
-                assignee: _assigneeFor(task),
-                db: db,
-                actions: actions,
-                archivedDisplay: archivedDisplay,
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Semantics(
+              button: true,
+              expanded: _expanded,
+              label: '${widget.title}, ${tasks.length} tasks',
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                child: Row(
+                  children: [
+                    CircleAvatar(radius: 12, backgroundColor: color, child: Icon(widget.icon, size: 14, color: Colors.white)),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(widget.title, style: Theme.of(context).textTheme.titleMedium)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(999)),
+                      child: Text('${tasks.length}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                    ),
+                    const SizedBox(width: 6),
+                    AnimatedRotation(
+                      turns: _expanded ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(Icons.expand_more, color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 1),
-          ],
-        ],
+          ),
+        ),
+        ClipRect(
+          child: AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeInOut,
+            alignment: Alignment.topCenter,
+            child: !_expanded
+                ? const SizedBox(width: double.infinity)
+                : tasks.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                        child: Text(widget.emptyLabel, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600)),
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          for (final task in tasks) ...[
+                            const SizedBox(height: 12),
+                            ParentTaskSwipe(
+                              task: task,
+                              child: _TaskProgressRow(
+                                task: task,
+                                assignee: _assigneeFor(task),
+                                db: widget.db,
+                                archivedDisplay: widget.archivedDisplay,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 4),
+                        ],
+                      ),
+          ),
+        ),
       ],
     );
   }
 
   AppUser? _assigneeFor(TaskModel task) {
     if (task.assignedToUserId == null) return null;
-    return db.userById(task.assignedToUserId!);
+    return widget.db.userById(task.assignedToUserId!);
   }
 }
 
@@ -298,89 +331,20 @@ class _TaskProgressRow extends StatelessWidget {
     required this.task,
     required this.assignee,
     required this.db,
-    required this.actions,
     this.archivedDisplay = false,
   });
 
   final TaskModel task;
   final AppUser? assignee;
   final DatabaseService db;
-  final _RowActions actions;
   final bool archivedDisplay;
-
-  Future<void> _reassign(BuildContext context) async {
-    final selection = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => SimpleDialog(
-        title: Text('Re-assign "${task.title}"'),
-        children: [
-          SimpleDialogOption(
-            onPressed: () => Navigator.of(dialogContext).pop(_householdPoolSentinel),
-            child: const Row(
-              children: [
-                Icon(Icons.groups_outlined),
-                SizedBox(width: 12),
-                Text('Household Task (unassigned)'),
-              ],
-            ),
-          ),
-          for (final child in db.children)
-            SimpleDialogOption(
-              onPressed: () => Navigator.of(dialogContext).pop(child.id),
-              child: Row(
-                children: [
-                  Text(child.avatarEmoji, style: const TextStyle(fontSize: 20)),
-                  const SizedBox(width: 12),
-                  Text(child.name),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-
-    if (selection == null || !context.mounted) return;
-    final newChildId = selection == _householdPoolSentinel ? null : selection;
-    await db.reassignTask(task.id, newChildId);
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          newChildId == null
-              ? '"${task.title}" moved back to the household pool.'
-              : '"${task.title}" re-assigned to ${db.userById(newChildId)?.name ?? 'a child'}.',
-        ),
-      ),
-    );
-  }
-
-  Future<void> _duplicate(BuildContext context) async {
-    final duplicate = TaskModel(
-      id: 'task-${DateTime.now().millisecondsSinceEpoch}',
-      title: '${task.title} (Copy)',
-      description: task.description,
-      icon: task.icon,
-      assignedToUserId: task.assignedToUserId,
-      rewardXp: task.rewardXp,
-      coinReward: task.coinReward,
-      createdAt: DateTime.now(),
-    );
-    final newTaskId = await db.addTask(duplicate);
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Duplicated as a new pending task - fine-tune it now.')),
-    );
-    Navigator.of(context).pushNamed(AppRoutes.taskEdit, arguments: newTaskId);
-  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return AppCard(
-      onTap: actions == _RowActions.edit
-          ? () => Navigator.of(context).pushNamed(AppRoutes.taskEdit, arguments: task.id)
-          : null,
+      onTap: () => showTaskViewSheet(context, task.id),
       padding: const EdgeInsets.symmetric(
         horizontal: 16,
         vertical: 8,
@@ -412,35 +376,11 @@ class _TaskProgressRow extends StatelessWidget {
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (archivedDisplay)
-                const _ArchivedPill()
-              else
-                _StatusPill(task: task),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  const Icon(Icons.star, size: 14, color: Colors.amber),
-                  const SizedBox(width: 2),
-                  Text('+${task.rewardXp} XP', style: theme.textTheme.bodyMedium?.copyWith(
-                    fontSize: 13,
-                  )),
-                  if (task.coinReward > 0) ...[
-                    const SizedBox(width: 6),
-                    Icon(Icons.monetization_on, size: 13, color: Colors.amber.shade700),
-                    const SizedBox(width: 1),
-                    Text('+${task.coinReward}', style: theme.textTheme.bodyMedium?.copyWith(
-                      fontSize: 12,
-                    )),
-                  ],
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(width: 4),
-          _TrailingAction(actions: actions, onReassign: () => _reassign(context), onApprove: () => db.approveTask(task.id), onDuplicate: () => _duplicate(context)),
+          const SizedBox(width: 8),
+          if (archivedDisplay)
+            const _ArchivedPill()
+          else
+            _StatusPill(task: task),
         ],
       ),
     );
@@ -456,65 +396,6 @@ class _TaskProgressRow extends StatelessWidget {
     if (difference == 0) return 'Due Today';
     if (difference == 1) return 'Due Tomorrow';
     return 'Due in $difference Days';
-  }
-}
-
-/// The trailing control on a task row, based on [_RowActions].
-class _TrailingAction extends StatelessWidget {
-  const _TrailingAction({
-    required this.actions,
-    required this.onReassign,
-    required this.onApprove,
-    required this.onDuplicate,
-  });
-
-  final _RowActions actions;
-  final VoidCallback onReassign;
-  final VoidCallback onApprove;
-  final VoidCallback onDuplicate;
-
-  @override
-  Widget build(BuildContext context) {
-    switch (actions) {
-      case _RowActions.edit:
-        return const Icon(Icons.chevron_right, color: Colors.grey, size: 20);
-      case _RowActions.approveOrReassign:
-        return PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert, color: Colors.grey),
-          onSelected: (value) {
-            if (value == 'approve') onApprove();
-            if (value == 'reassign') onReassign();
-          },
-          itemBuilder: (context) => const [
-            PopupMenuItem(
-              value: 'approve',
-              child: Row(
-                children: [
-                  Icon(Icons.check_circle_outline, size: 20, color: AppColors.growthGreen),
-                  SizedBox(width: 10),
-                  Text('Approve'),
-                ],
-              ),
-            ),
-            PopupMenuItem(
-              value: 'reassign',
-              child: Row(
-                children: [
-                  Icon(Icons.swap_horiz, size: 20),
-                  SizedBox(width: 10),
-                  Text('Re-assign'),
-                ],
-              ),
-            ),
-          ],
-        );
-      case _RowActions.duplicateOnly:
-        return IconButton(
-          icon: const Icon(Icons.copy_outlined, size: 20, color: Colors.grey),
-          tooltip: 'Duplicate',
-          onPressed: onDuplicate,
-        );
-    }
   }
 }
 

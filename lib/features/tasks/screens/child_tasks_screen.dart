@@ -9,7 +9,8 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/services/database_service.dart';
 import '../../../shared/widgets/help_tip.dart';
 import '../widgets/task_swipe.dart';
-import '../task_completion_flow.dart';
+import '../widgets/task_view_card.dart';
+import '../../../core/services/accessibility_settings.dart';
 
 enum _ChildTasksView { tasks, history }
 
@@ -65,126 +66,83 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
         const SizedBox(height: 8),
         Text(
           _view == _ChildTasksView.tasks
-              ? 'Tip: swipe a task right to claim or complete it.'
+              ? (AccessibilitySettings.swipesEnabled(context)
+                  ? 'Tap a task to see it, or swipe right to claim or complete it.'
+                  : 'Tap a task to see it and claim or complete it.')
               : 'Tasks approved in the last ${AppConstants.doneTaskVisibleDays} days.',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
         ),
         const SizedBox(height: 8),
         if (_view == _ChildTasksView.tasks) ...[
-          _SectionHeader(
+          _TaskDrawer(
+            key: const ValueKey('drawer-claimed'),
             icon: Icons.check_circle,
             title: 'Claimed / Assigned',
             count: activeTasks.length,
             badgeColor: AppColors.growthGreen,
-            help: 'Your tasks. Tap Complete (or swipe right) when you finish one.',
-          ),
-          const SizedBox(height: 6),
-          if (activeTasks.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Text('Nothing claimed yet - grab a task below!'),
-            )
-          else
-            for (final task in activeTasks) ...[
-              _TaskRow(
-                task: task,
-                childId: child.id,
-                trailing: ElevatedButton(
-                  onPressed: () => startTaskCompletion(context, task),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(0, 28),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 0,
-                    ),
-                  ),
-                  child: const Text('Complete'),
-                ),
-              ),
-              const SizedBox(height: 2),
+            help: 'Your tasks. Tap one to mark it complete when you finish.',
+            emptyLabel: 'Nothing claimed yet - grab a task below!',
+            initiallyExpanded: true,
+            children: [
+              for (final task in activeTasks) _TaskRow(task: task, childId: child.id),
             ],
+          ),
           const SizedBox(height: 10),
-          _SectionHeader(
+          _TaskDrawer(
+            key: const ValueKey('drawer-awaiting'),
             icon: Icons.hourglass_bottom,
             title: 'Awaiting Approval',
             count: awaitingApproval.length,
             badgeColor: Colors.orange,
             help: 'Done and waiting for a parent to check. You get the XP and coins once it\'s approved.',
-          ),
-          const SizedBox(height: 6),
-          if (awaitingApproval.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Text('No tasks waiting for approval.'),
-            )
-          else
-            for (final task in awaitingApproval) ...[
-              _TaskRow(
-                task: task,
-                childId: child.id,
-                trailing: const _StatusPill(
-                  label: 'Awaiting Approval',
-                  color: Colors.orange,
-                  icon: Icons.hourglass_bottom,
+            emptyLabel: 'No tasks waiting for approval.',
+            children: [
+              for (final task in awaitingApproval)
+                _TaskRow(
+                  task: task,
+                  childId: child.id,
+                  trailing: const _StatusPill(
+                    label: 'Awaiting Approval',
+                    color: Colors.orange,
+                    icon: Icons.hourglass_bottom,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
             ],
+          ),
           const SizedBox(height: 10),
-          _SectionHeader(
+          _TaskDrawer(
+            key: const ValueKey('drawer-available'),
             icon: Icons.access_time,
             title: 'Available Tasks',
             count: availableTasks.length,
             badgeColor: AppColors.primaryBlue,
             help: 'Household tasks anyone can do. Claim one to make it yours - first come, first served!',
-          ),
-          const SizedBox(height: 8),
-          if (availableTasks.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Text('No unclaimed tasks right now - check back later!'),
-            )
-          else
-            for (final task in availableTasks) ...[
-              _TaskRow(
-                task: task,
-                childId: child.id,
-                isAvailable: true,
-                trailing: ElevatedButton(
-                  onPressed: () => context.read<DatabaseService>().claimTask(
-                    task.id,
-                    child.id,
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(0, 24),
-                  ),
-                  child: const Text('Claim'),
-                ),
-              ),
-              const SizedBox(height: 2),
+            emptyLabel: 'No unclaimed tasks right now - check back later!',
+            // Nothing to do yet? Show what's up for grabs.
+            initiallyExpanded: activeTasks.isEmpty,
+            children: [
+              for (final task in availableTasks)
+                _TaskRow(task: task, childId: child.id, isAvailable: true),
             ],
+          ),
         ] else ...[
-          _SectionHeader(
+          _TaskDrawer(
+            key: const ValueKey('drawer-completed'),
             icon: Icons.check_circle_outline,
             title: 'Completed',
             count: history.length,
             badgeColor: AppColors.growthGreen,
-          ),
-          const SizedBox(height: 6),
-
-          if (history.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Text(
-                'Nothing completed yet - finish a task to see it here!',
-              ),
-            )
-          else
-            for (final task in history) ...[
-              _HistoryRow(task: task),
-              const SizedBox(height: 12),
+            emptyLabel: 'Nothing completed yet - finish a task to see it here!',
+            initiallyExpanded: true,
+            children: [
+              for (final task in history)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _HistoryRow(task: task),
+                ),
             ],
+          ),
         ],
       ],
     );
@@ -283,12 +241,16 @@ class _SectionHeader extends StatelessWidget {
     required this.count,
     required this.badgeColor,
     this.help,
+    this.expanded,
   });
 
   final IconData icon;
   final String title;
   final int count;
   final Color badgeColor;
+
+  /// Drawer state for the arrow; null hides the arrow.
+  final bool? expanded;
 
   /// Optional ⓘ tip explaining this section.
   final String? help;
@@ -332,8 +294,94 @@ class _SectionHeader extends StatelessWidget {
               ),
             ),
           ),
+          if (expanded != null) ...[
+            const SizedBox(width: 6),
+            AnimatedRotation(
+              turns: expanded! ? 0.5 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: Icon(Icons.expand_more, color: Colors.grey.shade600),
+            ),
+          ],
         ],
       ),
+    );
+  }
+}
+
+/// A collapsible section: tapping the header slides its tasks open or
+/// closed. The count stays visible on the header while it's closed.
+class _TaskDrawer extends StatefulWidget {
+  const _TaskDrawer({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.count,
+    required this.badgeColor,
+    required this.emptyLabel,
+    required this.children,
+    this.help,
+    this.initiallyExpanded = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final int count;
+  final Color badgeColor;
+  final String emptyLabel;
+  final List<Widget> children;
+  final String? help;
+  final bool initiallyExpanded;
+
+  @override
+  State<_TaskDrawer> createState() => _TaskDrawerState();
+}
+
+class _TaskDrawerState extends State<_TaskDrawer> {
+  late bool _expanded = widget.initiallyExpanded;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Semantics(
+          button: true,
+          expanded: _expanded,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: _SectionHeader(
+              icon: widget.icon,
+              title: widget.title,
+              count: widget.count,
+              badgeColor: widget.badgeColor,
+              help: widget.help,
+              expanded: _expanded,
+            ),
+          ),
+        ),
+        ClipRect(
+          child: AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeInOut,
+            alignment: Alignment.topCenter,
+            child: !_expanded
+                ? const SizedBox(width: double.infinity)
+                : Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: widget.children.isEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                            child: Text(widget.emptyLabel),
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: widget.children,
+                          ),
+                  ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -341,13 +389,15 @@ class _SectionHeader extends StatelessWidget {
 class _TaskRow extends StatelessWidget {
   const _TaskRow({
     required this.task,
-    required this.trailing,
+    this.trailing,
     this.childId,
     this.isAvailable = false,
   });
 
   final TaskModel task;
-  final Widget trailing;
+  /// Optional status shown in place of the rewards (e.g. "Awaiting Approval").
+  /// Actions like claim/complete live in the task view card instead.
+  final Widget? trailing;
 
   /// Enables swipe actions (claim / complete / undo) for this child.
   final String? childId;
@@ -356,7 +406,11 @@ class _TaskRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final id = childId;
-    final row = _buildRow(context);
+    final row = GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => showTaskViewSheet(context, task.id),
+      child: _buildRow(context),
+    );
     if (id == null) return row;
     return ChildTaskSwipe(task: task, childId: id, child: row);
   }
@@ -366,7 +420,7 @@ class _TaskRow extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: EdgeInsets.symmetric(horizontal: 14, vertical: isAvailable ? 2 : 10),
+      padding: const EdgeInsets.fromLTRB(12.5, 25, 25, 25),
       decoration: BoxDecoration(
         color: context.raisedSurface,
         borderRadius: BorderRadius.circular(16),
@@ -413,11 +467,10 @@ class _TaskRow extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Transform.translate(
-                offset: const Offset(8, 0),
-                child: trailing,
-                ),
-              const SizedBox(height: 2),
+              // A status (e.g. "Awaiting Approval") takes the rewards' place.
+              if (trailing != null)
+                trailing!
+              else
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -431,13 +484,8 @@ class _TaskRow extends StatelessWidget {
                       color: Colors.amber,
                     ),
                   ),
-                ],
-              ),
-              if (task.coinReward > 0) ...[
-                const SizedBox(height: 1),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+                  if (task.coinReward > 0) ...[
+                    const SizedBox(width: 8),
                     Icon(Icons.monetization_on, size: 12, color: Colors.amber.shade800),
                     const SizedBox(width: 1),
                     Text(
@@ -449,8 +497,8 @@ class _TaskRow extends StatelessWidget {
                       ),
                     ),
                   ],
-                ),
-              ],
+                ],
+              ),
             ],
           ),
         ],
@@ -521,7 +569,10 @@ class _HistoryRow extends StatelessWidget {
     final theme = Theme.of(context);
     final approved = task.status == TaskStatus.approved;
 
-    return Container(
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => showTaskViewSheet(context, task.id),
+      child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: context.raisedSurface,
@@ -613,6 +664,7 @@ class _HistoryRow extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }
