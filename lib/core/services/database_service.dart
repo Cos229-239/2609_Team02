@@ -765,7 +765,7 @@ class DatabaseService extends ChangeNotifier {
   Future<void> completeTask(String taskId) async {
     await _tasksCollection.doc(taskId).update({
       'status': TaskStatus.completed.name,
-      'completedAt': Timestamp.fromDate(DateTime.now()),
+      'completedAt': Timestamp.fromDate(_clock()),
     });
   }
 
