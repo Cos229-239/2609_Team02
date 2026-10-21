@@ -16,6 +16,7 @@ import '../../../shared/utils/legal_links.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_notice.dart';
+import '../../../shared/widgets/parental_gate.dart';
 
 /// Famotive Premium: what it unlocks, the plans (with the 7-day free trial),
 /// restore, and the current subscription for parents who have one.
@@ -135,6 +136,7 @@ class _PremiumScreenState extends State<PremiumScreen> {
 
   static Future<void> _openManage(BuildContext context, String? productId) async {
     final notices = AppNotice.of(context);
+    if (!await ParentalGate.verify(context)) return;
     final opened = await launchUrl(
       PremiumService.manageSubscriptionsUri(productId: productId),
       mode: LaunchMode.externalApplication,
@@ -267,7 +269,12 @@ class _Plans extends StatelessWidget {
           label: trial ? 'Start $days-Day Free Trial' : 'Subscribe for ${plan.perPeriod}',
           icon: Icons.workspace_premium_outlined,
           isLoading: service.busy,
-          onPressed: service.busy ? null : () => service.buy(plan),
+          onPressed: service.busy
+              ? null
+              : () async {
+                  // Kids Category: a parent must pass the gate before any purchase.
+                  if (await ParentalGate.verify(context)) await service.buy(plan);
+                },
         ),
         const SizedBox(height: 10),
         // Store-required disclosure of the trial and auto-renewal terms.

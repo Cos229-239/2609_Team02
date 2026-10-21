@@ -11,13 +11,16 @@ import '../../../shared/widgets/app_card.dart';
 import '../widgets/profile_menu_tile.dart';
 import '../../../core/services/accessibility_settings.dart';
 import '../../../shared/widgets/app_notice.dart';
+import '../../../shared/widgets/parental_gate.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   /// Opens the device's mail app with a pre-filled support request,
-  /// pre-addressed to support@famotive.org.
+  /// pre-addressed to support@famotive.org. Behind the [ParentalGate]:
+  /// it leaves the app (Kids Category).
   Future<void> _launchSupportEmail(BuildContext context) async {
+    if (!await ParentalGate.verify(context)) return;
     final uri = Uri(
       scheme: 'mailto',
       path: 'support@famotive.org',
