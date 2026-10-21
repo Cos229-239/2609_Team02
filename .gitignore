@@ -313,5 +313,8 @@ coverage/
 
 SubscriptionKey_D26244PGV2.p8
 
+# QA walkthrough web build output (tool/deploy_qa_walkthrough.sh)
+/public/qa/
+
 # Firebase emulator secret params (functions/README.md)
 .secret.local

@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Famotive — Join the Beta</title>
+<meta name="description" content="Famotive turns chores into quests. Kids earn XP and rewards, parents get an easy way to assign and approve. Join the iOS or Android beta." />
+<meta property="og:title" content="Join the Famotive beta" />
+<meta property="og:description" content="Chores become quests. Kids earn XP, parents stay organized. Free beta on iPhone and Android." />
+<meta name="theme-color" content="#2455C9" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --blue: #2455C9;
+    --blue-dark: #1B43A3;
+    --blue-soft: #E8EEFB;
+    --green: #43A047;
+    --green-soft: #E6F4E7;
+    --gold: #F5B301;
+    --surface: #F7F9FC;
+    --card: #FFFFFF;
+    --ink: #1A1E27;
+    --muted: #5B6472;
+    --line: #E3E7EF;
+    --radius: 18px;
+    --shadow: 0 10px 30px rgba(26, 30, 39, .08), 0 2px 6px rgba(26, 30, 39, .05);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--surface);
+    color: var(--ink);
+    font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--blue); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+
+  /* ---------- Nav ---------- */
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 18px 0; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 22px; text-decoration: none; color: var(--ink); }
+  .logo-mark {
+    width: 36px; height: 36px; border-radius: 11px; background: var(--blue);
+    display: grid; place-items: center; color: #fff; font-size: 18px;
+  }
+  .logo .otive { color: var(--green); }
+  .nav-cta {
+    font-weight: 800; font-size: 14px; text-decoration: none; color: var(--blue);
+    background: var(--blue-soft); padding: 9px 16px; border-radius: 999px;
+  }
+
+  /* ---------- Hero ---------- */
+  .hero { display: grid; grid-template-columns: 1.1fr .9fr; gap: 48px; align-items: center; padding: 40px 0 64px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 800;
+    color: var(--green); background: var(--green-soft); padding: 6px 12px; border-radius: 999px;
+  }
+  .pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 1.8s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+  h1 { font-size: clamp(34px, 5.4vw, 54px); line-height: 1.08; margin: 18px 0 16px; font-weight: 900; letter-spacing: -.5px; }
+  h1 .hl { color: var(--blue); }
+  .lede { font-size: 18px; color: var(--muted); margin: 0 0 28px; max-width: 520px; }
+  .hero-ctas { display: flex; flex-wrap: wrap; gap: 12px; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    font-family: inherit; font-weight: 800; font-size: 16px; text-decoration: none; cursor: pointer;
+    border: 0; border-radius: 14px; padding: 15px 22px; min-height: 52px;
+    transition: transform .12s ease, background .15s ease, box-shadow .15s ease;
+  }
+  .btn:active { transform: scale(.98); }
+  .btn-primary { background: var(--blue); color: #fff; box-shadow: 0 6px 16px rgba(36, 85, 201, .3); }
+  .btn-primary:hover { background: var(--blue-dark); }
+  .btn-green { background: var(--green); color: #fff; box-shadow: 0 6px 16px rgba(67, 160, 71, .3); }
+  .btn-green:hover { background: #388E3C; }
+  .btn-ghost { background: #fff; color: var(--ink); border: 1.5px solid var(--line); }
+  .btn-ghost:hover { border-color: #cfd6e3; }
+  .btn svg { width: 20px; height: 20px; flex: none; }
+  .hero-note { margin-top: 14px; font-size: 14px; color: var(--muted); }
+
+  /* Hero phone mock */
+  .phone {
+    width: 300px; max-width: 100%; margin: 0 auto; background: #fff; border-radius: 36px;
+    padding: 18px; box-shadow: var(--shadow); border: 1px solid var(--line); position: relative;
+  }
+  .phone-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .phone-head .hi { font-weight: 900; font-size: 18px; }
+  .lvl { font-size: 12px; font-weight: 800; color: var(--blue); background: var(--blue-soft); padding: 4px 10px; border-radius: 999px; }
+  .xpbar { height: 10px; background: var(--blue-soft); border-radius: 999px; overflow: hidden; margin-bottom: 6px; }
+  .xpbar span { display: block; height: 100%; width: 72%; background: linear-gradient(90deg, var(--blue), #4F7BE0); border-radius: 999px; }
+  .xpmeta { font-size: 12px; color: var(--muted); margin-bottom: 16px; font-weight: 700; }
+  .quest {
+    display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 14px;
+    border: 1.5px solid var(--line); margin-bottom: 10px; background: #fff;
+  }
+  .quest .ic { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; font-size: 20px; background: var(--surface); flex: none; }
+  .quest .t { font-weight: 800; font-size: 14px; line-height: 1.2; }
+  .quest .s { font-size: 12px; color: var(--muted); font-weight: 700; }
+  .quest .xp { margin-left: auto; font-size: 12px; font-weight: 900; color: var(--green); background: var(--green-soft); padding: 4px 8px; border-radius: 8px; white-space: nowrap; }
+  .quest.done { background: var(--green-soft); border-color: transparent; }
+  .quest.done .t { text-decoration: line-through; color: #2E7D32; }
+  .badge-float {
+    position: absolute; right: -22px; top: -18px; background: #fff; border-radius: 14px; box-shadow: var(--shadow);
+    padding: 10px 12px; font-size: 13px; font-weight: 800; display: flex; gap: 8px; align-items: center;
+    animation: bob 3s ease-in-out infinite;
+  }
+  @keyframes bob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-6px) } }
+
+  /* ---------- Sections ---------- */
+  section { padding: 56px 0; }
+  .eyebrow { font-size: 13px; font-weight: 900; letter-spacing: 1.2px; text-transform: uppercase; color: var(--blue); }
+  h2 { font-size: clamp(28px, 4vw, 38px); line-height: 1.15; margin: 8px 0 12px; font-weight: 900; }
+  .sub { color: var(--muted); font-size: 17px; margin: 0 0 32px; max-width: 620px; }
+  .center { text-align: center; }
+  .center .sub { margin-left: auto; margin-right: auto; }
+
+  /* ---------- Join card ---------- */
+  #join { padding-top: 24px; }
+  .join-card { background: var(--card); border-radius: 24px; box-shadow: var(--shadow); border: 1px solid var(--line); padding: 28px; max-width: 720px; margin: 0 auto; }
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--surface); padding: 6px; border-radius: 14px; margin-bottom: 26px; }
+  .tab {
+    font-family: inherit; font-size: 16px; font-weight: 800; color: var(--muted); background: transparent; border: 0;
+    padding: 12px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .tab svg { width: 18px; height: 18px; }
+  .tab[aria-selected="true"] { background: #fff; color: var(--ink); box-shadow: 0 2px 8px rgba(26, 30, 39, .08); }
+  .panel[hidden] { display: none; }
+  .panel h3 { margin: 0 0 4px; font-size: 22px; font-weight: 900; }
+  .panel .meta { color: var(--muted); margin: 0 0 22px; }
+  .detected { font-size: 13px; font-weight: 800; color: var(--green); margin: -14px 0 18px; display: none; }
+  .detected.show { display: block; }
+
+  /* Steps */
+  .steps { list-style: none; padding: 0; margin: 0; counter-reset: step; }
+  .step { position: relative; padding: 0 0 22px 56px; }
+  .step:last-child { padding-bottom: 0; }
+  .step::before {
+    counter-increment: step; content: counter(step);
+    position: absolute; left: 0; top: 0; width: 38px; height: 38px; border-radius: 50%;
+    display: grid; place-items: center; font-weight: 900; background: var(--blue-soft); color: var(--blue);
+    transition: background .2s, color .2s;
+  }
+  .step:not(:last-child)::after {
+    content: ""; position: absolute; left: 18px; top: 44px; bottom: 6px; width: 2px; background: var(--line); border-radius: 2px;
+  }
+  .step.done::before { content: "✓"; background: var(--green); color: #fff; }
+  .step.done:not(:last-child)::after { background: var(--green); }
+  .step.locked { opacity: .5; }
+  .step.locked .btn { pointer-events: none; }
+  .step h4 { margin: 6px 0 4px; font-size: 18px; font-weight: 900; }
+  .step p { margin: 0 0 12px; color: var(--muted); }
+  .step .btn { width: 100%; max-width: 380px; }
+  .tiny { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .tiny button { font: inherit; color: var(--blue); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; font-weight: 700; }
+  .join-form { display: flex; gap: 10px; max-width: 520px; }
+  .field {
+    flex: 1; min-width: 0; font: inherit; font-size: 16px; font-weight: 700; color: var(--ink);
+    padding: 14px 16px; min-height: 52px; border-radius: 14px; border: 1.5px solid var(--line); background: #fff;
+  }
+  .field:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 4px rgba(67, 160, 71, .15); }
+  .field[aria-invalid="true"] { border-color: #D93025; }
+  .join-form .btn { width: auto; flex: none; }
+  .join-form .btn[disabled] { opacity: .7; cursor: progress; }
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .form-msg { min-height: 0; margin: 10px 0 0 !important; font-size: 14px; font-weight: 700; }
+  .form-msg:empty { display: none; }
+  .form-msg.ok { color: #2E7D32; }
+  .form-msg.err { color: #C5221F; }
+  .spin { width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,.45); border-top-color: #fff; border-radius: 50%; animation: rot .7s linear infinite; }
+  @keyframes rot { to { transform: rotate(360deg) } }
+  .tip {
+    display: flex; gap: 12px; background: #FFF8E1; border: 1px solid #FBE7A6; border-radius: 14px;
+    padding: 14px 16px; font-size: 14px; color: #5D4A00; margin-bottom: 24px;
+  }
+  .tip b { color: #3E3100; }
+  .success {
+    display: none; text-align: center; background: var(--green-soft); border-radius: 16px; padding: 20px; margin-top: 22px;
+  }
+  .success.show { display: block; }
+  .success .big { font-size: 34px; }
+  .success h4 { margin: 4px 0 4px; font-size: 18px; font-weight: 900; color: #2E7D32; }
+  .success p { margin: 0; color: #2E5E30; font-size: 14px; }
+
+  .qr-row { display: none; align-items: center; gap: 16px; margin-top: 22px; padding-top: 22px; border-top: 1px solid var(--line); }
+  .qr-row.show { display: flex; }
+  .qr-box { width: 112px; height: 112px; flex: none; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 8px; display: grid; place-items: center; }
+  .qr-box img, .qr-box canvas { width: 96px !important; height: 96px !important; }
+  .qr-row p { margin: 0; font-size: 14px; color: var(--muted); }
+  .qr-row b { color: var(--ink); }
+
+  /* ---------- How it works ---------- */
+  .flow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+  .flow-item { background: #fff; border-radius: var(--radius); border: 1px solid var(--line); padding: 20px 16px; text-align: center; }
+  .flow-item .e { font-size: 30px; }
+  .flow-item b { display: block; margin: 8px 0 4px; font-size: 16px; }
+  .flow-item span { font-size: 14px; color: var(--muted); }
+
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 16px; }
+  .feature { background: #fff; border-radius: var(--radius); border: 1px solid var(--line); padding: 24px; }
+  .feature .fi { width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center; font-size: 22px; margin-bottom: 12px; }
+  .feature h3 { margin: 0 0 6px; font-size: 18px; font-weight: 900; }
+  .feature p { margin: 0; color: var(--muted); font-size: 15px; }
+
+  /* ---------- FAQ ---------- */
+  .faq { max-width: 720px; margin: 0 auto; }
+  details { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 0 20px; margin-bottom: 10px; }
+  summary { cursor: pointer; font-weight: 800; padding: 16px 0; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; font-size: 22px; line-height: 1; color: var(--blue); }
+  details[open] summary::after { content: "–"; }
+  details p { margin: 0 0 16px; color: var(--muted); }
+
+  /* ---------- Final CTA + footer ---------- */
+  .final { background: var(--blue); color: #fff; border-radius: 28px; padding: 44px 28px; text-align: center; }
+  .final h2 { color: #fff; }
+  .final p { color: #D6E1FA; margin: 0 0 24px; }
+  .final .btn { background: #fff; color: var(--blue); }
+  footer { padding: 36px 0 48px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; font-size: 14px; color: var(--muted); }
+  footer a { color: var(--muted); text-decoration: none; margin-left: 18px; }
+  footer a:hover { color: var(--ink); }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 860px) {
+    .hero { grid-template-columns: 1fr; gap: 36px; padding-top: 16px; text-align: center; }
+    .lede { margin-left: auto; margin-right: auto; }
+    .hero-ctas { justify-content: center; }
+    .badge-float { right: -6px; }
+    .flow { grid-template-columns: 1fr 1fr; }
+    .flow-item:last-child { grid-column: span 2; }
+    .features { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 520px) {
+    .join-card { padding: 20px 16px; border-radius: 20px; }
+    .step { padding-left: 50px; }
+    .hero-ctas .btn { width: 100%; }
+    footer { flex-direction: column; }
+    footer a { margin: 0 18px 0 0; }
+    .qr-row.show { display: none; }
+    .join-form { flex-direction: column; }
+    .join-form .btn { width: 100%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <nav>
+    <a class="logo" href="/"><span class="logo-mark">🏠</span><span>Fam<span class="otive">otive</span></span></a>
+    <a class="nav-cta" href="#join">Join the beta</a>
+  </nav>
+
+  <!-- ===== HERO ===== -->
+  <header class="hero">
+    <div>
+      <span class="pill"><span class="dot"></span> Free beta — now open</span>
+      <h1>Chores become <span class="hl">quests.</span><br>Kids actually want to do them.</h1>
+      <p class="lede">Famotive turns household responsibilities into a game. Kids earn XP, achievements and rewards. Parents assign, track and approve in seconds.</p>
+      <div class="hero-ctas" id="heroCtas">
+        <a class="btn btn-primary" href="#join" data-go="ios">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.37 12.7c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.48.83-.72 0-1.82-.81-3-.79-1.54.02-2.96.9-3.76 2.28-1.6 2.78-.41 6.9 1.15 9.16.76 1.1 1.67 2.34 2.86 2.3 1.15-.05 1.58-.74 2.97-.74 1.38 0 1.77.74 2.98.72 1.23-.02 2.01-1.12 2.76-2.23.87-1.28 1.23-2.52 1.25-2.58-.03-.01-2.4-.92-2.42-3.66zM14.1 5.95c.63-.77 1.06-1.83.94-2.89-.91.04-2.02.61-2.67 1.37-.58.67-1.1 1.76-.96 2.8 1.02.08 2.06-.52 2.69-1.28z"/></svg>
+          Get it on iPhone
+        </a>
+        <a class="btn btn-green" href="#join" data-go="android">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.6 9.48l1.84-3.18a.38.38 0 00-.66-.38l-1.86 3.22a11.5 11.5 0 00-9.84 0L5.22 5.92a.38.38 0 00-.66.38L6.4 9.48A10.8 10.8 0 001 18h22a10.8 10.8 0 00-5.4-8.52zM7 15.25a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5zm10 0a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5z"/></svg>
+          Get it on Android
+        </a>
+      </div>
+      <p class="hero-note">Free while in beta · Takes about a minute</p>
+    </div>
+
+    <div aria-hidden="true">
+      <div class="phone">
+        <div class="badge-float">🏆 Achievement unlocked!</div>
+        <div class="phone-head"><span class="hi">Hi, Maya 👋</span><span class="lvl">Level 7</span></div>
+        <div class="xpbar"><span></span></div>
+        <div class="xpmeta">360 / 500 XP to Level 8</div>
+        <div class="quest done"><span class="ic">🛏️</span><div><div class="t">Make your bed</div><div class="s">Approved by Mom</div></div><span class="xp">+20 XP</span></div>
+        <div class="quest"><span class="ic">🐶</span><div><div class="t">Feed Biscuit</div><div class="s">Due 6:00 pm</div></div><span class="xp">+15 XP</span></div>
+        <div class="quest"><span class="ic">🍽️</span><div><div class="t">Unload dishwasher</div><div class="s">Family goal</div></div><span class="xp">+30 XP</span></div>
+        <div class="quest"><span class="ic">📚</span><div><div class="t">Read 20 minutes</div><div class="s">Daily quest</div></div><span class="xp">+25 XP</span></div>
+      </div>
+    </div>
+  </header>
+</div>
+
+<!-- ===== JOIN ===== -->
+<section id="join">
+  <div class="wrap">
+    <div class="center">
+      <div class="eyebrow">Join the beta</div>
+      <h2>Get Famotive on your phone</h2>
+      <p class="sub">Pick your device and follow the steps. We’ll guide you the whole way.</p>
+    </div>
+
+    <div class="join-card">
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" id="tab-ios" aria-controls="panel-ios" aria-selected="true">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.37 12.7c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.48.83-.72 0-1.82-.81-3-.79-1.54.02-2.96.9-3.76 2.28-1.6 2.78-.41 6.9 1.15 9.16.76 1.1 1.67 2.34 2.86 2.3 1.15-.05 1.58-.74 2.97-.74 1.38 0 1.77.74 2.98.72 1.23-.02 2.01-1.12 2.76-2.23.87-1.28 1.23-2.52 1.25-2.58-.03-.01-2.4-.92-2.42-3.66zM14.1 5.95c.63-.77 1.06-1.83.94-2.89-.91.04-2.02.61-2.67 1.37-.58.67-1.1 1.76-.96 2.8 1.02.08 2.06-.52 2.69-1.28z"/></svg>
+          iPhone
+        </button>
+        <button class="tab" role="tab" id="tab-android" aria-controls="panel-android" aria-selected="false">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.6 9.48l1.84-3.18a.38.38 0 00-.66-.38l-1.86 3.22a11.5 11.5 0 00-9.84 0L5.22 5.92a.38.38 0 00-.66.38L6.4 9.48A10.8 10.8 0 001 18h22a10.8 10.8 0 00-5.4-8.52zM7 15.25a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5zm10 0a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5z"/></svg>
+          Android
+        </button>
+      </div>
+
+      <!-- iOS -->
+      <div class="panel" id="panel-ios" role="tabpanel" aria-labelledby="tab-ios">
+        <p class="detected" id="detected-ios">✓ Looks like you’re on an iPhone</p>
+        <h3>iPhone &amp; iPad</h3>
+        <p class="meta">We use Apple’s TestFlight app to share the beta. Two taps and you’re in.</p>
+        <ol class="steps">
+          <li class="step">
+            <h4>Open the beta invite</h4>
+            <p>If you don’t have TestFlight yet, the page will offer to install it first (it’s free, made by Apple).</p>
+            <a class="btn btn-primary" href="https://testflight.apple.com/join/tuFMgWM8" target="_blank" rel="noopener">Join on TestFlight →</a>
+          </li>
+          <li class="step">
+            <h4>Tap “Accept”, then “Install”</h4>
+            <p>Famotive appears on your home screen. Updates arrive automatically through TestFlight.</p>
+          </li>
+        </ol>
+        <div class="qr-row" id="qr-ios">
+          <div class="qr-box" id="qr-ios-code"></div>
+          <p><b>On a computer?</b> Scan this with your iPhone’s camera to open the invite there.</p>
+        </div>
+      </div>
+
+      <!-- Android -->
+      <div class="panel" id="panel-android" role="tabpanel" aria-labelledby="tab-android" hidden>
+        <p class="detected" id="detected-android">✓ Looks like you’re on Android</p>
+        <h3>Android</h3>
+        <p class="meta">Google only lets approved testers install beta apps. Three quick steps — all free.</p>
+
+        <div class="tip">
+          <span>💡</span>
+          <span><b>Use the same Google account as your Play Store.</b> If your phone has more than one account, check which one is active in the Play Store app before you start.</span>
+        </div>
+
+        <ol class="steps" id="androidSteps">
+          <li class="step" data-step="1">
+            <h4>Join the tester list</h4>
+            <p>Opens our Google Group. Tap the <b>“Join group”</b> button on that page, then come back here.</p>
+            <a class="btn btn-green" id="a-step1" href="https://groups.google.com/g/famotive-testers" target="_blank" rel="noopener">Open tester list →</a>
+            <div class="tiny" id="a-step1-help" hidden>Didn’t see a “Join group” button? Make sure you’re signed in to Google, then <button type="button" data-reopen="1">open it again</button>.</div>
+          </li>
+          <li class="step locked" data-step="2">
+            <h4>Become a tester</h4>
+            <p>Opens Google Play. Tap <b>“Become a tester”</b>. If it says you’re not eligible, wait a minute and refresh — Google can take a moment to update.</p>
+            <a class="btn btn-green" id="a-step2" href="https://play.google.com/apps/testing/com.famotive" target="_blank" rel="noopener">Become a tester →</a>
+          </li>
+          <li class="step locked" data-step="3">
+            <h4>Install Famotive</h4>
+            <p>Download it from the Play Store like any other app. It can take a few minutes for the beta to show up.</p>
+            <a class="btn btn-green" id="a-step3" href="https://play.google.com/store/apps/details?id=com.famotive" target="_blank" rel="noopener">Open in Play Store →</a>
+          </li>
+        </ol>
+
+        <div class="success" id="a-success">
+          <div class="big">🎉</div>
+          <h4>You’re in! Welcome to the beta.</h4>
+          <p>Thanks for helping us make chores a little more fun.</p>
+        </div>
+        <p class="tiny" style="margin-top:18px">Need to start over? <button type="button" id="a-reset">Reset steps</button></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== HOW IT WORKS ===== -->
+<section>
+  <div class="wrap">
+    <div class="center">
+      <div class="eyebrow">How it works</div>
+      <h2>A simple loop the whole family gets</h2>
+      <p class="sub">Responsibilities turn into progress — for each kid and for the family as a team.</p>
+    </div>
+    <div class="flow">
+      <div class="flow-item"><div class="e">📝</div><b>Parent assigns</b><span>One-off or recurring chores</span></div>
+      <div class="flow-item"><div class="e">✅</div><b>Child completes</b><span>A kid-friendly quest list</span></div>
+      <div class="flow-item"><div class="e">👍</div><b>Parent approves</b><span>One tap to sign off</span></div>
+      <div class="flow-item"><div class="e">⭐</div><b>Child earns</b><span>XP, levels &amp; rewards</span></div>
+      <div class="flow-item"><div class="e">🏡</div><b>Family progresses</b><span>Shared goals together</span></div>
+    </div>
+    <div class="features">
+      <div class="feature"><div class="fi" style="background:var(--blue-soft)">🗓️</div><h3>Made for busy parents</h3><p>Set chores once with recurring schedules, get notified when they’re done, approve from anywhere.</p></div>
+      <div class="feature"><div class="fi" style="background:var(--green-soft)">🎮</div><h3>Feels like a game to kids</h3><p>XP, levels and achievements turn “ugh, chores” into “what quest is next?”</p></div>
+      <div class="feature"><div class="fi" style="background:#FFF4D6">🎁</div><h3>Rewards you choose</h3><p>Build a reward store — screen time, a treat, a trip out. Kids spend what they earn.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FAQ ===== -->
+<section>
+  <div class="wrap">
+    <div class="center">
+      <div class="eyebrow">Questions</div>
+      <h2>Beta FAQ</h2>
+    </div>
+    <div class="faq">
+      <details><summary>Does the beta cost anything?</summary><p>No. The beta is completely free.</p></details>
+      <details><summary>Why does Android need a Google Group?</summary><p>Google Play only lets people on an approved tester list install apps that are still in testing. Our Google Group <i>is</i> that list — joining it is what unlocks the download. You won’t get spammed; it’s only used for tester access.</p></details>
+      <details><summary>Google Play says I’m not eligible / the app isn’t found</summary><p>This almost always means the Play Store is using a different Google account than the one that joined the group. Switch accounts in the Play Store app (tap your profile picture), or join the group with the account your phone uses. After joining, give it a few minutes before trying again.</p></details>
+      <details><summary>The Google Group says I don’t have permission</summary><p>Sign in to Google first (tap “Sign in” at the top of the page), then reload — the “Join group” button only appears once you’re signed in.</p></details>
+      <details><summary>Do my kids need their own phones?</summary><p>No. Kids can use their own device or a shared family tablet — each family member gets their own profile.</p></details>
+      <details><summary>How do I leave the beta?</summary><p>On iPhone, remove Famotive from TestFlight. On Android, open the “Become a tester” page again and choose “Leave the program”. You can also <a href="/delete-my-data.html">delete your data</a> at any time.</p></details>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:8px">
+  <div class="wrap">
+    <div class="final">
+      <h2>Ready to make chores fun?</h2>
+      <p>Join the free beta on iPhone or Android today.</p>
+      <a class="btn" href="#join">Join the beta</a>
+    </div>
+    <footer>
+      <span>&copy; <span id="yr">2026</span> Famotive · Together. Support. Grow.</span>
+      <span>
+        <a href="/privacy-policy.html">Privacy</a>
+        <a href="/terms-and-conditions.html">Terms</a>
+        <a href="/delete-my-data.html">Delete my data</a>
+      </span>
+    </footer>
+  </div>
+</section>
+
+<script>
+(function () {
+  var LINKS = {
+    testflight: "https://testflight.apple.com/join/tuFMgWM8"
+  };
+  var STORE_KEY = "famotive-android-steps";
+
+  // ---------- Storage (safe) ----------
+  function load() { try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch (e) { return {}; } }
+  function save(s) { try { localStorage.setItem(STORE_KEY, JSON.stringify(s)); } catch (e) {} }
+
+  // ---------- Platform detection ----------
+  var ua = navigator.userAgent || "";
+  var isAndroid = /android/i.test(ua);
+  var isIOS = /iphone|ipad|ipod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  var isMobile = isAndroid || isIOS || /mobi/i.test(ua);
+
+  // ---------- Tabs ----------
+  var tabs = { ios: document.getElementById("tab-ios"), android: document.getElementById("tab-android") };
+  var panels = { ios: document.getElementById("panel-ios"), android: document.getElementById("panel-android") };
+  function select(which) {
+    Object.keys(tabs).forEach(function (k) {
+      var on = k === which;
+      tabs[k].setAttribute("aria-selected", on ? "true" : "false");
+      panels[k].hidden = !on;
+    });
+  }
+  tabs.ios.addEventListener("click", function () { select("ios"); });
+  tabs.android.addEventListener("click", function () { select("android"); });
+
+  if (isAndroid) { select("android"); document.getElementById("detected-android").classList.add("show"); }
+  else if (isIOS) { document.getElementById("detected-ios").classList.add("show"); }
+
+  // Hero buttons jump to the right tab
+  document.querySelectorAll("[data-go]").forEach(function (el) {
+    el.addEventListener("click", function () { select(el.getAttribute("data-go")); });
+  });
+
+  // On a phone, show only the matching hero button
+  if (isAndroid) document.querySelector('[data-go="ios"]').style.display = "none";
+  if (isIOS) document.querySelector('[data-go="android"]').style.display = "none";
+
+  // ---------- Android stepper ----------
+  var state = load();
+  var steps = document.querySelectorAll("#androidSteps .step");
+  function render() {
+    var next = 1;
+    while (state["s" + next]) next++;
+    steps.forEach(function (li) {
+      var n = +li.getAttribute("data-step");
+      li.classList.toggle("done", !!state["s" + n]);
+      li.classList.toggle("locked", n > next);
+    });
+    if (state.s1 && state.email) {
+      setMsg("ok", "✓ " + state.email + " is on the tester list. Now do step 2.");
+      emailEl.value = state.email;
+    }
+    document.getElementById("a-success").classList.toggle("show", !!state.s3);
+  }
+  function mark(n) { state["s" + n] = true; save(state); render(); }
+  // Small delay so the new tab opens before the UI changes underneath the tap
+  [2, 3].forEach(function (n) {
+    document.getElementById("a-step" + n).addEventListener("click", function () {
+      setTimeout(function () { mark(n); }, 400);
+    });
+  });
+  document.getElementById("a-reset").addEventListener("click", function () {
+    state = {}; save(state); setMsg("", ""); emailEl.value = ""; render();
+  });
+
+  // ---------- Step 1: add email to the tester group via /api/join-beta ----------
+  var form = document.getElementById("joinForm");
+  var emailEl = document.getElementById("joinEmail");
+  var btn = document.getElementById("joinBtn");
+  var msgEl = document.getElementById("joinMsg");
+  var fallback = document.getElementById("joinFallback");
+  var BTN_LABEL = btn.textContent;
+  var failures = 0;
+
+  function setMsg(kind, text) { msgEl.className = "form-msg " + kind; msgEl.textContent = text; }
+  function busy(on) {
+    btn.disabled = on;
+    btn.innerHTML = on ? '<span class="spin" aria-hidden="true"></span> Adding…' : BTN_LABEL;
+  }
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var email = emailEl.value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      emailEl.setAttribute("aria-invalid", "true");
+      setMsg("err", "Please enter a valid email address.");
+      emailEl.focus();
+      return;
+    }
+    emailEl.removeAttribute("aria-invalid");
+    busy(true); setMsg("", "");
+
+    fetch("/api/join-beta", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email, website: document.getElementById("joinHp").value })
+    })
+      .then(function (r) { return r.json().catch(function () { return { ok: false, error: "unavailable" }; }); })
+      .then(function (res) {
+        busy(false);
+        if (res.ok) {
+          state.email = email.toLowerCase();
+          mark(1);
+          return;
+        }
+        failures++;
+        if (res.error === "invalid_email") {
+          emailEl.setAttribute("aria-invalid", "true");
+          setMsg("err", "That email doesn’t look right — please check it.");
+        } else if (res.error === "rate_limited") {
+          setMsg("err", "Too many tries. Please wait a bit, or join the group manually below.");
+          fallback.hidden = false;
+        } else {
+          setMsg("err", "Something went wrong on our end. Try again, or join the group manually below.");
+          fallback.hidden = false;
+        }
+      })
+      .catch(function () {
+        busy(false); failures++;
+        setMsg("err", "Couldn’t reach our server. Check your connection and try again.");
+        if (failures > 1) fallback.hidden = false;
+      });
+  });
+  // Manual fallback also counts as finishing step 1
+  fallback.querySelector("a").addEventListener("click", function () { setTimeout(function () { mark(1); }, 400); });
+
+  render();
+
+  // ---------- QR code for desktop visitors (iOS needs the phone) ----------
+  if (!isMobile) {
+    var s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
+    s.onload = function () {
+      try {
+        new QRCode(document.getElementById("qr-ios-code"), { text: LINKS.testflight, width: 96, height: 96, colorDark: "#1A1E27", colorLight: "#ffffff" });
+        document.getElementById("qr-ios").classList.add("show");
+      } catch (e) {}
+    };
+    document.head.appendChild(s);
+  }
+
+  document.getElementById("yr").textContent = new Date().getFullYear();
+})();
+</script>
+</body>
+</html>

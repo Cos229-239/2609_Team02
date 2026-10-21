@@ -46,7 +46,6 @@ void main() async {
   final notificationService = NotificationService(
     authService: authService,
     navigatorKey: navigatorKey,
-    messengerKey: scaffoldMessengerKey,
   );
 
   // Listens to the store's purchase stream from launch, so renewals and

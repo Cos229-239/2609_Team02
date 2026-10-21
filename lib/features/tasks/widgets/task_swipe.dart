@@ -6,6 +6,7 @@ import '../../../core/models/task.dart';
 import '../../../core/services/database_service.dart';
 import '../task_completion_flow.dart';
 import '../../../core/services/accessibility_settings.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 /// One swipe direction's action: the colored background that's revealed
 /// and what happens when the swipe goes past the threshold.
@@ -74,9 +75,7 @@ class TaskSwipe extends StatelessWidget {
           await action.onTriggered();
         } catch (e) {
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-            );
+            showAppNotice(context, e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
           }
         }
         return false;
@@ -121,8 +120,8 @@ class _SwipeBackground extends StatelessWidget {
   // Looked up when a swipe fires, not while building (provider's read()
   // isn't allowed during build).
   DatabaseService db() => context.read<DatabaseService>();
-  final messenger = ScaffoldMessenger.of(context);
-  void say(String text) => messenger.showSnackBar(SnackBar(content: Text(text)));
+  final notices = AppNotice.of(context);
+  void say(String text) => notices.show(text);
 
   final TaskSwipeAction primary;
   if (task.status == TaskStatus.completed) {

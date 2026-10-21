@@ -10,6 +10,7 @@ import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../task_completion_flow.dart';
 import 'task_proof_card.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 /// Opens the task view card for [taskId] as a bottom sheet over the current
 /// screen. Used when tapping a task tile anywhere in the app.
@@ -244,9 +245,7 @@ class TaskViewCard extends StatelessWidget {
                 : () async {
                     await context.read<DatabaseService>().claimTask(task.id, childId);
                     if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('"${task.title}" is yours now!')),
-                    );
+                    showAppNotice(context, '"${task.title}" is yours now!');
                   },
           ),
         ];
@@ -277,9 +276,7 @@ class TaskViewCard extends StatelessWidget {
             onPressed: () async {
               await context.read<DatabaseService>().uncompleteTask(task.id);
               if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('"${task.title}" is back on your list.')),
-              );
+              showAppNotice(context, '"${task.title}" is back on your list.');
             },
           ),
         ];
@@ -324,15 +321,9 @@ class TaskViewCard extends StatelessWidget {
     final newChildId = selection == _householdPool ? null : selection;
     await db.reassignTask(task.id, newChildId);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          newChildId == null
+    showAppNotice(context, newChildId == null
               ? '"${task.title}" moved back to the household pool.'
-              : '"${task.title}" re-assigned to ${db.userById(newChildId)?.name ?? 'a child'}.',
-        ),
-      ),
-    );
+              : '"${task.title}" re-assigned to ${db.userById(newChildId)?.name ?? 'a child'}.',);
   }
 
   Future<void> _duplicate(BuildContext context, TaskModel task) async {
@@ -348,9 +339,7 @@ class TaskViewCard extends StatelessWidget {
     );
     final newTaskId = await context.read<DatabaseService>().addTask(duplicate);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Duplicated as a new pending task - fine-tune it now.')),
-    );
+    showAppNotice(context, 'Duplicated as a new pending task - fine-tune it now.');
     // Swap this card for the copy's editor.
     Navigator.of(context).pushReplacementNamed(AppRoutes.taskEdit, arguments: newTaskId);
   }
@@ -358,10 +347,10 @@ class TaskViewCard extends StatelessWidget {
   /// A parent finishing a task themselves needs no separate approval: it's
   /// approved and rewarded in one step (photo proof is skipped too).
   Future<void> _parentComplete(BuildContext context, TaskModel task) async {
-    final messenger = ScaffoldMessenger.of(context);
+    final notices = AppNotice.of(context);
     final navigator = Navigator.of(context);
     await context.read<DatabaseService>().parentCompleteTask(task.id);
-    messenger.showSnackBar(SnackBar(content: Text('"${task.title}" completed - rewards granted!')));
+    notices.show('"${task.title}" completed - rewards granted!', tone: NoticeTone.success);
     if (navigator.mounted) navigator.pop();
   }
 
@@ -383,7 +372,7 @@ class TaskViewCard extends StatelessWidget {
     if (confirmed != true || !context.mounted) return;
     await context.read<DatabaseService>().uncompleteTask(task.id);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('"${task.title}" sent back to redo.')));
+    showAppNotice(context, '"${task.title}" sent back to redo.', tone: NoticeTone.success);
     Navigator.of(context).pop();
   }
 

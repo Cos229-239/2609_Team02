@@ -13,6 +13,7 @@ import '../../../shared/widgets/app_card.dart';
 import '../../minigames/widgets/mini_games_store_section.dart';
 import '../../rewards/widgets/reward_progress_tile.dart';
 import '../../../core/models/reward.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 /// "Rewards" tab for a signed-in child: the reward store, the family
 /// leaderboard, and a personal redemption history.
@@ -26,14 +27,10 @@ class ChildRewardsScreen extends StatelessWidget {
     try {
       await db.redeemReward(rewardId: rewardId, childId: child.id);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('🎉 "$rewardTitle" redeemed! A parent will see it in Family.')),
-      );
+      showAppNotice(context, '🎉 "$rewardTitle" redeemed! A parent will see it in Family.', tone: NoticeTone.success);
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-      );
+      showAppNotice(context, e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
     }
   }
 

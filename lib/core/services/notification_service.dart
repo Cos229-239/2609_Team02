@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../../app/routes.dart';
 import '../models/user.dart';
 import 'auth_service.dart';
+import '../../shared/widgets/app_notice.dart';
 
 /// Push notifications via Firebase Cloud Messaging.
 ///
@@ -29,7 +30,6 @@ class NotificationService {
   NotificationService({
     required AuthService authService,
     required this._navigatorKey,
-    required this._messengerKey,
     FirebaseMessaging? messaging,
     FirebaseFirestore? firestore,
   })  : _auth = authService,
@@ -38,7 +38,6 @@ class NotificationService {
 
   final AuthService _auth;
   final GlobalKey<NavigatorState> _navigatorKey;
-  final GlobalKey<ScaffoldMessengerState> _messengerKey;
   final FirebaseMessaging _messaging;
   final FirebaseFirestore _firestore;
 
@@ -219,29 +218,16 @@ class NotificationService {
 
   void _showForegroundBanner(RemoteMessage message) {
     final notification = message.notification;
-    final messenger = _messengerKey.currentState;
-    if (notification == null || messenger == null) return;
+    final overlay = _navigatorKey.currentState?.overlay;
+    if (notification == null || overlay == null) return;
 
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 5),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (notification.title != null)
-                Text(notification.title!, style: const TextStyle(fontWeight: FontWeight.bold)),
-              if (notification.body != null) Text(notification.body!),
-            ],
-          ),
-          action: routeFor(message.data) == null
-              ? null
-              : SnackBarAction(label: 'View', onPressed: () => _openFromNotification(message)),
-        ),
-      );
+    final text = [notification.title, notification.body].whereType<String>().join('\n');
+    AppNotice.on(overlay).show(
+      text,
+      duration: const Duration(seconds: 5),
+      actionLabel: routeFor(message.data) == null ? null : 'View',
+      onAction: () => _openFromNotification(message),
+    );
   }
 
   Future<void> _openFromNotification(RemoteMessage message) async {

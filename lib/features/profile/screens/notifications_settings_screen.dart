@@ -5,6 +5,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 /// "Notifications" — push notification opt-in (synced to the user's
 /// profile, so it applies to every device they're signed in on) and the
@@ -24,7 +25,7 @@ class _NotificationsSettingsScreenState extends State<NotificationsSettingsScree
   Future<void> _setPush(bool enabled) async {
     final auth = context.read<AuthService>();
     final notifications = context.read<NotificationService?>();
-    final messenger = ScaffoldMessenger.of(context);
+    final notices = AppNotice.of(context);
 
     setState(() => _savingPush = true);
     try {
@@ -32,13 +33,11 @@ class _NotificationsSettingsScreenState extends State<NotificationsSettingsScree
       if (enabled && notifications != null) {
         final granted = await notifications.registerCurrentUser();
         if (!granted) {
-          messenger.showSnackBar(const SnackBar(
-            content: Text('Notifications are blocked for Famotive. Turn them on in your device settings.'),
-          ));
+          notices.show('Notifications are blocked for Famotive. Turn them on in your device settings.');
         }
       }
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      notices.show(e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
     } finally {
       if (mounted) setState(() => _savingPush = false);
     }

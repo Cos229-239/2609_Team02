@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../onboarding_content.dart';
 import '../onboarding_controller.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 /// Full-screen, swipeable guide: the first-time walkthrough for a parent
 /// or child, or one of the topic guides from Settings > App Tour &
@@ -95,7 +96,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _skip() async {
-    final messenger = ScaffoldMessenger.maybeOf(context);
+    final notices = AppNotice.of(context);
     final navigator = Navigator.of(context);
     if (widget.guide.isWalkthrough) {
       await _controller?.completeWalkthrough(widget.userId, skipped: true);
@@ -103,11 +104,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (!mounted) return;
     navigator.pop();
     if (widget.guide.isWalkthrough) {
-      messenger?.showSnackBar(
-        const SnackBar(
-          content: Text('No problem! Replay the tour any time in Settings > App Tour & Tutorials.'),
-        ),
-      );
+      notices.show('👍 No problem! Replay the tour any time in Settings > App Tour & Tutorials.');
     }
   }
 

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/models/mini_game.dart';
@@ -12,6 +13,7 @@ import '../../../core/services/mini_game_service.dart';
 import '../../../core/services/xp_multiplier.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../mini_game_framework.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 enum _Phase { intro, playing, result }
 
@@ -63,7 +65,42 @@ class _MiniGameHostScreenState extends State<MiniGameHostScreen> {
   MiniGameOutcome? _outcome;
   bool _reported = false;
 
-  MiniGameSettings get _settings => widget.session?.settings ?? widget.casualSettings ?? const MiniGameSettings();
+  /// Practice rounds: the difficulty the child picked (remembered on this device).
+  DifficultyPreset _practiceLevel = DifficultyPreset.normal;
+  static const _practiceLevelKey = 'minigames.practiceDifficulty';
+
+  MiniGameSettings get _settings {
+    final session = widget.session;
+    if (session != null) return session.settings;
+    return (widget.casualSettings ?? const MiniGameSettings()).withPreset(_practiceLevel);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.isRewarded) unawaited(_loadPracticeLevel());
+  }
+
+  Future<void> _loadPracticeLevel() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString(_practiceLevelKey);
+      final level = DifficultyPreset.values.where((p) => p.name == saved).firstOrNull;
+      if (level != null && mounted && _phase != _Phase.playing) setState(() => _practiceLevel = level);
+    } catch (e) {
+      debugPrint('MiniGameHost: could not load practice difficulty: $e');
+    }
+  }
+
+  void _setPracticeLevel(DifficultyPreset level) {
+    setState(() => _practiceLevel = level);
+    SharedPreferences.getInstance()
+        .then((prefs) => prefs.setString(_practiceLevelKey, level.name))
+        .catchError((Object e) {
+      debugPrint('MiniGameHost: could not save practice difficulty: $e');
+      return false;
+    });
+  }
 
   bool _starting = false;
 
@@ -112,7 +149,7 @@ class _MiniGameHostScreenState extends State<MiniGameHostScreen> {
   }
 
   void _showError(Object e) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+    showAppNotice(context, e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
   }
 
   Future<void> _skip() async {
@@ -196,6 +233,8 @@ class _MiniGameHostScreenState extends State<MiniGameHostScreen> {
                 starting: _starting,
                 onPlay: _start,
                 onSkip: widget.isRewarded ? _skip : null,
+                practiceLevel: widget.isRewarded ? null : _practiceLevel,
+                onPracticeLevel: _setPracticeLevel,
               ),
             _Phase.playing => _buildGame(),
             _Phase.result => _Result(
@@ -203,6 +242,8 @@ class _MiniGameHostScreenState extends State<MiniGameHostScreen> {
                 session: widget.session,
                 settings: _settings,
                 onPlayAgain: widget.isRewarded ? null : _start,
+                practiceLevel: widget.isRewarded ? null : _practiceLevel,
+                onPracticeLevel: _setPracticeLevel,
               ),
           },
         ),
@@ -227,14 +268,51 @@ class _MiniGameHostScreenState extends State<MiniGameHostScreen> {
   }
 }
 
+/// Easy / Medium / Hard switch for practice rounds.
+class _PracticeLevelPicker extends StatelessWidget {
+  const _PracticeLevelPicker({required this.value, required this.onChanged});
+
+  final DifficultyPreset value;
+  final ValueChanged<DifficultyPreset> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SegmentedButton<DifficultyPreset>(
+        key: const Key('practice-difficulty'),
+        showSelectedIcon: false,
+        segments: [
+          for (final p in DifficultyPreset.values)
+            ButtonSegment(
+              value: p,
+              label: Text('${p.emoji} ${p.childLabel}', key: Key('practice-difficulty-${p.name}')),
+            ),
+        ],
+        selected: {value},
+        onSelectionChanged: (s) => onChanged(s.first),
+      ),
+    );
+  }
+}
+
 class _Intro extends StatelessWidget {
-  const _Intro({required this.gameId, required this.session, required this.onPlay, this.onSkip, this.starting = false});
+  const _Intro({
+    required this.gameId,
+    required this.session,
+    required this.onPlay,
+    this.onSkip,
+    this.starting = false,
+    this.practiceLevel,
+    this.onPracticeLevel,
+  });
 
   final MiniGameId gameId;
   final MiniGameSession? session;
   final bool starting;
   final VoidCallback onPlay;
   final VoidCallback? onSkip;
+  final DifficultyPreset? practiceLevel;
+  final ValueChanged<DifficultyPreset>? onPracticeLevel;
 
   @override
   Widget build(BuildContext context) {
@@ -283,6 +361,12 @@ class _Intro extends StatelessWidget {
             style: theme.textTheme.bodySmall,
           ),
         ],
+        if (practiceLevel != null && onPracticeLevel != null) ...[
+          const SizedBox(height: 20),
+          Text('How hard?', textAlign: TextAlign.center, style: theme.textTheme.titleMedium),
+          const SizedBox(height: 8),
+          _PracticeLevelPicker(value: practiceLevel!, onChanged: onPracticeLevel!),
+        ],
         const SizedBox(height: 24),
         AppButton(
           key: const Key('minigame-play'),
@@ -301,12 +385,21 @@ class _Intro extends StatelessWidget {
 }
 
 class _Result extends StatelessWidget {
-  const _Result({required this.outcome, required this.session, required this.settings, this.onPlayAgain});
+  const _Result({
+    required this.outcome,
+    required this.session,
+    required this.settings,
+    this.onPlayAgain,
+    this.practiceLevel,
+    this.onPracticeLevel,
+  });
 
   final MiniGameOutcome outcome;
   final MiniGameSession? session;
   final MiniGameSettings settings;
   final VoidCallback? onPlayAgain;
+  final DifficultyPreset? practiceLevel;
+  final ValueChanged<DifficultyPreset>? onPracticeLevel;
 
   @override
   Widget build(BuildContext context) {
@@ -355,6 +448,10 @@ class _Result extends StatelessWidget {
           )
         else
           _RewardBreakdown(session: s, preview: preview),
+        if (practiceLevel != null && onPracticeLevel != null) ...[
+          const SizedBox(height: 16),
+          _PracticeLevelPicker(value: practiceLevel!, onChanged: onPracticeLevel!),
+        ],
         const SizedBox(height: 24),
         if (onPlayAgain != null) ...[
           AppButton(label: 'Play again', icon: Icons.replay, onPressed: onPlayAgain),

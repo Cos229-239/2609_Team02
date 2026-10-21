@@ -8,6 +8,7 @@ import '../../../app/theme.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/milestone_service.dart';
 import '../../../shared/widgets/app_button.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 /// "We did it!" - the family reached its goal and the shared reward is
 /// unlocked. Parents mark the reward as enjoyed (claimed) once.
@@ -37,7 +38,7 @@ class _MilestoneCelebrationScreenState extends State<MilestoneCelebrationScreen>
       await context.read<MilestoneService>().claimReward(widget.milestoneId);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+        showAppNotice(context, e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
       }
     } finally {
       if (mounted) setState(() => _claiming = false);

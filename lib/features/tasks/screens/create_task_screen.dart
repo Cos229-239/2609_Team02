@@ -14,6 +14,7 @@ import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/help_tip.dart';
 import '../../../shared/widgets/number_stepper.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 enum _AssignTarget { household, child }
 
@@ -197,7 +198,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     final original = _originalTask;
     final originalSchedule = _originalSchedule;
     void done(String message) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      showAppNotice(context, message);
       Navigator.of(context).pop();
     }
 
@@ -243,9 +244,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         requiresPhoto: _photoOn,
       );
       db.updateTask(original.id, updated);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('"$title" updated!')),
-      );
+      showAppNotice(context, '"$title" updated!', tone: NoticeTone.success);
     } else {
       db.addTask(
         TaskModel(
@@ -261,9 +260,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
           requiresPhoto: _photoOn,
         ),
       );
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('"$title" created!')),
-      );
+      showAppNotice(context, '"$title" created!', tone: NoticeTone.success);
     }
 
     Navigator.of(context).pop();
@@ -310,9 +307,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     await context.read<DatabaseService>().setTaskArchived(task.id, newValue);
     if (!mounted) return;
     setState(() => _originalTask = task.copyWith(archived: newValue));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(newValue ? 'Task archived.' : 'Task unarchived.')),
-    );
+    showAppNotice(context, newValue ? 'Task archived.' : 'Task unarchived.', tone: NoticeTone.success);
   }
 
   Future<void> _confirmDelete() async {

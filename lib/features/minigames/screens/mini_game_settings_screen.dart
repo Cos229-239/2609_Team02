@@ -9,6 +9,7 @@ import '../../../core/services/mini_game_service.dart';
 import '../../../core/services/xp_multiplier.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 /// Parent: bonus-game difficulty and rewards, for the whole family or one
 /// child. Every control is bounded to safe values; saving never changes a
@@ -52,7 +53,7 @@ class _MiniGameSettingsScreenState extends State<MiniGameSettingsScreen> {
 
   Future<void> _save() async {
     final service = context.read<MiniGameService>();
-    final messenger = ScaffoldMessenger.of(context);
+    final notices = AppNotice.of(context);
     setState(() => _saving = true);
     try {
       final child = _childId;
@@ -62,9 +63,9 @@ class _MiniGameSettingsScreenState extends State<MiniGameSettingsScreen> {
         await service.saveChildOverride(child, _useFamily ? null : _draft);
       }
       setState(() => _dirty = false);
-      messenger.showSnackBar(const SnackBar(content: Text('Saved. New bonus games use these settings.')));
+      notices.show('Saved. New bonus games use these settings.', tone: NoticeTone.success);
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      notices.show(e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
     } finally {
       if (mounted) setState(() => _saving = false);
     }

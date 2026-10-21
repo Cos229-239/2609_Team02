@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../app/routes.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/database_service.dart';
+import '../../../core/services/demo_mode.dart';
 import '../widgets/household_actions.dart';
 
 /// Shown in place of the tabs while the signed-in user isn't in any
@@ -51,6 +52,14 @@ class NoHouseholdScreen extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 32),
+        if (DemoMode.maybeOf(context) != null)
+          TextButton.icon(
+            key: const Key('demo-end-test'),
+            onPressed: DemoMode.maybeOf(context)!.onEndTest,
+            icon: const Icon(Icons.flag_outlined),
+            label: const Text('End test'),
+          )
+        else
         TextButton.icon(
           onPressed: () async {
             await context.read<AuthService>().logout();

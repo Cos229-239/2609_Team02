@@ -1,0 +1,14 @@
+{
+  "name": "famotive-rex",
+  "private": true,
+  "description": "Rex's Room voxel pet game. `npm run build` writes the single-file app bundle to assets/rex/index.html.",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "three": "0.169.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.0"
+  }
+}

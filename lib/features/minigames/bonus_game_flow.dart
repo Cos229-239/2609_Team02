@@ -8,14 +8,16 @@ import '../../core/models/progress_event.dart';
 import '../../core/services/mini_game_service.dart';
 import '../milestones/screens/approval_journey_screen.dart';
 import 'mini_game_framework.dart';
-import 'screens/mini_game_host_screen.dart';
+import '../rex/rex_room_screen.dart';
+import '../../shared/widgets/app_notice.dart';
 
 /// Opens the rewarded bonus game for [session] (replacing the current route
-/// when [replace], so finishing returns straight to Home).
+/// when [replace], so finishing returns straight to Home). It plays in Rex's
+/// Room: Rex runs off into the game, and comes back after.
 Future<void> openBonusGame(BuildContext context, MiniGameSession session, {bool replace = false}) {
   final route = MaterialPageRoute<void>(
     settings: const RouteSettings(name: '/minigames/bonus'),
-    builder: (_) => MiniGameHostScreen.rewarded(session: session),
+    builder: (_) => RexRoomScreen(launchSessionId: session.id),
   );
   final navigator = Navigator.of(context);
   return replace ? navigator.pushReplacement(route) : navigator.push(route);
@@ -50,9 +52,7 @@ Widget buildApprovalJourney(BuildContext context, List<ProgressEvent> events) {
             final session = await _bonusSessionFor(service, events);
             if (!journeyContext.mounted) return;
             if (session == null) {
-              ScaffoldMessenger.of(journeyContext).showSnackBar(
-                const SnackBar(content: Text('That bonus game isn\'t available any more.')),
-              );
+              showAppNotice(journeyContext, 'That bonus game isn\'t available any more.');
               return;
             }
             unawaited(openBonusGame(journeyContext, session, replace: true));

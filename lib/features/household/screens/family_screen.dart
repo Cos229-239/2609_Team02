@@ -16,6 +16,7 @@ import '../../rewards/widgets/reward_editor_sheet.dart';
 import '../widgets/add_child_sheet.dart';
 import '../widgets/family_member_card.dart';
 import '../widgets/household_actions.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 /// "Family" tab: household members (with admin tools: approve join
 /// requests, remove members, hand over admin), adding a child account, the
@@ -362,12 +363,12 @@ class _JoinRequestsSection extends StatelessWidget {
   final bool isAdmin;
 
   Future<void> _run(BuildContext context, Future<void> Function() action, String done) async {
-    final messenger = ScaffoldMessenger.of(context);
+    final notices = AppNotice.of(context);
     try {
       await action();
-      messenger.showSnackBar(SnackBar(content: Text(done)));
+      notices.show(done, tone: NoticeTone.success);
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      notices.show(e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
     }
   }
 
@@ -504,7 +505,7 @@ class _MemberMenu extends StatelessWidget {
 
   Future<void> _confirmRemove(BuildContext context) async {
     final db = context.read<DatabaseService>();
-    final messenger = ScaffoldMessenger.of(context);
+    final notices = AppNotice.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -527,9 +528,9 @@ class _MemberMenu extends StatelessWidget {
     if (confirmed != true) return;
     try {
       await db.removeMember(member.id);
-      messenger.showSnackBar(SnackBar(content: Text('${member.name} was removed.')));
+      notices.show('${member.name} was removed.');
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      notices.show(e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
     }
   }
 
@@ -537,9 +538,9 @@ class _MemberMenu extends StatelessWidget {
   /// history (server-side: functions/src/account/delete.ts).
   Future<void> _confirmDeleteAccount(BuildContext context) async {
     final auth = context.read<AuthService>();
-    final messenger = ScaffoldMessenger.of(context);
+    final notices = AppNotice.of(context);
     void show(Object e) =>
-        messenger.showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+        notices.show(e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
 
     final AccountDeletionPreview preview;
     try {
@@ -584,7 +585,7 @@ class _MemberMenu extends StatelessWidget {
     try {
       if (!await auth.confirmIdentity(password: password)) return;
       await auth.deleteChildAccount(member.id);
-      messenger.showSnackBar(SnackBar(content: Text("${member.name}'s account was deleted.")));
+      notices.show("${member.name}'s account was deleted.", tone: NoticeTone.success);
     } catch (e) {
       show(e);
     }
@@ -592,7 +593,7 @@ class _MemberMenu extends StatelessWidget {
 
   Future<void> _confirmMakeAdmin(BuildContext context) async {
     final db = context.read<DatabaseService>();
-    final messenger = ScaffoldMessenger.of(context);
+    final notices = AppNotice.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -610,9 +611,9 @@ class _MemberMenu extends StatelessWidget {
     if (confirmed != true) return;
     try {
       await db.transferAdmin(member.id);
-      messenger.showSnackBar(SnackBar(content: Text('${member.name} is now the admin.')));
+      notices.show('${member.name} is now the admin.');
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      notices.show(e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
     }
   }
 }

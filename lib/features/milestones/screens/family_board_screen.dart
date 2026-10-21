@@ -12,6 +12,7 @@ import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../widgets/family_board.dart';
 import '../widgets/milestone_phase_chip.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 /// The household's Family Goal board: where the family piece is, what moved
 /// it, and (for parents) everything needed to manage the goal.
@@ -311,7 +312,7 @@ class _ParentMenu extends StatelessWidget {
 
   Future<void> _run(BuildContext context, _Action action) async {
     final service = context.read<MilestoneService>();
-    final messenger = ScaffoldMessenger.of(context);
+    final notices = AppNotice.of(context);
     final navigator = Navigator.of(context);
     Future<bool> confirm(String title, String body, String ok) async {
       final result = await showDialog<bool>(
@@ -347,7 +348,7 @@ class _ParentMenu extends StatelessWidget {
           await navigator.pushNamed(AppRoutes.milestoneEditor, arguments: milestone.id);
         case _Action.pause:
           await service.pause(milestone.id);
-          messenger.showSnackBar(const SnackBar(content: Text('Paused - approvals won\'t move the board until you resume.')));
+          notices.show('Paused - approvals won\'t move the board until you resume.');
         case _Action.resume:
           await service.resume(milestone.id);
         case _Action.extend:
@@ -374,10 +375,10 @@ class _ParentMenu extends StatelessWidget {
           }
         case _Action.recalculate:
           final position = await service.recalculate(milestone.id);
-          messenger.showSnackBar(SnackBar(content: Text('Board recalculated: space $position.')));
+          notices.show('Board recalculated: space $position.', tone: NoticeTone.success);
       }
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      notices.show(e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
     }
   }
 

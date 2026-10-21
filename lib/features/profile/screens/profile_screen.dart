@@ -4,11 +4,13 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/demo_mode.dart';
 import '../../../core/services/theme_controller.dart';
 import '../../../shared/utils/legal_links.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../widgets/profile_menu_tile.dart';
 import '../../../core/services/accessibility_settings.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -23,11 +25,7 @@ class ProfileScreen extends StatelessWidget {
     );
     final launched = await launchUrl(uri);
     if (!launched && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Couldn't open your email app — reach us at support@famotive.org"),
-        ),
-      );
+      showAppNotice(context, "Couldn't open your email app — reach us at support@famotive.org", tone: NoticeTone.error);
     }
   }
 
@@ -134,7 +132,16 @@ class ProfileScreen extends StatelessWidget {
         const SizedBox(height: 16),
         AppCard(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          child: ProfileMenuTile(
+          // In the QA demo (lib/qa/) there's no account to log out of.
+          child: DemoMode.maybeOf(context) != null
+              ? ProfileMenuTile(
+                  key: const Key('demo-end-test'),
+                  icon: Icons.flag_outlined,
+                  label: 'End test',
+                  destructive: true,
+                  onTap: DemoMode.maybeOf(context)!.onEndTest,
+                )
+              : ProfileMenuTile(
             icon: Icons.logout,
             label: 'Log Out',
             destructive: true,

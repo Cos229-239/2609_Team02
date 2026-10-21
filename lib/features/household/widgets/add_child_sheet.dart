@@ -5,6 +5,7 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/services/database_service.dart';
 import '../../../core/utils/validators.dart';
 import '../../../shared/widgets/app_button.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 const _avatarChoices = ['🧒', '👧', '👦', '🧒🏽', '👧🏾', '👦🏻', '🦄', '🐯', '🐼', '🚀'];
 
@@ -80,16 +81,12 @@ class _AddChildSheetState extends State<_AddChildSheet> {
           );
       if (!mounted) return;
       final name = _name.text.trim();
-      final messenger = ScaffoldMessenger.of(context);
+      final notices = AppNotice.of(context);
       Navigator.of(context).pop();
-      messenger.showSnackBar(
-        SnackBar(content: Text('$name was added! They can log in with ${_email.text.trim()}.')),
-      );
+      notices.show('$name was added! They can log in with ${_email.text.trim()}.', tone: NoticeTone.success);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-      );
+      showAppNotice(context, e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
     } finally {
       if (mounted) setState(() => _busy = false);
     }

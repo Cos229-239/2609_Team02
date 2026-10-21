@@ -16,8 +16,19 @@ class IntRange {
   }
 }
 
-/// Difficulty presets shown to parents instead of raw numbers.
-enum DifficultyPreset { easy, normal, hard }
+/// Difficulty presets shown to parents instead of raw numbers, and picked by
+/// the child for practice rounds.
+enum DifficultyPreset {
+  easy('Easy', '🐣'),
+  normal('Medium', '🦖'),
+  hard('Hard', '🔥');
+
+  const DifficultyPreset(this.childLabel, this.emoji);
+
+  /// Child-facing name (practice rounds say "Medium" for normal).
+  final String childLabel;
+  final String emoji;
+}
 
 class BalloonPopperSettings {
   const BalloonPopperSettings({this.targetCount = 15, this.timeLimitSec = 30});
@@ -275,6 +286,14 @@ class MiniGameSettings {
         for (final id in MiniGameId.values) id.name: gameSettings(id),
         'multiplier': multiplier.toMap(),
       };
+
+  /// Every game set to one difficulty preset (used for practice rounds).
+  MiniGameSettings withPreset(DifficultyPreset p) => copyWith(
+        balloonPopper: BalloonPopperSettings.preset(p),
+        matchPairs: MatchPairsSettings.preset(p),
+        jumpAndRun: JumpAndRunSettings.preset(p),
+        memoryRun: MemoryRunSettings.preset(p),
+      );
 
   MiniGameSettings copyWith({
     bool? rewardedGamesEnabled,

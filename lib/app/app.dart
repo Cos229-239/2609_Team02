@@ -1,9 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/constants/app_constants.dart';
 import '../core/services/auth_service.dart';
 import '../core/services/database_service.dart';
+import '../core/services/demo_mode.dart';
 import '../core/services/milestone_service.dart';
 import '../core/services/mini_game_service.dart';
 import '../features/minigames/mini_game_framework.dart';
@@ -28,6 +30,8 @@ class FamotiveApp extends StatelessWidget {
     this.accessibilitySettings,
     this.onboardingController,
     this.premiumService,
+    this.firestore,
+    this.demoMode,
   });
 
   /// Constructed and given a chance to restore any existing session
@@ -63,6 +67,13 @@ class FamotiveApp extends StatelessWidget {
   /// Famotive Premium purchases; null in tests.
   final PremiumService? premiumService;
 
+  /// Firestore for household data; null uses the default (live) instance.
+  /// The QA demo passes an in-memory one (see lib/qa/demo_family.dart).
+  final FirebaseFirestore? firestore;
+
+  /// Set only in the QA demo: turns "Log Out" into "End test".
+  final DemoMode? demoMode;
+
   @override
   Widget build(BuildContext context) {
     final homeRouteName = authService.isLoggedIn ? AppRoutes.home : AppRoutes.login;
@@ -81,9 +92,13 @@ class FamotiveApp extends StatelessWidget {
           create: (_) => onboardingController ?? (OnboardingController()..load()),
         ),
         ChangeNotifierProvider<PremiumService?>.value(value: premiumService),
+        Provider<DemoMode?>.value(value: demoMode),
         ChangeNotifierProxyProvider<AuthService, DatabaseService>(
           // Only games this build includes are offered after approvals.
-          create: (_) => DatabaseService(availableMiniGames: MiniGameRegistry.ids),
+          create: (_) => DatabaseService(
+            firestore: firestore,
+            availableMiniGames: MiniGameRegistry.ids,
+          ),
           update: (_, auth, db) => db!
             // Keep the active household valid (e.g. after being removed from
             // one) and tidy up join requests once they're answered.
@@ -94,12 +109,12 @@ class FamotiveApp extends StatelessWidget {
         ),
         // Family Goal board of the active household.
         ChangeNotifierProxyProvider<AuthService, MilestoneService>(
-          create: (_) => MilestoneService(),
+          create: (_) => MilestoneService(firestore: firestore),
           update: (_, auth, service) => service!..bind(auth.currentUser),
         ),
         // Bonus game sessions and mini-game settings.
         ChangeNotifierProxyProvider<AuthService, MiniGameService>(
-          create: (_) => MiniGameService(),
+          create: (_) => MiniGameService(firestore: firestore),
           update: (_, auth, service) => service!..bind(auth.currentUser),
         ),
       ],

@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.famotive",
+      "sha256_cert_fingerprints": [
+        "06:EC:16:41:A7:5D:5B:CC:CB:4A:BE:32:D3:CE:BC:24:C2:E1:7D:9A:19:3B:1E:8E:06:14:E7:9A:86:00:46:28"
+      ]
+    }
+  }
+]
