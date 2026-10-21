@@ -69,11 +69,24 @@ class _RexRoomScreenState extends State<RexRoomScreen> {
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(RexRoomScreen._background)
+      // Kids Category (guideline 1.3): the game is a bundled page and must
+      // never navigate a child out to the web.
+      ..setNavigationDelegate(NavigationDelegate(
+        onNavigationRequest: (request) => _isBundledPage(request.url)
+            ? NavigationDecision.navigate
+            : NavigationDecision.prevent,
+      ))
       ..addJavaScriptChannel('FamotiveBridge', onMessageReceived: _onMessage);
     _db.addListener(_pushTasks);
     _games?.addListener(_pushGames);
     _auth.addListener(_pushPlayer);
   }
+
+  static bool _isBundledPage(String url) =>
+      url.startsWith(RexRoomScreen._baseUrl) ||
+      url.startsWith('about:') ||
+      url.startsWith('data:') ||
+      url.startsWith('blob:');
 
   @override
   void didChangeDependencies() {
