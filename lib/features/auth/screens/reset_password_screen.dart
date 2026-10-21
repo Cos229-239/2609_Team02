@@ -8,6 +8,7 @@ import '../../../core/utils/validators.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/loading_indicator.dart';
 import '../widgets/auth_text_field.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 enum _ResetStatus { verifying, valid, invalid, done }
 
@@ -84,9 +85,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       setState(() => _status = _ResetStatus.done);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-      );
+      showAppNotice(context, e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

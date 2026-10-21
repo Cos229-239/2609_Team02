@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/routes.dart';
+import '../../../shared/widgets/app_card.dart';
 import '../../../core/models/join_request.dart';
 import '../../../core/models/redemption.dart';
 import '../../../core/models/reward.dart';
@@ -15,6 +16,7 @@ import '../../rewards/widgets/reward_editor_sheet.dart';
 import '../widgets/add_child_sheet.dart';
 import '../widgets/family_member_card.dart';
 import '../widgets/household_actions.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 /// "Family" tab: household members (with admin tools: approve join
 /// requests, remove members, hand over admin), adding a child account, the
@@ -72,7 +74,7 @@ class FamilyScreen extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             isAdmin
-                ? "You're the admin: you approve anyone who asks to join."
+                ? "Manage your family, approve new members, and celebrate milestones together."
                 : (adminName == null ? 'Manage your family members and reward store' : 'Admin: $adminName'),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.grey.shade600,
@@ -183,7 +185,7 @@ class FamilyScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'What kids can redeem their coins for.',
+                  'Turn hard-earned coins into exciting rewards!',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600, fontSize: 13),
                 ),
                 const SizedBox(height: 10),
@@ -200,6 +202,31 @@ class FamilyScreen extends StatelessWidget {
                     _RewardManagementRow(reward: reward),
                     const SizedBox(height: 8),
                   ],
+                const SizedBox(height: 8),
+                // Mini-games live in the kids' Reward Store; parents tune them here.
+                AppCard(
+                  key: const Key('minigame-settings-entry'),
+                  onTap: () => Navigator.of(context).pushNamed(AppRoutes.miniGameSettings),
+                  child: Row(
+                    children: [
+                      const Text('🎮', style: TextStyle(fontSize: 26)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Mini-games & bonus XP', style: Theme.of(context).textTheme.titleMedium),
+                            Text(
+                              'Customize game difficulty and XP rewards for each child.',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: Colors.grey),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 24),
                 const Divider(),
                 const SizedBox(height: 12),
@@ -218,7 +245,7 @@ class FamilyScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Every reward redeemed by any child, most recent first.',
+                  'Keep track of your family\'s rewards and every coin spent.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600, fontSize: 13),
                 ),
                 const SizedBox(height: 10),
@@ -336,12 +363,12 @@ class _JoinRequestsSection extends StatelessWidget {
   final bool isAdmin;
 
   Future<void> _run(BuildContext context, Future<void> Function() action, String done) async {
-    final messenger = ScaffoldMessenger.of(context);
+    final notices = AppNotice.of(context);
     try {
       await action();
-      messenger.showSnackBar(SnackBar(content: Text(done)));
+      notices.show(done, tone: NoticeTone.success);
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      notices.show(e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
     }
   }
 
@@ -478,7 +505,7 @@ class _MemberMenu extends StatelessWidget {
 
   Future<void> _confirmRemove(BuildContext context) async {
     final db = context.read<DatabaseService>();
-    final messenger = ScaffoldMessenger.of(context);
+    final notices = AppNotice.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -501,9 +528,9 @@ class _MemberMenu extends StatelessWidget {
     if (confirmed != true) return;
     try {
       await db.removeMember(member.id);
-      messenger.showSnackBar(SnackBar(content: Text('${member.name} was removed.')));
+      notices.show('${member.name} was removed.');
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      notices.show(e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
     }
   }
 
@@ -511,9 +538,9 @@ class _MemberMenu extends StatelessWidget {
   /// history (server-side: functions/src/account/delete.ts).
   Future<void> _confirmDeleteAccount(BuildContext context) async {
     final auth = context.read<AuthService>();
-    final messenger = ScaffoldMessenger.of(context);
+    final notices = AppNotice.of(context);
     void show(Object e) =>
-        messenger.showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+        notices.show(e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
 
     final AccountDeletionPreview preview;
     try {
@@ -558,7 +585,7 @@ class _MemberMenu extends StatelessWidget {
     try {
       if (!await auth.confirmIdentity(password: password)) return;
       await auth.deleteChildAccount(member.id);
-      messenger.showSnackBar(SnackBar(content: Text("${member.name}'s account was deleted.")));
+      notices.show("${member.name}'s account was deleted.", tone: NoticeTone.success);
     } catch (e) {
       show(e);
     }
@@ -566,7 +593,7 @@ class _MemberMenu extends StatelessWidget {
 
   Future<void> _confirmMakeAdmin(BuildContext context) async {
     final db = context.read<DatabaseService>();
-    final messenger = ScaffoldMessenger.of(context);
+    final notices = AppNotice.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -584,9 +611,9 @@ class _MemberMenu extends StatelessWidget {
     if (confirmed != true) return;
     try {
       await db.transferAdmin(member.id);
-      messenger.showSnackBar(SnackBar(content: Text('${member.name} is now the admin.')));
+      notices.show('${member.name} is now the admin.');
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      notices.show(e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
     }
   }
 }

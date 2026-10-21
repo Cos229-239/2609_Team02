@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 /// "Continue with Google" and (on iPhone/iPad) "Continue with Apple".
 ///
@@ -42,9 +43,7 @@ class _SocialSignInButtonsState extends State<SocialSignInButtons> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-      );
+      showAppNotice(context, e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
     } finally {
       if (mounted) setState(() => _busy = null);
     }

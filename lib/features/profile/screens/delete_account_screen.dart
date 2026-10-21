@@ -7,6 +7,7 @@ import '../../../core/services/auth_service.dart';
 import '../../../shared/utils/legal_links.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../widgets/current_password_prompt.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 /// Settings → Account Settings → Delete Account.
 ///
@@ -36,7 +37,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
   Future<void> _delete() async {
     final auth = context.read<AuthService>();
     final navigator = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
+    final notices = AppNotice.of(context);
 
     String? password;
     if (auth.hasPasswordLogin) {
@@ -53,9 +54,9 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
       if (!confirmed) return;
       await auth.deleteAccount();
       navigator.pushNamedAndRemoveUntil(AppRoutes.login, (route) => false);
-      messenger.showSnackBar(const SnackBar(content: Text('Your account was deleted.')));
+      notices.show('Your account was deleted.', tone: NoticeTone.success);
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      notices.show(e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
     } finally {
       if (mounted) setState(() => _deleting = false);
     }

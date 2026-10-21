@@ -6,22 +6,76 @@ import '../../../core/models/task.dart';
 import '../../../core/models/task_proof.dart';
 import '../../../shared/widgets/app_card.dart';
 
-/// One row representing a task: icon, title, XP reward and a status
-/// indicator. Reused by the child's task list and the parent's
-/// create/assign screen.
+/// One row representing a task in a parent's view: icon, title and a
+/// status indicator. Rewards aren't shown here (parents see them on the
+/// task card); tapping the tile opens that card.
 class TaskTile extends StatelessWidget {
-  const TaskTile({super.key, required this.task, this.onTap, this.trailing});
+  const TaskTile({
+    super.key,
+    required this.task,
+    this.onTap,
+    this.completedByName,
+    this.showDescription = true,
+  });
 
   final TaskModel task;
   final VoidCallback? onTap;
 
-  /// Overrides the default status icon (used by the "assign tasks" screen
-  /// to show a toggle/edit/delete row instead of a status indicator).
-  final Widget? trailing;
+  /// When set, shows "Completed by [name]" under the title (parent approval
+  /// views).
+  final String? completedByName;
+
+  /// Hides the description line for compact lists like "Needs Approval".
+  final bool showDescription;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final muted = Colors.grey.shade600;
+
+    final details = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            Flexible(
+              child: Text(
+                task.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            if (task.requiresPhoto || task.proof != null) ...[
+              const SizedBox(width: 4),
+              _PhotoIndicator(task: task),
+            ],
+          ],
+        ),
+        if (completedByName != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            'Completed by $completedByName',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(fontSize: 12, color: muted),
+          ),
+        ],
+        if (showDescription && task.description.isNotEmpty) ...[
+          const SizedBox(height: 2),
+          Text(
+            task.description,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12, color: muted),
+          ),
+        ],
+      ],
+    );
 
     return AppCard(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -39,91 +93,17 @@ class TaskTile extends StatelessWidget {
               size: 20,
             ),
           ),
+          const SizedBox(width: 10),
+          // No action buttons here: tapping the tile opens the task card.
+          Expanded(flex: 7, child: details),
           const SizedBox(width: 8),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        task.title,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    if (task.requiresPhoto || task.proof != null) ...[
-                      const SizedBox(width: 4),
-                      _PhotoIndicator(task: task),
-                    ],
-                  ],
-                ),
-                if (task.description.isNotEmpty)
-                  Text(
-                    task.description,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-              ],
+            flex: 3,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: _StatusBadge(status: task.status),
             ),
           ),
-          if (trailing != null)
-            trailing!
-          else ...[
-            const SizedBox(width: 16),
-            SizedBox(
-              width: 100,
-              child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.star, size: 16, color: Colors.amber),
-                    const SizedBox(width: 2),
-                    Text(
-                      '+${task.rewardXp} XP',
-                      style: theme.textTheme.bodyMedium?.copyWith(fontSize: 13),
-                    ),
-                  ],
-                ),
-                if (task.coinReward > 0) ...[
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.monetization_on, size: 14, color: Colors.amber.shade700),
-                      const SizedBox(width: 2),
-                      Text(
-                        '+${task.coinReward}',
-                        style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
-            ),
-            ),
-            const SizedBox(width: 2),
-            Expanded(
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: Transform.translate(
-                  offset: Offset(
-                    task.status == TaskStatus.completed ? 48 : 0,
-                    0,
-                  ),
-                  child: _StatusBadge(status: task.status),
-                  ),
-                ),
-                ),
-          ],
         ],
       ),
     );
@@ -160,6 +140,8 @@ class _StatusBadge extends StatelessWidget {
           child: Text(
             label,
             maxLines: 2,
+            softWrap: true,
+            textAlign: TextAlign.end,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: color,

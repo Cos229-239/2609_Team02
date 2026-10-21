@@ -11,6 +11,7 @@ import 'features/onboarding/onboarding_controller.dart';
 import 'core/services/premium_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'core/services/accessibility_settings.dart';
 
 /// Shared with [DeepLinkService] so a password-reset email link can
 /// navigate straight to [ResetPasswordScreen] from outside the widget
@@ -35,12 +36,16 @@ void main() async {
   // aren't shown the walkthrough again.
   final themeController = ThemeController();
   final onboardingController = OnboardingController();
-  await Future.wait([themeController.load(), onboardingController.load()]);
+  final accessibilitySettings = AccessibilitySettings();
+  await Future.wait([
+    themeController.load(),
+    onboardingController.load(),
+    accessibilitySettings.load(),
+  ]);
 
   final notificationService = NotificationService(
     authService: authService,
     navigatorKey: navigatorKey,
-    messengerKey: scaffoldMessengerKey,
   );
 
   // Listens to the store's purchase stream from launch, so renewals and
@@ -53,6 +58,7 @@ void main() async {
     scaffoldMessengerKey: scaffoldMessengerKey,
     notificationService: notificationService,
     themeController: themeController,
+    accessibilitySettings: accessibilitySettings,
     onboardingController: onboardingController,
     premiumService: premiumService,
   ));

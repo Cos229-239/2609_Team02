@@ -10,6 +10,7 @@ import '../../../shared/utils/legal_links.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/social_sign_in_buttons.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 /// "Welcome/Login" screen — where users sign into the app.
 class LoginScreen extends StatefulWidget {
@@ -45,9 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.home, (route) => false);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-      );
+      showAppNotice(context, e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

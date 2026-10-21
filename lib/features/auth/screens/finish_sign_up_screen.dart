@@ -9,6 +9,7 @@ import '../../../shared/utils/legal_links.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../widgets/auth_text_field.dart';
 import 'register_screen.dart' show PhoneNumberFormatter;
+import '../../../shared/widgets/app_notice.dart';
 
 /// Shown the first time someone signs in with Google/Apple: the account
 /// exists in Firebase Auth but has no Famotive profile yet. Collects the
@@ -62,9 +63,7 @@ class _FinishSignUpScreenState extends State<FinishSignUpScreen> {
       Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.home, (route) => false);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-      );
+      showAppNotice(context, e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

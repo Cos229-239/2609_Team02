@@ -30,6 +30,13 @@ void main() {
       }
     });
 
+    test('a reached family goal opens its celebration', () {
+      final route = NotificationService.routeFor({'type': 'milestone_completed', 'milestoneId': 'm1'});
+      expect(route?.name, AppRoutes.milestoneCelebration);
+      expect(route?.arguments, 'm1');
+      expect(NotificationService.routeFor({'type': 'milestone_completed'}), isNull);
+    });
+
     test('unknown or incomplete payloads are ignored', () {
       expect(NotificationService.routeFor({}), isNull);
       expect(NotificationService.routeFor({'type': 'something_new'}), isNull);

@@ -15,6 +15,8 @@ export interface MessageContext {
   householdName?: string;
   /** Who asked to join (join_requested). */
   requesterName?: string;
+  /** Family Goal name (milestone_completed). */
+  milestoneTitle?: string;
   /** Morning digest contents (titles of each group). */
   digest?: { due: string[]; overdue: string[]; pool: string[] };
 }
@@ -113,6 +115,15 @@ export function buildMessage(kind: NotificationKind, ctx: MessageContext): Messa
         title: "You're in! 🏡",
         body: `Welcome to ${ctx.householdName?.trim() || 'your new household'} — your quests are waiting.`,
       };
+    case 'milestone_completed': {
+      const reward = `${ctx.rewardIcon ? `${ctx.rewardIcon} ` : ''}${ctx.rewardTitle?.trim() || 'your family reward'}`;
+      return {
+        title: 'Family goal reached! 🎉',
+        body: ctx.milestoneTitle?.trim()
+          ? `You did it together — ${ctx.milestoneTitle.trim()} is complete and ${reward} is unlocked!`
+          : `You did it together — ${reward} is unlocked!`,
+      };
+    }
     case 'reward_redeemed': {
       const reward = `${ctx.rewardIcon ? `${ctx.rewardIcon} ` : ''}${ctx.rewardTitle?.trim() || 'a reward'}`;
       const cost = ctx.coinCost ? ` for ${ctx.coinCost} coins` : '';

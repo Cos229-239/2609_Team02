@@ -16,6 +16,8 @@ export type NotificationKind =
   | 'task_accepted' // a child claimed a task from the pool
   | 'task_completed' // a child marked a task done (awaiting approval)
   | 'reward_redeemed' // a child redeemed a reward from the store
+  // Whole household
+  | 'milestone_completed' // the family reached its Family Goal (board finish)
   // Household membership
   | 'join_requested' // to the admin: someone entered the invite code
   | 'household_joined'; // to the new member: the admin let them in
@@ -123,6 +125,23 @@ export function planMembersAdded(before: string[], after: string[], actorId?: st
 /** A redemption document was created. */
 export function planRedemptionCreated(actorId?: string): PlannedNotification[] {
   return [{ kind: 'reward_redeemed', audience: { type: 'parents' }, excludeUserIds: exclude(actorId) }];
+}
+
+/** The subset of a `households/{id}/milestones/{id}` doc the planner reads. */
+export interface MilestoneData {
+  status?: string;
+}
+
+/**
+ * A Family Goal changed: when it just became completed, tell the whole
+ * family (children and parents), except whoever completed it.
+ */
+export function planMilestoneUpdated(before: MilestoneData, after: MilestoneData, actorId?: string): PlannedNotification[] {
+  if (before.status === 'completed' || after.status !== 'completed') return [];
+  return [
+    { kind: 'milestone_completed', audience: { type: 'children' }, excludeUserIds: exclude(actorId) },
+    { kind: 'milestone_completed', audience: { type: 'parents' }, excludeUserIds: exclude(actorId) },
+  ];
 }
 
 // --- Morning run: due today / overdue digest -----------------------------------

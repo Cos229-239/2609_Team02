@@ -1,0 +1,25 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "7R67F8H655.com.famotive",
+        "appIDs": [ "7R67F8H655.com.famotive" ],
+        "paths": [ "/__/auth/links", "/__/auth/links/*" ],
+        "components": [
+          { "/": "/__/auth/links", "comment": "Firebase Auth email actions (password reset, email change)" },
+          { "/": "/__/auth/links/*" }
+        ]
+      },
+      {
+        "appID": "7R67F8H655.com.example.famotive",
+        "appIDs": [ "7R67F8H655.com.example.famotive" ],
+        "paths": [ "/__/auth/links", "/__/auth/links/*" ],
+        "components": [
+          { "/": "/__/auth/links" },
+          { "/": "/__/auth/links/*" }
+        ]
+      }
+    ]
+  }
+}

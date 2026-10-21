@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../widgets/app_notice.dart';
+import '../widgets/parental_gate.dart';
 
 /// Terms & Privacy live on famotive.org, so the app always shows the current
 /// version. They open in an in-app browser (Safari View Controller / Chrome
-/// Custom Tab) over the app.
+/// Custom Tab) over the app, behind the [ParentalGate] (Kids Category).
 class LegalLinks {
   LegalLinks._();
 
@@ -13,7 +15,8 @@ class LegalLinks {
   static Future<void> openPrivacy(BuildContext context) => _open(context, AppConstants.privacyUrl);
 
   static Future<void> _open(BuildContext context, String url) async {
-    final messenger = ScaffoldMessenger.maybeOf(context);
+    final notices = AppNotice.of(context);
+    if (!await ParentalGate.verify(context)) return;
     var opened = false;
     try {
       opened = await launchUrl(Uri.parse(url), mode: LaunchMode.inAppBrowserView);
@@ -21,7 +24,7 @@ class LegalLinks {
       debugPrint('LegalLinks: could not open $url: $e');
     }
     if (!opened) {
-      messenger?.showSnackBar(SnackBar(content: Text("Couldn't open the page. Visit $url")));
+      notices.show("Couldn't open the page. Visit $url", tone: NoticeTone.error);
     }
   }
 }

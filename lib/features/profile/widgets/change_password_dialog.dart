@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/utils/validators.dart';
 import '../../auth/widgets/auth_text_field.dart';
+import '../../../shared/widgets/app_notice.dart';
 
 /// Dialog that collects the current password + a new one, and calls
 /// [AuthService.updatePassword]. Shown from [AccountSettingsScreen]'s
@@ -48,14 +49,10 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
           );
       if (!mounted) return;
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password updated.')),
-      );
+      showAppNotice(context, 'Password updated.', tone: NoticeTone.success);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-      );
+      showAppNotice(context, e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

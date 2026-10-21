@@ -4,17 +4,23 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/demo_mode.dart';
 import '../../../core/services/theme_controller.dart';
 import '../../../shared/utils/legal_links.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../widgets/profile_menu_tile.dart';
+import '../../../core/services/accessibility_settings.dart';
+import '../../../shared/widgets/app_notice.dart';
+import '../../../shared/widgets/parental_gate.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   /// Opens the device's mail app with a pre-filled support request,
-  /// pre-addressed to support@famotive.org.
+  /// pre-addressed to support@famotive.org. Behind the [ParentalGate]:
+  /// it leaves the app (Kids Category).
   Future<void> _launchSupportEmail(BuildContext context) async {
+    if (!await ParentalGate.verify(context)) return;
     final uri = Uri(
       scheme: 'mailto',
       path: 'support@famotive.org',
@@ -22,11 +28,7 @@ class ProfileScreen extends StatelessWidget {
     );
     final launched = await launchUrl(uri);
     if (!launched && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Couldn't open your email app — reach us at support@famotive.org"),
-        ),
-      );
+      showAppNotice(context, "Couldn't open your email app — reach us at support@famotive.org", tone: NoticeTone.error);
     }
   }
 
@@ -123,10 +125,26 @@ class ProfileScreen extends StatelessWidget {
             child: _DarkModeTile(),
           ),
         ],
+        if (AccessibilitySettings.maybeOf(context) != null) ...[
+          const SizedBox(height: 16),
+          const AppCard(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: _SwipeActionsTile(),
+          ),
+        ],
         const SizedBox(height: 16),
         AppCard(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          child: ProfileMenuTile(
+          // In the QA demo (lib/qa/) there's no account to log out of.
+          child: DemoMode.maybeOf(context) != null
+              ? ProfileMenuTile(
+                  key: const Key('demo-end-test'),
+                  icon: Icons.flag_outlined,
+                  label: 'End test',
+                  destructive: true,
+                  onTap: DemoMode.maybeOf(context)!.onEndTest,
+                )
+              : ProfileMenuTile(
             icon: Icons.logout,
             label: 'Log Out',
             destructive: true,
@@ -139,6 +157,40 @@ class ProfileScreen extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Settings > Accessibility > Swipe Actions. Off makes task rows tap-only;
+/// every swipe action is still on the card that opens when a task is tapped.
+class _SwipeActionsTile extends StatelessWidget {
+  const _SwipeActionsTile();
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = AccessibilitySettings.maybeOf(context);
+    if (settings == null) return const SizedBox.shrink();
+    final on = settings.swipeActions;
+    final color = Theme.of(context).colorScheme.onSurface;
+
+    return SwitchListTile.adaptive(
+      key: const Key('swipe-actions-switch'),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+      dense: true,
+      visualDensity: const VisualDensity(vertical: -4),
+      secondary: Icon(Icons.swipe_outlined, color: color, size: 24),
+      title: Text(
+        'Swipe Actions',
+        style: TextStyle(color: color, fontWeight: FontWeight.w500, fontSize: 16),
+      ),
+      subtitle: Text(
+        on
+            ? 'On - Swipe to manage tasks'
+            : 'Off - Tap to manage tasks',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
+      ),
+      value: on,
+      onChanged: settings.setSwipeActions,
     );
   }
 }
@@ -159,13 +211,14 @@ class _DarkModeTile extends StatelessWidget {
       key: const Key('dark-mode-switch'),
       contentPadding: const EdgeInsets.symmetric(horizontal: 4),
       dense: true,
+      visualDensity: const VisualDensity(vertical: -4),
       secondary: Icon(isDark ? Icons.dark_mode : Icons.dark_mode_outlined, color: color, size: 24),
       title: Text(
         'Dark Mode',
         style: TextStyle(color: color, fontWeight: FontWeight.w500, fontSize: 16),
       ),
       subtitle: Text(
-        isDark ? 'On - easier on the eyes at night' : 'Off',
+        isDark ? 'On' : 'Off',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
       ),
       value: isDark,

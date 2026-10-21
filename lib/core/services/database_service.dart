@@ -10,12 +10,14 @@ import 'package:flutter/foundation.dart';
 import '../constants/app_constants.dart';
 import '../models/household.dart';
 import '../models/join_request.dart';
+import '../models/mini_game.dart';
 import '../models/redemption.dart';
 import '../models/reward.dart';
 import '../models/task.dart';
 import '../models/task_proof.dart';
 import '../models/task_schedule.dart';
 import '../models/user.dart';
+import 'approval_effects.dart';
 import 'time_zone_service.dart';
 
 /// Firestore-backed household data: the households the signed-in user
@@ -25,11 +27,23 @@ class DatabaseService extends ChangeNotifier {
   DatabaseService({
     FirebaseFirestore? firestore,
     Future<String?> Function()? deviceTimeZone,
+    DateTime Function()? clock,
+    ApprovalEffects? approvalEffects,
+    Iterable<MiniGameId>? availableMiniGames,
   }) : _firestore = firestore ?? FirebaseFirestore.instance,
-       _deviceTimeZone = deviceTimeZone ?? TimeZoneService.localTimeZone;
+       _deviceTimeZone = deviceTimeZone ?? TimeZoneService.localTimeZone,
+       _clock = clock ?? DateTime.now {
+    _approvalEffects = approvalEffects ?? ApprovalEffects(_firestore, availableGames: availableMiniGames);
+  }
 
   final FirebaseFirestore _firestore;
   final Future<String?> Function() _deviceTimeZone;
+
+  /// Current time (injectable for tests).
+  final DateTime Function() _clock;
+
+  /// Milestone board / progress events written with each approval.
+  late final ApprovalEffects _approvalEffects;
 
   /// Household we've already tried to fill in a missing time zone for.
   String? _timeZoneBackfilledFor;
@@ -897,6 +911,10 @@ class DatabaseService extends ChangeNotifier {
     final taskRef = _tasksCollection.doc(taskId);
     final householdId = _householdId;
 
+    final milestoneRefs = householdId == null
+        ? const <DocumentReference<Map<String, dynamic>>>[]
+        : await _approvalEffects.candidateMilestones(householdId);
+
     // Discover accumulation challenges before starting the approval transaction.
     final accumulationGoals = householdId == null
         ? <Goal>[]
@@ -911,8 +929,9 @@ class DatabaseService extends ChangeNotifier {
       final task = TaskModel.fromFirestore(taskSnap);
       if (!from.contains(task.status)) return;
 
-      final approvalTime = DateTime.now();
-      final now = Timestamp.fromDate(approvalTime);
+      final approvedAt = _clock();
+      final approvalTime = approvedAt;
+      final now = Timestamp.fromDate(approvedAt);
 
       final approval = <String, Object?>{
         'status': TaskStatus.approved.name,
@@ -936,7 +955,6 @@ class DatabaseService extends ChangeNotifier {
       // Prepare an eligible challenge contribution in this same transaction.
       final preparedContributions = <PreparedGoalContribution>[];
       final goalService = GoalService(firestore: _firestore);
-
       final goalId = task.goalId;
 
       if (householdId != null && assignedTo != null && goalId != null) {
@@ -1007,6 +1025,22 @@ class DatabaseService extends ChangeNotifier {
         }
       }
       // All Firestore reads are complete. Begin transaction writes.
+      // Family milestone board move + the child's "approved!" moment, in
+      // this same transaction so they can't disagree with the approval.
+      final effects = householdId == null
+          ? PreparedApproval.nothing
+          : await _approvalEffects.prepare(
+              transaction,
+              householdId: householdId,
+              taskId: taskId,
+              task: task,
+              assigneeProfile: userSnap?.data(),
+              approvedAt: approvedAt,
+              approverId: _sessionUser?.id,
+              milestoneRefs: milestoneRefs,
+            );
+
+      // All Firestore reads are complete. Begin transaction writes.
       transaction.update(taskRef, approval);
 
       if (userRef != null && userSnap != null && userSnap.exists) {
@@ -1023,7 +1057,11 @@ class DatabaseService extends ChangeNotifier {
       for (final contribution in preparedContributions) {
         contribution.apply(transaction);
       }
+
+      // Apply Family Milestone Board updates and approval effects.
+      effects.apply(transaction);
     });
+    
   }
 
   // --- Mutations: household membership ---------------------------------------

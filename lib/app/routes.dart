@@ -10,6 +10,11 @@ import '../features/auth/screens/register_screen.dart';
 import '../features/auth/screens/reset_password_screen.dart';
 import '../features/auth/screens/confirm_email_change_screen.dart';
 import '../features/household/screens/households_screen.dart';
+import '../features/milestones/screens/family_board_screen.dart';
+import '../features/milestones/screens/milestone_celebration_screen.dart';
+import '../features/milestones/screens/milestone_editor_screen.dart';
+import '../features/minigames/screens/mini_game_settings_screen.dart';
+import '../features/rex/rex_room_screen.dart';
 import '../features/onboarding/screens/help_center_screen.dart';
 import '../features/premium/screens/premium_screen.dart';
 import '../features/profile/screens/account_settings_screen.dart';
@@ -56,6 +61,18 @@ class AppRoutes {
   // Family Challenges & Goals
   static const String goals = '/goals';
   static const String challengeCreate = '/goals/create';
+  // Family Goal (milestone board). See Documents/Family_Milestones_and_MiniGames.md.
+  /// The board; optional milestone id argument (default: the current goal).
+  static const String familyBoard = '/family-goal';
+  /// Parent: create (no argument) or edit (milestone id) a family goal.
+  static const String milestoneEditor = '/family-goal/edit';
+  /// "We did it!" screen; milestone id argument.
+  static const String milestoneCelebration = '/family-goal/celebrate';
+  /// Parent: mini-game difficulty and bonus XP; optional child id argument.
+  static const String miniGameSettings = '/minigames/settings';
+
+  /// Child: Rex's Room, the 3D pet game (see games/rex).
+  static const String rexRoom = '/rex';
 
   // Settings sub-screens, pushed from the Settings tab.
   static const String accountSettings = '/settings/account';
@@ -137,12 +154,30 @@ class AppRoutes {
         final scheduleId = args as String;
         return _page(CreateTaskScreen(scheduleId: scheduleId), settings);
 
+      // Family Challenges & Goals
       case goals:
         return _page(const GoalsScreen(), settings);
 
       case challengeCreate:
         return _page(const CreateChallengeScreen(), settings);
 
+      // Family Milestone Board
+      case familyBoard:
+        return _page(FamilyBoardScreen(milestoneId: args as String?), settings);
+
+      case milestoneEditor:
+        return _page(MilestoneEditorScreen(milestoneId: args as String?), settings);
+
+      case milestoneCelebration:
+        return _page(MilestoneCelebrationScreen(milestoneId: args as String), settings);
+
+      // Mini-games
+      case miniGameSettings:
+        return _page(MiniGameSettingsScreen(initialChildId: args as String?), settings);
+
+      // Rex Virtual Pet
+      case rexRoom:
+        return _page(const RexRoomScreen(), settings);
       case accountSettings:
         return _page(const AccountSettingsScreen(), settings);
       case deleteAccount:
