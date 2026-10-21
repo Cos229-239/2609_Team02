@@ -215,16 +215,6 @@ class ProgressScreen extends StatelessWidget {
           db: db,
           emptyLabel: 'No pending tasks right now.',
         ),
-
-        const SizedBox(height: 28),
-        _TaskSection(
-          icon: Icons.hourglass_bottom,
-          title: 'Awaiting Approval',
-          color: Colors.orange,
-          tasks: awaitingApproval,
-          db: db,
-          emptyLabel: 'No tasks waiting for approval.',
-        ),
         const SizedBox(height: 28),
         _TaskSection(
           icon: Icons.check_circle_outline,
