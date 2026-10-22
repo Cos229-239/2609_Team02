@@ -7,8 +7,11 @@ import '../features/onboarding/onboarding_content.dart';
 ///
 /// - **A (verbose)** is whatever `dev` currently ships: read live from
 ///   [OnboardingGuides], so it always matches the real app.
-/// - **B (minimal)** is a snapshot of the four-screen walkthrough from
-///   `feature/tutorial-final` (commit d46b855). It's copied here rather
+/// - **B (minimal)** started as a snapshot of the four-screen walkthrough
+///   from `feature/tutorial-final` (commit d46b855). The child version now
+///   has a fifth screen for Rex's Room, and both mention the
+///   `feature/child-first` changes (Rex for a child on a parent's phone,
+///   parents managing a child's profile and login). It's copied here rather
 ///   than imported so both variants can run side by side in one build; if
 ///   that branch changes, update this file to match.
 enum WalkthroughVariant {
@@ -82,8 +85,9 @@ class MinimalWalkthrough {
         icon: Icons.celebration_outlined,
         accent: OnboardingAccent.green,
         bullets: [
+          'Tap a child on Home to hand them your phone with Rex (Face ID to leave)',
+          'Tap a child in Family to edit their profile or reset their password',
           'Look for the ⓘ icons for quick tips',
-          'Long-press the tabs to see what they do',
         ],
       ),
     ],
@@ -114,6 +118,19 @@ class MinimalWalkthrough {
         ],
       ),
       OnboardingStep(
+        title: 'Meet Rex!',
+        body: 'Rex is your dino buddy. Tap "Visit Rex" on Home to play with '
+            'him and do your quests right from his room.',
+        icon: Icons.pets_outlined,
+        emoji: '🦖',
+        accent: OnboardingAccent.green,
+        bullets: [
+          'Finished quests keep Rex fed, clean and happy',
+          'Swipe left for your quests, right for Rex\'s store',
+          'Play mini-games with Rex for fun or bonus XP',
+        ],
+      ),
+      OnboardingStep(
         title: 'Spend your coins',
         body: 'Open the Rewards tab to see the Reward Store your family set up.',
         icon: Icons.redeem_outlined,
@@ -132,6 +149,10 @@ class MinimalWalkthrough {
         icon: Icons.flag_outlined,
         emoji: '🚀',
         accent: OnboardingAccent.green,
+        bullets: [
+          'Change your picture in Settings > Account Settings',
+          'A parent can change your name, email or password',
+        ],
       ),
     ],
   );

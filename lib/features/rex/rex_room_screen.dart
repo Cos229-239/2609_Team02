@@ -5,7 +5,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../core/models/mini_game.dart';
 import '../../core/models/mini_game_session.dart';
@@ -13,11 +12,13 @@ import '../../core/models/mini_game_settings.dart';
 import '../../core/models/task.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/database_service.dart';
+import '../../core/services/demo_mode.dart';
 import '../../core/services/kid_mode.dart';
 import '../../core/services/mini_game_service.dart';
 import '../../core/services/xp_multiplier.dart';
 import '../../shared/widgets/parent_verification.dart';
 import '../tasks/task_completion_flow.dart';
+import 'host/rex_host.dart';
 
 /// Rex's Room: the child's 3D voxel pet game (games/rex, bundled into
 /// assets/rex/index.html), hosted in a full-screen WebView.
@@ -60,7 +61,7 @@ class RexRoomScreen extends StatefulWidget {
 }
 
 class _RexRoomScreenState extends State<RexRoomScreen> {
-  late final WebViewController _controller;
+  late final RexHost _host;
   late final DatabaseService _db;
   late final AuthService _auth;
   MiniGameService? _games;
@@ -75,6 +76,9 @@ class _RexRoomScreenState extends State<RexRoomScreen> {
 
   /// A parent handed their device to [_childId]: leaving needs the gate.
   bool _kidMode = false;
+
+  /// The QA/demo build (no real data): unlock every Rex item.
+  late final bool _unlockAll = DemoMode.maybeOf(context) != null;
   bool _gateOpen = false;
 
   @override
@@ -87,17 +91,14 @@ class _RexRoomScreenState extends State<RexRoomScreen> {
     _childId = widget.childId ?? me?.id;
     _kidMode = widget.childId != null && widget.childId != me?.id;
     if (_kidMode) KidMode.active.value = true;
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(RexRoomScreen._background)
-      // Kids Category (guideline 1.3): the game is a bundled page and must
-      // never navigate a child out to the web.
-      ..setNavigationDelegate(NavigationDelegate(
-        onNavigationRequest: (request) => _isBundledPage(request.url)
-            ? NavigationDecision.navigate
-            : NavigationDecision.prevent,
-      ))
-      ..addJavaScriptChannel('FamotiveBridge', onMessageReceived: _onMessage);
+    // A WebView on iOS/Android, an iframe on the web (QA site). Kids
+    // Category (guideline 1.3): the game is a bundled page and must never
+    // navigate a child out to the web.
+    _host = RexHost.create(
+      onMessage: _onMessage,
+      allowNavigation: _isBundledPage,
+      background: RexRoomScreen._background,
+    );
     _db.addListener(_pushTasks);
     _db.addListener(_pushPlayer);
     _games?.addListener(_pushGames);
@@ -123,7 +124,7 @@ class _RexRoomScreenState extends State<RexRoomScreen> {
       _loadStarted = true;
       _load();
     } else if (_ready) {
-      _controller.runJavaScript('window.RexGame && RexGame.setInsets(${jsonEncode(_insetsJson)});');
+      _host.runJavaScript('window.RexGame && RexGame.setInsets(${jsonEncode(_insetsJson)});');
     }
   }
 
@@ -139,13 +140,19 @@ class _RexRoomScreenState extends State<RexRoomScreen> {
     _db.removeListener(_pushPlayer);
     _games?.removeListener(_pushGames);
     _auth.removeListener(_pushPlayer);
+    _host.dispose();
     super.dispose();
   }
 
   Future<void> _load() async {
     final html = await rootBundle.loadString(RexRoomScreen._asset);
-    final config = jsonEncode({'player': _childId ?? '', 'insets': _insetsJson});
-    await _controller.loadHtmlString(
+    final config = jsonEncode({
+      'player': _childId ?? '',
+      'insets': _insetsJson,
+      // Demo / QA builds: every Rex item unlocked so testers can try them all.
+      if (_unlockAll) 'unlockAll': true,
+    });
+    await _host.loadHtml(
       html.replaceFirst('<head>', '<head><script>window.REX_EMBED = $config;</script>'),
       baseUrl: RexRoomScreen._baseUrl,
     );
@@ -179,10 +186,10 @@ class _RexRoomScreenState extends State<RexRoomScreen> {
     ]);
     if (json == _lastTasksJson) return;
     _lastTasksJson = json;
-    _controller.runJavaScript('window.RexGame && RexGame.setTasks($json);');
+    _host.runJavaScript('window.RexGame && RexGame.setTasks($json);');
   }
 
-  void _js(String code) => _controller.runJavaScript('window.RexGame && $code');
+  void _js(String code) => _host.runJavaScript('window.RexGame && $code');
 
   /// The child's total XP: Rex shows the same level.
   void _pushPlayer() {
@@ -307,10 +314,10 @@ class _RexRoomScreenState extends State<RexRoomScreen> {
     });
   }
 
-  Future<void> _onMessage(JavaScriptMessage message) async {
+  Future<void> _onMessage(String message) async {
     final Object? decoded;
     try {
-      decoded = jsonDecode(message.message);
+      decoded = jsonDecode(message);
     } on FormatException {
       return;
     }
@@ -326,7 +333,7 @@ class _RexRoomScreenState extends State<RexRoomScreen> {
         _pushGames();
         _maybeAutoLaunch();
         // In case the device rotated while the page was loading.
-        _controller.runJavaScript('RexGame.setInsets(${jsonEncode(_insetsJson)});');
+        _host.runJavaScript('RexGame.setInsets(${jsonEncode(_insetsJson)});');
       case 'taskCompleted':
         final id = decoded['taskId'];
         TaskModel? task;
@@ -381,7 +388,7 @@ class _RexRoomScreenState extends State<RexRoomScreen> {
       },
       child: Scaffold(
         backgroundColor: RexRoomScreen._background,
-        body: WebViewWidget(controller: _controller),
+        body: _host.build(context),
       ),
     );
   }

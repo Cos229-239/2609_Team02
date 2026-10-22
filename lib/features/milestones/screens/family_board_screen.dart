@@ -170,7 +170,7 @@ class _BoardBody extends StatelessWidget {
                       '${db.userById(c.childId)?.name ?? 'Family member'} · ${DateFormat('MMM d, h:mm a').format(c.approvedAt)}',
                     ),
                     trailing: Text(
-                      '${c.spaces == 1 ? "+1 Space Earned!" : "+${c.spaces} Spaces Earned!"}',
+                      c.spaces == 1 ? "+1 Space Earned!" : "+${c.spaces} Spaces Earned!",
                       style: const TextStyle(
                       color: AppColors.growthGreen, fontWeight: FontWeight.w800, fontSize: 13),
                     ),

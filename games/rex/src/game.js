@@ -253,6 +253,19 @@ export class Game {
 
   // ---- Store + care actions ---------------------------------------------
 
+  // Demo / QA builds: own every Rex item (toys, decor, cosmetics, pets) and
+  // keep the care items stocked, so testers can try everything without
+  // saving up coins. Family rewards are real-world and stay in the app.
+  unlockAll(stock = 99) {
+    const s = this.state;
+    for (const item of STORE_ITEMS) {
+      if (item.kind === 'consumable') s.inventory[item.id] = Math.max(s.inventory[item.id] || 0, stock);
+      else if (item.kind !== 'family') s.owned[item.id] = true;
+    }
+    this.changed();
+  }
+
+
   buy(itemId) {
     const s = this.state;
     const item = STORE_ITEMS.find((i) => i.id === itemId);

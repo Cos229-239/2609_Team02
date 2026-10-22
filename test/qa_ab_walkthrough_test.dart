@@ -40,12 +40,19 @@ void main() {
     expect(find.byType(FamotiveApp), findsNothing);
   }
 
-  test('B is shorter than A for both roles', () {
+  test('B is shorter than A for both roles; the child B has a Rex screen', () {
+    expect(WalkthroughVariant.b.guideFor(UserRole.parent).steps.length, 4);
+    expect(WalkthroughVariant.b.guideFor(UserRole.child).steps.length, 5);
+    expect(WalkthroughVariant.b.guideFor(UserRole.child).steps.map((s) => s.title), contains('Meet Rex!'));
     for (final role in UserRole.values) {
-      expect(WalkthroughVariant.b.guideFor(role).steps.length, 4);
       expect(WalkthroughVariant.a.guideFor(role).steps.length,
           greaterThan(WalkthroughVariant.b.guideFor(role).steps.length));
     }
+  });
+
+  test('the site is pinned to Version B, child view', () {
+    expect(kOnlyVariant, WalkthroughVariant.b);
+    expect(kOnlyRole, UserRole.child);
   });
 
   test('demo family seeds a household with tasks and rewards', () async {
@@ -60,10 +67,10 @@ void main() {
     expect(session.authService.currentUser?.id, DemoFamily.maya.id);
   });
 
-  testWidgets('opens straight into a random version, then the demo app, then the survey', (tester) async {
+  testWidgets('opens straight into Version B as a child, then the demo app, then the survey', (tester) async {
     bigScreen(tester);
-    // nextBool() answers: variant B, then role child.
-    await tester.pumpWidget(AbWalkthroughApp(queryParameters: const {}, random: _ScriptedRandom([false, false])));
+    // Would pick A + parent if the run were still random: the pins win.
+    await tester.pumpWidget(AbWalkthroughApp(queryParameters: const {}, random: _ScriptedRandom([true, true])));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('qa-start')), findsNothing);
@@ -83,16 +90,17 @@ void main() {
 
     await tester.tap(find.byKey(const Key('qa-show-results')));
     await tester.pumpAndSettle();
-    await scrollTo(tester, find.textContaining('step 1/4'));
+    await scrollTo(tester, find.textContaining('step 1/5'));
     expect(find.text('3. Runs (1)'), findsOneWidget);
-    expect(find.textContaining('step 1/4'), findsOneWidget);
+    expect(find.textContaining('step 1/5'), findsOneWidget);
   });
 
-  testWidgets('setup mode: pick a variant by hand, go one step, skip, end test', (tester) async {
+  testWidgets('setup mode: go one step, skip, end test', (tester) async {
     bigScreen(tester);
     await tester.pumpWidget(const AbWalkthroughApp(queryParameters: {'setup': '1'}));
     await tester.pumpAndSettle();
-    expect(find.text('Start walkthrough (4 steps)'), findsOneWidget);
+    expect(find.text('Start walkthrough (5 steps)'), findsOneWidget);
+    expect(find.textContaining('Only Version B is being tested'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('qa-start')));
     await tester.pumpAndSettle();
@@ -102,11 +110,11 @@ void main() {
     await tester.pumpAndSettle();
     await endTest(tester);
 
-    await scrollTo(tester, find.textContaining('Skipped · step 2/4'));
+    await scrollTo(tester, find.textContaining('Skipped · step 2/5'));
     expect(find.text('3. Runs (1)'), findsOneWidget);
   });
 
-  testWidgets('survey button is enabled once a survey link is set', (tester) async {
+  testWidgets('survey button is enabled once a survey link is set; ?variant=A is ignored', (tester) async {
     bigScreen(tester);
     await tester.pumpWidget(const AbWalkthroughApp(queryParameters: {
       'variant': 'a',
@@ -114,14 +122,14 @@ void main() {
       'survey': 'https://example.com/form?v={version}&r={role}&run={run}',
     }));
     await tester.pumpAndSettle();
-    expect(find.text('VERSION A'), findsOneWidget);
+    expect(find.text('VERSION B'), findsOneWidget);
     await tester.tap(find.byKey(const Key('onboarding-skip')));
     await tester.pumpAndSettle();
     await endTest(tester);
 
     final button = tester.widget<ElevatedButton>(find.byKey(const Key('qa-survey')));
     expect(button.onPressed, isNotNull);
-    expect(find.textContaining('You tested VERSION A as a parent'), findsOneWidget);
+    expect(find.textContaining('You tested VERSION B as a child'), findsOneWidget);
   });
 }
 

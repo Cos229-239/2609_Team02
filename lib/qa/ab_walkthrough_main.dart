@@ -19,6 +19,10 @@ import '../shared/widgets/app_notice.dart';
 
 /// QA-only web build for A/B testing the first-time walkthrough.
 ///
+/// **Right now every run is Version B as a child** ([kOnlyVariant],
+/// [kOnlyRole]): testers kept reporting Version A, so the site is pinned to
+/// B until those constants are set back to null.
+///
 /// No Firebase, no sign-in. Each run:
 ///   1. shows the real [OnboardingScreen] for a random variant (A/B) and
 ///      role (parent/child), timing every step;
@@ -33,10 +37,19 @@ import '../shared/widgets/app_notice.dart';
 ///
 ///   flutter run -d chrome -t lib/qa/ab_walkthrough_main.dart
 ///
-/// URL options: `?variant=A|B` forces a variant, `?role=parent|child`
-/// forces the role, `?tester=Name` is passed to the survey, `?survey=<url>`
+/// URL options (while [kOnlyVariant] / [kOnlyRole] are null): `?variant=A|B`
+/// forces a variant, `?role=parent|child` forces the role, `?tester=Name` is passed to the survey, `?survey=<url>`
 /// overrides [kSurveyUrl], and `?setup=1` shows the manual setup + results
 /// screen instead of starting right away.
+/// Every run uses this variant, whatever the URL or setup screen says.
+/// Null: random A/B per run again. Pinned to B for now: testers kept
+/// saying they got A.
+const WalkthroughVariant? kOnlyVariant = WalkthroughVariant.b;
+
+/// Every run is this role (null: random parent/child). Pinned to the child
+/// view for now, with Rex's Room and its items all unlocked in the demo.
+const UserRole? kOnlyRole = UserRole.child;
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const AbWalkthroughApp());
@@ -346,12 +359,13 @@ class _AbTestHomeState extends State<AbTestHome> {
   Future<void> _init() async {
     await _store.init();
     final params = widget.queryParameters ?? Uri.base.queryParameters;
-    _forcedVariant = WalkthroughVariant.parse(params['variant']);
-    _forcedRole = switch (params['role']?.toLowerCase()) {
-      'parent' => UserRole.parent,
-      'child' => UserRole.child,
-      _ => null,
-    };
+    _forcedVariant = kOnlyVariant ?? WalkthroughVariant.parse(params['variant']);
+    _forcedRole = kOnlyRole ??
+        switch (params['role']?.toLowerCase()) {
+          'parent' => UserRole.parent,
+          'child' => UserRole.child,
+          _ => null,
+        };
     final survey = params['survey'];
     if (survey != null && survey.isNotEmpty) _surveyTemplate = survey;
     final setup = params['setup']?.toLowerCase();
@@ -598,7 +612,7 @@ class _AbTestHomeState extends State<AbTestHome> {
                           ButtonSegment(value: UserRole.child, label: Text('Child'), icon: Icon(Icons.child_care)),
                         ],
                         selected: {_role},
-                        onSelectionChanged: (s) => setState(() => _role = s.first),
+                        onSelectionChanged: kOnlyRole != null ? null : (s) => setState(() => _role = s.first),
                       ),
                       const SizedBox(height: 16),
                       Text('Variant', style: theme.textTheme.labelLarge),
@@ -609,14 +623,20 @@ class _AbTestHomeState extends State<AbTestHome> {
                             ButtonSegment(value: v, label: Text('${v.code} · ${v.label}')),
                         ],
                         selected: {_variant},
-                        onSelectionChanged: (s) {
-                          setState(() => _variant = s.first);
-                          if (!_variantForced) _store.setAssignedVariant(s.first);
-                        },
+                        onSelectionChanged: kOnlyVariant != null
+                            ? null
+                            : (s) {
+                                setState(() => _variant = s.first);
+                                if (!_variantForced) _store.setAssignedVariant(s.first);
+                              },
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        _variantForced ? 'Forced by the ?variant= URL parameter.' : 'Pick the variant to test.',
+                        kOnlyVariant != null
+                            ? 'Only Version ${kOnlyVariant!.code} is being tested right now (kOnlyVariant).'
+                            : _variantForced
+                                ? 'Forced by the ?variant= URL parameter.'
+                                : 'Pick the variant to test.',
                         style: theme.textTheme.bodySmall,
                       ),
                       const SizedBox(height: 16),
@@ -719,7 +739,7 @@ class _AbTestHomeState extends State<AbTestHome> {
                           key: const Key('qa-again'),
                           onPressed: _running ? null : _startRandomRun,
                           icon: const Icon(Icons.shuffle),
-                          label: const Text('Test again (new random version)'),
+                          label: Text(kOnlyVariant != null ? 'Test again' : 'Test again (new random version)'),
                         ),
                       ),
                       const SizedBox(height: 8),

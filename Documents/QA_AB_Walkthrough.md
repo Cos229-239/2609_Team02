@@ -5,7 +5,19 @@ A small web build for comparing the two first-time onboarding walkthroughs:
 | Variant | Source | Parent steps | Child steps |
 |---|---|---|---|
 | **A · Verbose** | `dev` (read live from `OnboardingGuides`) | 10 | 7 |
-| **B · Minimal** | `feature/tutorial-final` (snapshot in `lib/qa/walkthrough_variants.dart`) | 4 | 4 |
+| **B · Minimal** | `feature/tutorial-final` (snapshot in `lib/qa/walkthrough_variants.dart`) + a "Meet Rex!" screen for kids | 4 | 5 |
+
+> **Currently pinned: every run is Version B, child view.** Testers kept
+> reporting Version A, so `kOnlyVariant = WalkthroughVariant.b` and
+> `kOnlyRole = UserRole.child` at the top of `lib/qa/ab_walkthrough_main.dart`
+> override the random pick, the `?variant=` / `?role=` URL options and the
+> setup screen. Set both back to `null` to go back to random A/B runs.
+>
+> In the demo, **Rex's Room works in the browser** (an iframe instead of the
+> app's WebView, `lib/features/rex/host/`) and **every Rex item is unlocked**
+> (toys, decor, hat, Ptero Pal, 99 of each care item) so testers can try them
+> all. The child's Account Settings show the `feature/child-first` rules
+> (picture only; a parent changes name, age, email and password).
 
 Each run shows the real `OnboardingScreen`, then opens **the whole app** on
 sample data (The Rivera Household: parent Alex, kids Maya and Leo, tasks in
@@ -72,7 +84,8 @@ python3 -m http.server 8080 -d build/web
 ## How a run works
 
 1. Opening the link starts right away (no setup screen). The variant (A/B)
-   and the role (parent/child) are each picked at random (50/50) for every run.
+   and the role (parent/child) are each picked at random (50/50) for every run
+   (while pinned, see above: always B as a child).
 2. The walkthrough for that variant and role. A large, faint **VERSION A** /
    **VERSION B** watermark sits over the screen for the whole run, so
    screenshots and screen recordings show which version was tested.

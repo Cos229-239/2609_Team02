@@ -28,6 +28,8 @@ if (embedded) document.body.classList.add('embedded');
 const initialInsets = embedCfg?.insets;
 if (params.get('reset') === '1') game.reset();
 if (params.get('demo') === '0') game.state.settings.demo = false;
+// Demo / QA builds of the app (and ?unlock=1): every Rex item unlocked.
+if (embedCfg?.unlockAll || params.get('unlock') === '1') game.unlockAll();
 
 const world = new World($('#scene'));
 // Voxel thumbnails of Rex items (family rewards keep their emoji).

@@ -58,6 +58,10 @@ dependencies:
   # parental gate as fallback). See lib/shared/widgets/parent_verification.dart.
   local_auth: ^3.0.2
 
+  # Browser APIs for the web build: Rex's Room runs in an iframe there (no
+  # WebView). See lib/features/rex/host/rex_host_web.dart.
+  web: ^1.1.1
+
   # Task photo proof.
   image_picker: ^1.1.2
   firebase_storage: ^13.0.0
