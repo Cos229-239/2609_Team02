@@ -66,7 +66,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     if (currentUser == null) return;
 
     final newEmail = _emailController.text.trim();
-    final emailChanged = newEmail != currentUser.email;
+    final emailChanged = !currentUser.isChild && newEmail != currentUser.email;
 
     String? currentPassword;
     if (emailChanged) {
@@ -112,6 +112,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     // Google/Apple-only accounts have no password: their email comes from
     // the provider and there's no password to change.
     final hasPassword = auth.hasPasswordLogin;
+    // Kids pick their avatar here; their name, age, email and password are
+    // managed by a parent (Family tab > child on the parent's account).
+    final isChild = currentUser?.isChild ?? false;
 
     if (currentUser == null) {
       return const Scaffold(body: Center(child: Text('Not signed in.')));
@@ -154,11 +157,33 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: AppConstants.spaceLg),
+                if (isChild) ...[
+                  Container(
+                    key: const Key('child-managed-by-parent'),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.family_restroom, color: Theme.of(context).colorScheme.primary),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text('Tap your picture to change it. Ask a parent to change your name, '
+                              'age, email or password.'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 AuthTextField(
                   controller: _nameController,
                   label: 'Name',
                   icon: Icons.badge_outlined,
                   validator: (v) => Validators.required(v, fieldName: 'Name'),
+                  enabled: !isChild,
                 ),
                 const SizedBox(height: 12),
                 AuthTextField(
@@ -167,6 +192,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                   icon: Icons.cake_outlined,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  enabled: !isChild,
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) return null;
                     final age = int.tryParse(v.trim());
@@ -191,9 +217,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.done,
                   validator: Validators.email,
-                  enabled: hasPassword,
+                  enabled: hasPassword && !isChild,
                 ),
-                if (!hasPassword) ...[
+                if (!hasPassword && !isChild) ...[
                   const SizedBox(height: 4),
                   Text(
                     'Signed in with ${auth.socialProviderName ?? 'Google or Apple'}: your email is managed there.',
@@ -206,7 +232,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                   isLoading: _isSaving,
                   onPressed: _handleSave,
                 ),
-                if (hasPassword) ...[
+                if (hasPassword && !isChild) ...[
                   const SizedBox(height: AppConstants.spaceLg),
                   AppCard(
                     onTap: () => ChangePasswordDialog.show(context),

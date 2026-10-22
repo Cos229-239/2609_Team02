@@ -13,8 +13,10 @@ import '../../core/models/mini_game_settings.dart';
 import '../../core/models/task.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/database_service.dart';
+import '../../core/services/kid_mode.dart';
 import '../../core/services/mini_game_service.dart';
 import '../../core/services/xp_multiplier.dart';
+import '../../shared/widgets/parent_verification.dart';
 import '../tasks/task_completion_flow.dart';
 
 /// Rex's Room: the child's 3D voxel pet game (games/rex, bundled into
@@ -31,10 +33,22 @@ import '../tasks/task_completion_flow.dart';
 /// sessions are started and finished through [MiniGameService] exactly as
 /// the old host screen did, so the server still validates and pays the XP.
 /// [launchSessionId] opens straight into that bonus game.
+///
+/// Kid mode: a parent opens Rex for one of their children ([childId]) on
+/// the parent's own device (Progress tab) and hands it over. The child plays
+/// and does their tasks as usual (submitted for approval like any other
+/// completion), but can't leave: the back button, the back swipe and the
+/// game's own close button all ask for [ParentVerification] first (Face ID
+/// / Touch ID, or the math parental gate). Bonus
+/// games stay with the child's own login (the server only accepts their
+/// results from the child), so kid mode offers practice games only.
 class RexRoomScreen extends StatefulWidget {
-  const RexRoomScreen({super.key, this.launchSessionId});
+  const RexRoomScreen({super.key, this.launchSessionId, this.childId});
 
   final String? launchSessionId;
+
+  /// The child to play as. Null: the signed-in child.
+  final String? childId;
 
   static const String _asset = 'assets/rex/index.html';
   // Gives the page a stable origin so its localStorage save survives.
@@ -59,13 +73,20 @@ class _RexRoomScreenState extends State<RexRoomScreen> {
   String? _lastTasksJson;
   EdgeInsets? _insets;
 
+  /// A parent handed their device to [_childId]: leaving needs the gate.
+  bool _kidMode = false;
+  bool _gateOpen = false;
+
   @override
   void initState() {
     super.initState();
     _db = context.read<DatabaseService>();
     _auth = context.read<AuthService>();
     _games = context.read<MiniGameService?>();
-    _childId = _auth.currentUser?.id;
+    final me = _auth.currentUser;
+    _childId = widget.childId ?? me?.id;
+    _kidMode = widget.childId != null && widget.childId != me?.id;
+    if (_kidMode) KidMode.active.value = true;
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(RexRoomScreen._background)
@@ -78,6 +99,7 @@ class _RexRoomScreenState extends State<RexRoomScreen> {
       ))
       ..addJavaScriptChannel('FamotiveBridge', onMessageReceived: _onMessage);
     _db.addListener(_pushTasks);
+    _db.addListener(_pushPlayer);
     _games?.addListener(_pushGames);
     _auth.addListener(_pushPlayer);
   }
@@ -112,7 +134,9 @@ class _RexRoomScreenState extends State<RexRoomScreen> {
 
   @override
   void dispose() {
+    if (_kidMode) KidMode.active.value = false;
     _db.removeListener(_pushTasks);
+    _db.removeListener(_pushPlayer);
     _games?.removeListener(_pushGames);
     _auth.removeListener(_pushPlayer);
     super.dispose();
@@ -163,7 +187,8 @@ class _RexRoomScreenState extends State<RexRoomScreen> {
   /// The child's total XP: Rex shows the same level.
   void _pushPlayer() {
     if (!_ready || !mounted) return;
-    final xp = _auth.currentUser?.xp;
+    final id = _childId;
+    final xp = _kidMode ? (id == null ? null : _db.userById(id)?.xp) : _auth.currentUser?.xp;
     if (xp == null || xp == _lastXp) return;
     _lastXp = xp;
     _js('RexGame.setPlayer(${jsonEncode({'xp': xp})});');
@@ -181,8 +206,9 @@ class _RexRoomScreenState extends State<RexRoomScreen> {
       'enabled': _settings.rewardedGamesEnabled,
       'settings': _settings.toMap(),
       'bonus': [
-        for (final s in _games?.openSessions ?? const <MiniGameSession>[])
-          {'sessionId': s.id, 'gameId': s.gameId.name, 'taskTitle': s.taskTitle, 'baseXp': s.baseXp},
+        if (!_kidMode)
+          for (final s in _games?.openSessions ?? const <MiniGameSession>[])
+            {'sessionId': s.id, 'gameId': s.gameId.name, 'taskTitle': s.taskTitle, 'baseXp': s.baseXp},
       ],
     });
     if (json == _lastGamesJson) return;
@@ -272,7 +298,7 @@ class _RexRoomScreenState extends State<RexRoomScreen> {
   /// Opened from a bonus prompt: go straight into that game once ready.
   void _maybeAutoLaunch() {
     final id = widget.launchSessionId;
-    if (id == null || _autoLaunched) return;
+    if (id == null || _autoLaunched || _kidMode) return;
     final session = _games?.sessionById(id);
     if (session == null) return;
     _autoLaunched = true;
@@ -321,15 +347,42 @@ class _RexRoomScreenState extends State<RexRoomScreen> {
         final session = _games?.sessionById('${decoded['sessionId']}');
         if (session != null) unawaited(_games!.skip(session).catchError((Object e) => debugPrint('RexRoom: skip failed: $e')));
       case 'close':
-        if (mounted) Navigator.of(context).maybePop();
+        if (!mounted) return;
+        if (_kidMode) {
+          await _leaveKidMode();
+        } else {
+          Navigator.of(context).maybePop();
+        }
     }
+  }
+
+  /// Kid mode: only a grown-up can close Rex: Face ID / Touch ID, or the
+  /// math gate when that isn't available or doesn't work.
+  Future<void> _leaveKidMode() async {
+    if (_gateOpen) return;
+    _gateOpen = true;
+    final passed = await ParentVerification.verify(
+      context,
+      reason: "Parent check to leave Rex's Room",
+      gateReason: "Leaving Rex's Room needs a grown-up. Parents: answer to go back to your account.",
+    );
+    _gateOpen = false;
+    if (passed && mounted) Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: RexRoomScreen._background,
-      body: WebViewWidget(controller: _controller),
+    return PopScope(
+      // Kid mode blocks the Android back button and the iOS back swipe; the
+      // parent check decides instead (Navigator.pop below isn't affected by this).
+      canPop: !_kidMode,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _kidMode) _leaveKidMode();
+      },
+      child: Scaffold(
+        backgroundColor: RexRoomScreen._background,
+        body: WebViewWidget(controller: _controller),
+      ),
     );
   }
 }

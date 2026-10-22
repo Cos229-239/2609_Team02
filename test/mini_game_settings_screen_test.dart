@@ -38,9 +38,9 @@ void main() {
       child: const MaterialApp(home: MiniGameSettingsScreen(initialChildId: 'kid')),
     ));
     await tester.pump();
-    expect(find.text('Use the family settings'), findsOneWidget);
+    expect(find.text('Use Family-Wide Settings'), findsOneWidget);
 
-    await tester.tap(find.text('Use the family settings'));
+    await tester.tap(find.text('Use Family-Wide Settings'));
     await tester.pump();
     await tester.tap(find.text('Match Pairs'));
     await tester.pumpAndSettle();

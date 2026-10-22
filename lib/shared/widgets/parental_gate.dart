@@ -30,13 +30,17 @@ class ParentalGate {
   @visibleForTesting
   static Random random = Random.secure();
 
+  static const String defaultReason =
+      'This leaves Famotive or involves a purchase. A parent needs to answer to continue.';
+
   /// Shows the gate. Resolves to true only when a correct answer was given.
-  static Future<bool> verify(BuildContext context) async {
+  /// [reason] replaces the line explaining why a grown-up is needed.
+  static Future<bool> verify(BuildContext context, {String reason = defaultReason}) async {
     final passed = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       useRootNavigator: true,
-      builder: (_) => const _ParentalGateDialog(),
+      builder: (_) => _ParentalGateDialog(reason: reason),
     );
     return passed ?? false;
   }
@@ -66,7 +70,9 @@ class ParentalGateQuestion {
 }
 
 class _ParentalGateDialog extends StatefulWidget {
-  const _ParentalGateDialog();
+  const _ParentalGateDialog({required this.reason});
+
+  final String reason;
 
   @override
   State<_ParentalGateDialog> createState() => _ParentalGateDialogState();
@@ -111,10 +117,7 @@ class _ParentalGateDialogState extends State<_ParentalGateDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'This leaves Famotive or involves a purchase. A parent needs to answer to continue.',
-            style: theme.textTheme.bodyMedium,
-          ),
+          Text(widget.reason, style: theme.textTheme.bodyMedium),
           const SizedBox(height: 16),
           Text(
             _question.prompt,

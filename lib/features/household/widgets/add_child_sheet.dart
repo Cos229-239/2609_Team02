@@ -7,7 +7,8 @@ import '../../../core/utils/validators.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_notice.dart';
 
-const _avatarChoices = ['🧒', '👧', '👦', '🧒🏽', '👧🏾', '👦🏻', '🦄', '🐯', '🐼', '🚀'];
+/// Emoji avatars a parent can pick for a child (add + manage screens).
+const childAvatarChoices = ['🧒', '👧', '👦', '🧒🏽', '👧🏾', '👦🏻', '🦄', '🐯', '🐼', '🚀'];
 
 /// Lets a parent create a login for a child right from the Family tab.
 /// The email is pre-filled as the parent's own address plus a "+name" tag
@@ -36,7 +37,7 @@ class _AddChildSheetState extends State<_AddChildSheet> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   final _confirm = TextEditingController();
-  String _avatar = _avatarChoices.first;
+  String _avatar = childAvatarChoices.first;
 
   /// Stops auto-filling once the parent types their own email.
   bool _emailEdited = false;
@@ -116,7 +117,7 @@ class _AddChildSheetState extends State<_AddChildSheet> {
                 spacing: 6,
                 runSpacing: 6,
                 children: [
-                  for (final a in _avatarChoices)
+                  for (final a in childAvatarChoices)
                     ChoiceChip(
                       label: Text(a, style: const TextStyle(fontSize: 20)),
                       selected: _avatar == a,

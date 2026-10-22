@@ -121,7 +121,7 @@ function, rather than each screen wiring up its own `MaterialPageRoute`. To navi
 
 ```dart
 Navigator.of(context).pushNamed(AppRoutes.taskCreate);              // push a new screen on top
-Navigator.of(context).pushNamed(AppRoutes.taskList, arguments: id); // ...with data
+Navigator.of(context).pushNamed(AppRoutes.taskDetail, arguments: id); // ...with data
 Navigator.of(context).pop();                                        // go back
 ```
 

@@ -99,10 +99,17 @@ service cloud.firestore {
         return request.resource.data.get('xp', 0) <= resource.data.get('xp', 0) &&
           request.resource.data.get('coins', 0) <= resource.data.get('coins', 0);
       }
+      // A child's name, age and login email are managed by their parents
+      // (Family tab > child), never by the child.
+      function childIdentityUnchanged() {
+        return resource.data.role != 'child' ||
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['name', 'age', 'email']);
+      }
       allow update: if isSignedIn() && (
         (request.auth.uid == userId &&
           request.resource.data.role == resource.data.role &&
           !request.resource.data.diff(resource.data).affectedKeys().hasAny(['premium']) &&
+          childIdentityUnchanged() &&
           (ownBalancesNotRaised() || isParent())) ||
         (isParent() && sharesActiveHousehold(userId) &&
           request.resource.data.diff(resource.data).affectedKeys()

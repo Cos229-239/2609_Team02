@@ -53,6 +53,11 @@ dependencies:
   # lib/features/onboarding/onboarding_controller.dart.
   shared_preferences: ^2.5.3
 
+  # Face ID / Touch ID / fingerprint: a parent proves it's them before
+  # leaving Rex's kid mode or opening a child's account settings (math
+  # parental gate as fallback). See lib/shared/widgets/parent_verification.dart.
+  local_auth: ^3.0.2
+
   # Task photo proof.
   image_picker: ^1.1.2
   firebase_storage: ^13.0.0

@@ -11,9 +11,9 @@ import '../../../core/models/user.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/database_service.dart';
 import '../../../shared/widgets/help_tip.dart';
-import '../../profile/widgets/current_password_prompt.dart';
 import '../../rewards/widgets/reward_editor_sheet.dart';
 import '../widgets/add_child_sheet.dart';
+import '../widgets/child_account_actions.dart';
 import '../widgets/family_member_card.dart';
 import '../widgets/household_actions.dart';
 import '../../../shared/widgets/app_notice.dart';
@@ -140,7 +140,8 @@ class FamilyScreen extends StatelessWidget {
                     ),
                     const HelpTip(
                       title: 'Children',
-                      message: 'Tap a child to see their tasks. "Add Child" below creates a login '
+                      message: 'Tap a child to edit their name, avatar, login email or password, '
+                          'remove them from the household or delete their account. "Add Child" below creates a login '
                           'for a kid without an email; "Invite" shares your household code.',
                     ),
                   ],
@@ -150,8 +151,9 @@ class FamilyScreen extends StatelessWidget {
                   FamilyMemberCard(
                     user: child,
                     badge: badgeFor(child),
-                    onTap: () => Navigator.of(context).pushNamed(AppRoutes.taskList, arguments: child.id),
-                    trailing: _MemberMenu(member: child, isAdmin: isAdmin, meId: me?.id, isOwner: false),
+                    onTap: (me?.isParent ?? false)
+                        ? () => openManageChild(context, child)
+                        : null,
                   ),
                   const SizedBox(height: 8),
                 ],
@@ -465,15 +467,13 @@ class _MemberMenu extends StatelessWidget {
     final isSelf = member.id == meId;
     final canRemove = !isSelf && !isOwner && (isAdmin || ((me?.isParent ?? false) && member.isChild));
     final canMakeAdmin = isAdmin && !isSelf && member.isParent;
-    final canDeleteAccount = isAdmin && !isSelf && member.isChild;
-    if (!canRemove && !canMakeAdmin && !canDeleteAccount) return const SizedBox(width: 8);
+    if (!canRemove && !canMakeAdmin) return const SizedBox(width: 8);
 
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert, color: Colors.grey),
       onSelected: (value) {
         if (value == 'remove') _confirmRemove(context);
         if (value == 'admin') _confirmMakeAdmin(context);
-        if (value == 'delete') _confirmDeleteAccount(context);
       },
       itemBuilder: (_) => [
         if (canMakeAdmin)
@@ -488,15 +488,6 @@ class _MemberMenu extends StatelessWidget {
               Icon(Icons.person_remove_outlined, size: 20, color: Colors.red),
               SizedBox(width: 10),
               Text('Remove from household', style: TextStyle(color: Colors.red)),
-            ]),
-          ),
-        if (canDeleteAccount)
-          const PopupMenuItem(
-            value: 'delete',
-            child: Row(children: [
-              Icon(Icons.delete_forever_outlined, size: 20, color: Colors.red),
-              SizedBox(width: 10),
-              Text('Delete account', style: TextStyle(color: Colors.red)),
             ]),
           ),
       ],
@@ -531,63 +522,6 @@ class _MemberMenu extends StatelessWidget {
       notices.show('${member.name} was removed.');
     } catch (e) {
       notices.show(e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
-    }
-  }
-
-  /// Permanently deletes the child's login, profile, tasks and reward
-  /// history (server-side: functions/src/account/delete.ts).
-  Future<void> _confirmDeleteAccount(BuildContext context) async {
-    final auth = context.read<AuthService>();
-    final notices = AppNotice.of(context);
-    void show(Object e) =>
-        notices.show(e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
-
-    final AccountDeletionPreview preview;
-    try {
-      preview = await auth.previewAccountDeletion(childId: member.id);
-    } catch (e) {
-      show(e);
-      return;
-    }
-    if (!context.mounted) return;
-    if (!preview.canDelete) {
-      show(preview.forbidden ?? preview.blockers.join(' '));
-      return;
-    }
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text("Delete ${member.name}'s account?"),
-        content: Text(
-          "This permanently deletes ${member.name}'s login, profile, XP, coins, tasks and reward "
-          "history. It can't be undone.",
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !context.mounted) return;
-
-    String? password;
-    if (auth.hasPasswordLogin) {
-      password = await CurrentPasswordPrompt.show(
-        context,
-        message: "Enter your password to delete ${member.name}'s account.",
-      );
-      if (password == null) return;
-    }
-    try {
-      if (!await auth.confirmIdentity(password: password)) return;
-      await auth.deleteChildAccount(member.id);
-      notices.show("${member.name}'s account was deleted.", tone: NoticeTone.success);
-    } catch (e) {
-      show(e);
     }
   }
 

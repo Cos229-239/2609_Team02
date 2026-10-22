@@ -1,11 +1,13 @@
 package com.famotive
 
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.util.TimeZone
 
-class MainActivity : FlutterActivity() {
+// FlutterFragmentActivity (not FlutterActivity): local_auth's biometric
+// prompt needs a FragmentActivity.
+class MainActivity : FlutterFragmentActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 

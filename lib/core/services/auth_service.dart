@@ -58,6 +58,10 @@ class SocialSignInResult {
 /// and returns its result. Swapped out in tests.
 typedef AccountDeletionCall = Future<Map<String, dynamic>> Function(Map<String, dynamic> data);
 
+/// Calls the `manageChildAccount` Cloud Function
+/// (functions/src/account/manage.ts). Swapped out in tests.
+typedef ChildLoginCall = Future<Map<String, dynamic>> Function(Map<String, dynamic> data);
+
 /// What deleting an account would do, from a `dryRun` of `deleteAccount`.
 class AccountDeletionPreview {
   AccountDeletionPreview.fromMap(Map<String, dynamic> m)
@@ -95,6 +99,7 @@ class AuthService extends ChangeNotifier {
     this._childAccountCreator,
     this._googleIdTokenProvider,
     this._accountDeletionCall,
+    this._childLoginCall,
   })  : _auth = auth ?? FirebaseAuth.instance,
         _firestore = firestore ?? FirebaseFirestore.instance;
 
@@ -103,6 +108,7 @@ class AuthService extends ChangeNotifier {
   final ChildAccountCreator? _childAccountCreator;
   final GoogleIdTokenProvider? _googleIdTokenProvider;
   final AccountDeletionCall? _accountDeletionCall;
+  final ChildLoginCall? _childLoginCall;
 
   /// From the last Apple re-authentication; used to revoke Apple's tokens
   /// when the account is deleted (Apple requires it).
@@ -506,6 +512,13 @@ class AuthService extends ChangeNotifier {
 
   // --- Households ---------------------------------------------------------
 
+  /// Children's logins are managed by their parents (ManageChildScreen).
+  void _requireNotChild(String what) {
+    if (_currentUser?.isChild ?? false) {
+      throw Exception('Ask a parent to change your $what.');
+    }
+  }
+
   AppUser _requireUser() {
     final user = _currentUser;
     if (user == null) throw Exception('Not signed in.');
@@ -789,21 +802,28 @@ class AuthService extends ChangeNotifier {
     return (_accountDeletionCall ?? _cloudDeleteAccount)(data);
   }
 
-  static Future<Map<String, dynamic>> _cloudDeleteAccount(Map<String, dynamic> data) async {
+  static Future<Map<String, dynamic>> _cloudDeleteAccount(Map<String, dynamic> data) =>
+      _callCloudFunction('deleteAccount', data, unavailable: "Account deletion isn't available right now.");
+
+  static Future<Map<String, dynamic>> _cloudManageChild(Map<String, dynamic> data) =>
+      _callCloudFunction('manageChildAccount', data, unavailable: "Changing a child's login isn't available right now.");
+
+  static Future<Map<String, dynamic>> _callCloudFunction(
+    String name,
+    Map<String, dynamic> data, {
+    required String unavailable,
+  }) async {
     try {
-      final result = await FirebaseFunctions.instance.httpsCallable('deleteAccount').call(data);
+      final result = await FirebaseFunctions.instance.httpsCallable(name).call(data);
       final raw = result.data;
       return raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
     } on FirebaseFunctionsException catch (e) {
-      debugPrint('deleteAccount failed: ${e.code} ${e.message}');
+      debugPrint('$name failed: ${e.code} ${e.message}');
       switch (e.code) {
-        // The deleteAccount Cloud Function isn't deployed (or wrong region).
+        // The Cloud Function isn't deployed (or wrong region).
         case 'not-found':
         case 'unimplemented':
-          throw Exception(
-            "Account deletion isn't available right now. Please try again later "
-            'or email support@famotive.org.',
-          );
+          throw Exception('$unavailable Please try again later or email support@famotive.org.');
         // Usually the function's Cloud Run service isn't publicly invokable
         // (see functions/README.md), or the sign-in token expired.
         case 'unauthenticated':
@@ -815,6 +835,44 @@ class AuthService extends ChangeNotifier {
           throw Exception(e.message ?? 'Something went wrong. Please try again.');
       }
     }
+  }
+
+  // --- Managing a child's account (parents) -----------------------------
+
+  /// A parent edits a child's name, age and avatar. Firestore rules let any
+  /// parent in the child's active household change these fields.
+  Future<void> updateChildProfile({
+    required String childId,
+    required String name,
+    required String avatarEmoji,
+    int? age,
+  }) async {
+    final me = _requireUser();
+    if (!me.isParent) throw Exception("Only parents can edit a child's profile.");
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) throw Exception("Please enter your child's name.");
+    await _firestore.collection('users').doc(childId).update({
+      'name': trimmed,
+      'avatarEmoji': avatarEmoji,
+      'age': age,
+    });
+  }
+
+  /// A parent sets a new password for a child's login (call
+  /// [confirmIdentity] first). The child is signed out on other devices.
+  Future<void> setChildPassword(String childId, String newPassword) async {
+    final me = _requireUser();
+    if (!me.isParent) throw Exception("Only parents can reset a child's password.");
+    await (_childLoginCall ?? _cloudManageChild)({'childId': childId, 'password': newPassword});
+  }
+
+  /// A parent changes the email a child logs in with (call
+  /// [confirmIdentity] first). Returns the saved (normalized) email.
+  Future<String> updateChildEmail(String childId, String newEmail) async {
+    final me = _requireUser();
+    if (!me.isParent) throw Exception("Only parents can change a child's email.");
+    final result = await (_childLoginCall ?? _cloudManageChild)({'childId': childId, 'email': newEmail.trim()});
+    return result['email'] as String? ?? newEmail.trim().toLowerCase();
   }
 
   Future<void> logout() async {
@@ -839,6 +897,12 @@ class AuthService extends ChangeNotifier {
   }) async {
     final user = _currentUser;
     if (user == null) throw Exception('Not signed in.');
+    // A child's name and age are set by their parents (ManageChildScreen);
+    // Firestore rules refuse the change anyway.
+    if (user.isChild) {
+      name = user.name;
+      age = user.age;
+    }
 
     // Built directly, not via `copyWith`, so an explicit null clears
     // phoneNumber/age instead of leaving them unchanged.
@@ -902,6 +966,7 @@ class AuthService extends ChangeNotifier {
     required String currentPassword,
     required String newPassword,
   }) async {
+    _requireNotChild('password');
     await _reauthenticate(currentPassword);
     try {
       await _auth.currentUser!.updatePassword(newPassword);
@@ -914,6 +979,7 @@ class AuthService extends ChangeNotifier {
     required String newEmail,
     required String currentPassword,
   }) async {
+    _requireNotChild('email');
     await _reauthenticate(currentPassword);
     try {
       await _auth.currentUser!.verifyBeforeUpdateEmail(

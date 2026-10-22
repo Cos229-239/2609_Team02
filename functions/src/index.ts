@@ -80,6 +80,7 @@ initializeApp();
 
 // In-app account deletion (callable). See ./account/delete.ts.
 export { deleteAccount } from './account/delete';
+export { manageChildAccount } from './account/manage';
 // Task proof photo retention.
 export { cleanUpTaskPhotos, purgeExpiredTaskPhotos } from './photos/cleanup';
 // Mini-game bonus XP (server-authoritative). See ./minigames/index.ts.

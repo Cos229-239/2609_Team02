@@ -8,6 +8,7 @@ import '../features/auth/screens/register_screen.dart';
 import '../features/auth/screens/reset_password_screen.dart';
 import '../features/auth/screens/confirm_email_change_screen.dart';
 import '../features/household/screens/households_screen.dart';
+import '../features/household/screens/manage_child_screen.dart';
 import '../features/milestones/screens/family_board_screen.dart';
 import '../features/milestones/screens/milestone_celebration_screen.dart';
 import '../features/milestones/screens/milestone_editor_screen.dart';
@@ -22,7 +23,6 @@ import '../features/tasks/screens/create_task_screen.dart';
 import '../features/tasks/screens/task_completion_screen.dart';
 import '../features/tasks/screens/task_detail_screen.dart';
 import '../features/tasks/screens/task_proof_screen.dart';
-import '../features/tasks/screens/task_list_screen.dart';
 import '../shared/layouts/main_tab_shell.dart';
 import '../shared/screens/route_not_found_screen.dart';
 
@@ -47,7 +47,6 @@ class AppRoutes {
   static const String settings = '/settings';
 
   // Pushed on top of the tabs
-  static const String taskList = '/tasks';
   static const String taskDetail = '/tasks/detail';
   static const String taskCreate = '/tasks/create';
   static const String taskCompletion = '/tasks/completion';
@@ -65,8 +64,14 @@ class AppRoutes {
   /// Parent: mini-game difficulty and bonus XP; optional child id argument.
   static const String miniGameSettings = '/minigames/settings';
 
-  /// Child: Rex's Room, the 3D pet game (see games/rex).
+  /// Rex's Room, the 3D pet game (see games/rex). A child opens their own
+  /// (no argument); a parent hands their device to a child with that
+  /// child's id as the argument ("kid mode": leaving needs the parental gate).
   static const String rexRoom = '/rex';
+
+  /// Parent: edit one child's profile, login email and password, or delete
+  /// the account; child id argument.
+  static const String manageChild = '/family/child';
 
   // Settings sub-screens, pushed from the Settings tab.
   static const String accountSettings = '/settings/account';
@@ -115,9 +120,6 @@ class AppRoutes {
       case AppRoutes.settings:
         return _page(const MainTabShell(initialTab: AppTab.settings), settings);
 
-      case taskList:
-        final childId = args as String;
-        return _page(TaskListScreen(childId: childId), settings);
       case taskDetail:
         final taskId = args as String;
         return _page(TaskDetailScreen(taskId: taskId), settings);
@@ -148,7 +150,9 @@ class AppRoutes {
         return _page(MiniGameSettingsScreen(initialChildId: args as String?), settings);
 
       case rexRoom:
-        return _page(const RexRoomScreen(), settings);
+        return _page(RexRoomScreen(childId: args as String?), settings);
+      case manageChild:
+        return _page(ManageChildScreen(childId: args as String), settings);
 
       case accountSettings:
         return _page(const AccountSettingsScreen(), settings);

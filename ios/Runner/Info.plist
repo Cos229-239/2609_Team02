@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Famotive uses Face ID so only a parent can leave a child's Rex's Room or open a child's account settings.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Famotive uses the camera so kids can take a photo showing a finished task. The photo is checked on this device and shared only with their parents.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

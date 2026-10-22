@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../app/routes.dart';
 import '../../../app/theme.dart';
 import '../../../shared/widgets/help_tip.dart';
 import '../../../core/constants/app_constants.dart';
@@ -9,6 +8,7 @@ import '../../../core/constants/task_icons.dart';
 import '../../../core/models/task.dart';
 import '../../../core/models/user.dart';
 import '../../../core/services/database_service.dart';
+import '../../rex/rex_kid_mode.dart';
 import '../../tasks/widgets/task_swipe.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../tasks/widgets/task_view_card.dart';
@@ -75,7 +75,8 @@ children: [
     ),
     helpTitle: 'Family Progress',
     help: "Each child's lifetime XP and current coin balance. XP only goes up; "
-        'coins go down when a reward is redeemed.',
+        'coins go down when a reward is redeemed. Tap a child to open Rex\'s Room '
+        'for them on this device.',
   ),
   const SizedBox(height: 6),
   Text(
@@ -88,10 +89,8 @@ children: [
   const SizedBox(height: 20),
         for (final child in children) ...[
           AppCard(
-            onTap: () => Navigator.of(context).pushNamed(
-              AppRoutes.taskList,
-              arguments: child.id,
-            ),
+            key: Key('progress-child-${child.id}'),
+            onTap: () => startRexKidMode(context, child),
             padding: const EdgeInsets.symmetric(
               horizontal: 14,
               vertical: 4,

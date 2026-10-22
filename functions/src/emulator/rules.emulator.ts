@@ -90,9 +90,19 @@ test('a child cannot raise their own XP or coins, but can spend coins', async ()
   await assertFails(updateDoc(doc(kid(), 'users/kid'), { xp: 10_000 }));
   await assertFails(updateDoc(doc(kid(), 'users/kid'), { coins: 51 }));
   await assertSucceeds(updateDoc(doc(kid(), 'users/kid'), { coins: 40 }));
-  await assertSucceeds(updateDoc(doc(kid(), 'users/kid'), { name: 'Ava B.' }));
+  await assertSucceeds(updateDoc(doc(kid(), 'users/kid'), { avatarEmoji: '🦄' }));
   // A parent's approval still pays XP/coins.
   await assertSucceeds(updateDoc(doc(parent(), 'users/kid'), { xp: 120, coins: 60 }));
+});
+
+test("a child can't change their own name, age or email; a parent can change name and age", async () => {
+  await assertFails(updateDoc(doc(kid(), 'users/kid'), { name: 'Ava B.' }));
+  await assertFails(updateDoc(doc(kid(), 'users/kid'), { age: 12 }));
+  await assertFails(updateDoc(doc(kid(), 'users/kid'), { email: 'ava@example.com' }));
+  await assertSucceeds(updateDoc(doc(parent(), 'users/kid'), { name: 'Ava B.', age: 9 }));
+  await assertFails(updateDoc(doc(parent(), 'users/kid'), { email: 'ava@example.com' }));
+  // Parents still edit their own profile.
+  await assertSucceeds(updateDoc(doc(parent(), 'users/parent'), { name: 'Patricia', age: 40 }));
 });
 
 test('new profiles start with no XP or coins', async () => {

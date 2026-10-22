@@ -13,6 +13,7 @@ import '../../../shared/widgets/help_tip.dart';
 import '../../milestones/widgets/family_goal_card.dart';
 import '../../tasks/widgets/task_swipe.dart';
 import '../../tasks/widgets/task_tile.dart';
+import '../../rex/rex_kid_mode.dart';
 import '../widgets/family_member_card.dart';
 import '../../tasks/widgets/task_view_card.dart';
 import '../../../core/services/accessibility_settings.dart';
@@ -195,14 +196,14 @@ class HouseholdHomeScreen extends StatelessWidget {
             fontWeight: FontWeight.w600,
           )),
           helpTitle: 'Your Family',
-          help: "Tap a child to see and manage their tasks. Add or invite members from the Family tab.",
+          help: "Tap a child to open Rex's Room for them on this device. Add, invite or manage members from the Family tab.",
         ),
         const SizedBox(height: 14),
         for (final member in db.familyMembers) ...[
           FamilyMemberCard(
             user: member,
             onTap: member.isChild
-                ? () => Navigator.of(context).pushNamed(AppRoutes.taskList, arguments: member.id)
+                ? () => startRexKidMode(context, member)
                 : null,
           ),
           const SizedBox(height: 12),

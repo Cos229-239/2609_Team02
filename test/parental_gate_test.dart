@@ -80,4 +80,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(await result, isFalse);
   });
+
+  testWidgets('a custom reason replaces the default explanation', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Builder(
+        builder: (context) => TextButton(
+          onPressed: () => ParentalGate.verify(context, reason: 'Leaving Rex needs a grown-up.'),
+          child: const Text('open'),
+        ),
+      ),
+    ));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    expect(find.text('Leaving Rex needs a grown-up.'), findsOneWidget);
+    expect(find.text(ParentalGate.defaultReason), findsNothing);
+  });
 }

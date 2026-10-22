@@ -100,13 +100,24 @@ class TaskCompletionScreen extends StatelessWidget {
               AppButton(
                 label: 'Great Job! Keep It Up!',
                 variant: AppButtonVariant.success,
-                onPressed: () => Navigator.of(context)
-                    .pushNamedAndRemoveUntil(AppRoutes.home, (route) => false),
+                onPressed: () => _finish(context),
               ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  /// Back to Rex's Room if the task was done there (in kid mode a child must
+  /// never be dropped into the parent's home screen), otherwise home.
+  static void _finish(BuildContext context) {
+    final navigator = Navigator.of(context);
+    var rexBelow = false;
+    navigator.popUntil((route) {
+      if (route.settings.name == AppRoutes.rexRoom) rexBelow = true;
+      return rexBelow || route.isFirst;
+    });
+    if (!rexBelow) navigator.pushNamedAndRemoveUntil(AppRoutes.home, (route) => false);
   }
 }

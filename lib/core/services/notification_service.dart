@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../../app/routes.dart';
 import '../models/user.dart';
 import 'auth_service.dart';
+import 'kid_mode.dart';
 import '../../shared/widgets/app_notice.dart';
 
 /// Push notifications via Firebase Cloud Messaging.
@@ -217,6 +218,8 @@ class NotificationService {
   // --- Display & navigation ---------------------------------------------------
 
   void _showForegroundBanner(RemoteMessage message) {
+    // The parent's device is with a child in Rex: no "View" shortcuts out.
+    if (KidMode.isActive) return;
     final notification = message.notification;
     final overlay = _navigatorKey.currentState?.overlay;
     if (notification == null || overlay == null) return;
@@ -232,7 +235,7 @@ class NotificationService {
 
   Future<void> _openFromNotification(RemoteMessage message) async {
     final route = routeFor(message.data);
-    if (route == null) return;
+    if (route == null || KidMode.isActive) return;
 
     // Notifications come from every household the user is in: show the one
     // this is about first.
