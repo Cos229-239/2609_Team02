@@ -39,7 +39,7 @@ void main() {
       deviceTimeZone: () async => null,
       approvalEffects: ApprovalEffects(firestore, random: math.Random(3)),
     )..bindHousehold(householdId);
-    final childDb = DatabaseService(firestore: firestore, deviceTimeZone: () async => null)..bindHousehold(householdId);
+    final childDb = DatabaseService(firestore: firestore, clock: () => now,deviceTimeZone: () async => null)..bindHousehold(householdId);
     final parentGoals = MilestoneService(firestore: firestore, clock: () => now)..bind(parent);
     final childGoals = MilestoneService(firestore: firestore, clock: () => now)..bind(child);
     final childGames = MiniGameService(firestore: firestore, clock: () => now)..bind(child);

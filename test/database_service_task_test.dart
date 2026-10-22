@@ -1,6 +1,6 @@
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:famotive/core/models/goal.dart';
 import 'package:famotive/core/models/task.dart';
 import 'package:famotive/core/services/database_service.dart';
 
@@ -74,6 +74,120 @@ void main() {
       // Lets the push-notification function tell a claim from a parent assignment.
       expect(updatedTask.data()?['claimedBy'], 'child-1');
     });
+
+    test(
+      'prevents a nonparticipant from claiming an individual challenge task',
+      () async {
+        final householdRef = firestore
+            .collection('households')
+            .doc(householdId);
+
+        await householdRef.set({
+          'ownerId': 'parent-1',
+          'memberIds': ['parent-1', 'child-1', 'child-2'],
+        });
+
+        final goal = Goal(
+          id: 'goal-1',
+          title: 'Clean Your Room Challenge',
+          type: GoalType.individual,
+          metric: GoalMetric.tasksCompleted,
+          period: GoalPeriod.weekly,
+          targetValue: 1,
+          participantIds: ['child-1'],
+          startsAt: DateTime(2026, 10, 12),
+          endsAt: DateTime(2026, 10, 19),
+        );
+
+        await householdRef
+            .collection('goals')
+            .doc('goal-1')
+            .set(goal.toFirestore());
+
+        await householdRef
+            .collection('tasks')
+            .doc('task-1')
+            .set(
+              const TaskModel(
+                id: 'task-1',
+                title: 'Organize Bedroom',
+                goalId: 'goal-1',
+                rewardXp: 30,
+              ).toFirestore(),
+            );
+
+        // Child 2 is in the household but not this challenge.
+        await expectLater(
+          databaseService.claimTask('task-1', 'child-2'),
+          throwsStateError,
+        );
+
+        final taskSnapshot = await householdRef
+            .collection('tasks')
+            .doc('task-1')
+            .get();
+
+        // The task must remain available.
+        expect(taskSnapshot.data()?['assignedToUserId'], isNull);
+        expect(taskSnapshot.data()?['claimedBy'], isNull);
+        expect(taskSnapshot.data()?['status'], TaskStatus.pending.name);
+      },
+    );
+
+    test(
+      'prevents a non-household child from claiming a family challenge task',
+      () async {
+        final householdRef = firestore
+            .collection('households')
+            .doc(householdId);
+
+        await householdRef.set({
+          'ownerId': 'parent-1',
+          'memberIds': ['parent-1', 'child-1'],
+        });
+
+        final goal = Goal(
+          id: 'goal-1',
+          title: 'Family Cleanup',
+          type: GoalType.family,
+          metric: GoalMetric.tasksCompleted,
+          period: GoalPeriod.weekly,
+          targetValue: 3,
+          startsAt: DateTime(2026, 10, 12),
+          endsAt: DateTime(2026, 10, 19),
+        );
+
+        await householdRef
+            .collection('goals')
+            .doc('goal-1')
+            .set(goal.toFirestore());
+
+        await householdRef
+            .collection('tasks')
+            .doc('task-1')
+            .set(
+              const TaskModel(
+                id: 'task-1',
+                title: 'Sweep Kitchen',
+                goalId: 'goal-1',
+              ).toFirestore(),
+            );
+
+        // Child 2 does not belong to this household.
+        await expectLater(
+          databaseService.claimTask('task-1', 'child-2'),
+          throwsStateError,
+        );
+
+        final taskSnapshot = await householdRef
+            .collection('tasks')
+            .doc('task-1')
+            .get();
+
+        expect(taskSnapshot.data()?['assignedToUserId'], isNull);
+        expect(taskSnapshot.data()?['claimedBy'], isNull);
+      },
+    );
 
     test('marks an assigned task as completed', () async {
       const task = TaskModel(
@@ -354,39 +468,42 @@ void main() {
       expect(availableTasks.first.assignedToUserId, isNull);
     });
 
-    test('approves a completed task and awards coins to the assigned child', () async {
-      await firestore.collection('users').doc('child-1').set({
-        'xp': 0,
-        'coins': 20,
-        'householdId': householdId,
-      });
+    test(
+      'approves a completed task and awards coins to the assigned child',
+      () async {
+        await firestore.collection('users').doc('child-1').set({
+          'xp': 0,
+          'coins': 20,
+          'householdId': householdId,
+        });
 
-      const task = TaskModel(
-        id: 'task-1',
-        title: 'Feed the Dog',
-        assignedToUserId: 'child-1',
-        rewardXp: 50,
-        coinReward: 15,
-        status: TaskStatus.completed,
-      );
+        const task = TaskModel(
+          id: 'task-1',
+          title: 'Feed the Dog',
+          assignedToUserId: 'child-1',
+          rewardXp: 50,
+          coinReward: 15,
+          status: TaskStatus.completed,
+        );
 
-      await databaseService.addTask(task);
+        await databaseService.addTask(task);
 
-      final snapshot = await firestore
-          .collection('households')
-          .doc(householdId)
-          .collection('tasks')
-          .get();
+        final snapshot = await firestore
+            .collection('households')
+            .doc(householdId)
+            .collection('tasks')
+            .get();
 
-      final taskId = snapshot.docs.first.id;
+        final taskId = snapshot.docs.first.id;
 
-      await databaseService.approveTask(taskId);
+        await databaseService.approveTask(taskId);
 
-      final child = await firestore.collection('users').doc('child-1').get();
+        final child = await firestore.collection('users').doc('child-1').get();
 
-      expect(child.data()?['xp'], 50);
-      expect(child.data()?['coins'], 35);
-    });
+        expect(child.data()?['xp'], 50);
+        expect(child.data()?['coins'], 35);
+      },
+    );
 
     group('parentCompleteTask', () {
       Future<String> addAndGetId(TaskModel task) async {
@@ -399,13 +516,14 @@ void main() {
         return snapshot.docs.first.id;
       }
 
-      Future<Map<String, dynamic>?> taskData(String id) async => (await firestore
-              .collection('households')
-              .doc(householdId)
-              .collection('tasks')
-              .doc(id)
-              .get())
-          .data();
+      Future<Map<String, dynamic>?> taskData(String id) async =>
+          (await firestore
+                  .collection('households')
+                  .doc(householdId)
+                  .collection('tasks')
+                  .doc(id)
+                  .get())
+              .data();
 
       setUp(() async {
         await firestore.collection('users').doc('child-1').set({
@@ -415,34 +533,44 @@ void main() {
         });
       });
 
-      test('takes a pending task straight to approved and grants rewards', () async {
-        final id = await addAndGetId(const TaskModel(
-          id: 'task-1',
-          title: 'Feed the Dog',
-          assignedToUserId: 'child-1',
-          rewardXp: 50,
-          coinReward: 15,
-        ));
+      test(
+        'takes a pending task straight to approved and grants rewards',
+        () async {
+          final id = await addAndGetId(
+            const TaskModel(
+              id: 'task-1',
+              title: 'Feed the Dog',
+              assignedToUserId: 'child-1',
+              rewardXp: 50,
+              coinReward: 15,
+            ),
+          );
 
-        await databaseService.parentCompleteTask(id);
+          await databaseService.parentCompleteTask(id);
 
-        final data = await taskData(id);
-        expect(data?['status'], TaskStatus.approved.name);
-        expect(data?['completedAt'], isNotNull);
-        expect(data?['approvedAt'], isNotNull);
-        final child = await firestore.collection('users').doc('child-1').get();
-        expect(child.data()?['xp'], 60);
-        expect(child.data()?['coins'], 20);
-      });
+          final data = await taskData(id);
+          expect(data?['status'], TaskStatus.approved.name);
+          expect(data?['completedAt'], isNotNull);
+          expect(data?['approvedAt'], isNotNull);
+          final child = await firestore
+              .collection('users')
+              .doc('child-1')
+              .get();
+          expect(child.data()?['xp'], 60);
+          expect(child.data()?['coins'], 20);
+        },
+      );
 
       test('skips photo proof on a photo-required task', () async {
-        final id = await addAndGetId(const TaskModel(
-          id: 'task-1',
-          title: 'Clean Room',
-          assignedToUserId: 'child-1',
-          rewardXp: 20,
-          requiresPhoto: true,
-        ));
+        final id = await addAndGetId(
+          const TaskModel(
+            id: 'task-1',
+            title: 'Clean Room',
+            assignedToUserId: 'child-1',
+            rewardXp: 20,
+            requiresPhoto: true,
+          ),
+        );
 
         await databaseService.parentCompleteTask(id);
 
@@ -452,13 +580,15 @@ void main() {
       });
 
       test('approves a task the child already marked done', () async {
-        final id = await addAndGetId(const TaskModel(
-          id: 'task-1',
-          title: 'Feed the Dog',
-          assignedToUserId: 'child-1',
-          rewardXp: 50,
-          status: TaskStatus.completed,
-        ));
+        final id = await addAndGetId(
+          const TaskModel(
+            id: 'task-1',
+            title: 'Feed the Dog',
+            assignedToUserId: 'child-1',
+            rewardXp: 50,
+            status: TaskStatus.completed,
+          ),
+        );
 
         await databaseService.parentCompleteTask(id);
 
@@ -468,13 +598,15 @@ void main() {
       });
 
       test('grants rewards only once', () async {
-        final id = await addAndGetId(const TaskModel(
-          id: 'task-1',
-          title: 'Feed the Dog',
-          assignedToUserId: 'child-1',
-          rewardXp: 50,
-          coinReward: 15,
-        ));
+        final id = await addAndGetId(
+          const TaskModel(
+            id: 'task-1',
+            title: 'Feed the Dog',
+            assignedToUserId: 'child-1',
+            rewardXp: 50,
+            coinReward: 15,
+          ),
+        );
 
         await databaseService.parentCompleteTask(id);
         await databaseService.parentCompleteTask(id);
@@ -486,12 +618,14 @@ void main() {
       });
 
       test('approveTask still ignores a pending task', () async {
-        final id = await addAndGetId(const TaskModel(
-          id: 'task-1',
-          title: 'Feed the Dog',
-          assignedToUserId: 'child-1',
-          rewardXp: 50,
-        ));
+        final id = await addAndGetId(
+          const TaskModel(
+            id: 'task-1',
+            title: 'Feed the Dog',
+            assignedToUserId: 'child-1',
+            rewardXp: 50,
+          ),
+        );
 
         await databaseService.approveTask(id);
 
@@ -499,45 +633,207 @@ void main() {
       });
     });
 
-    test('updateTask overwrites the editable fields of an existing task', () async {
-      const task = TaskModel(
-        id: 'task-1',
-        title: 'Old Title',
-        rewardXp: 10,
-        coinReward: 5,
+    test(
+      'updateTask overwrites the editable fields of an existing task',
+      () async {
+        const task = TaskModel(
+          id: 'task-1',
+          title: 'Old Title',
+          rewardXp: 10,
+          coinReward: 5,
+        );
+
+        await databaseService.addTask(task);
+
+        final snapshot = await firestore
+            .collection('households')
+            .doc(householdId)
+            .collection('tasks')
+            .get();
+
+        final taskId = snapshot.docs.first.id;
+        final saved = TaskModel.fromFirestore(snapshot.docs.first);
+
+        final updated = saved.copyWith(
+          title: 'New Title',
+          description: 'Updated description',
+          rewardXp: 40,
+          coinReward: 20,
+        );
+
+        await databaseService.updateTask(taskId, updated);
+
+        final refreshed = await firestore
+            .collection('households')
+            .doc(householdId)
+            .collection('tasks')
+            .doc(taskId)
+            .get();
+
+        expect(refreshed.data()?['title'], 'New Title');
+        expect(refreshed.data()?['description'], 'Updated description');
+        expect(refreshed.data()?['rewardXp'], 40);
+        expect(refreshed.data()?['coinReward'], 20);
+      },
+    );
+
+    test(
+      'prevents ordinary task editing from removing a challenge association',
+      () async {
+        final householdRef = firestore
+            .collection('households')
+            .doc(householdId);
+
+        final taskRef = householdRef.collection('tasks').doc('task-1');
+
+        await taskRef.set(
+          const TaskModel(
+            id: 'task-1',
+            title: 'Clean Bedroom',
+            assignedToUserId: 'child-1',
+            goalId: 'goal-1',
+          ).toFirestore(),
+        );
+
+        final saved = TaskModel.fromFirestore(await taskRef.get());
+
+        // Attempt to remove the challenge association during a normal edit.
+        await expectLater(
+          databaseService.updateTask(
+            'task-1',
+            saved.copyWith(
+              title: 'Clean Bedroom and Closet',
+              clearGoalId: true,
+            ),
+          ),
+          throwsStateError,
+        );
+
+        final updated = await taskRef.get();
+
+        // The challenge association and original title must remain unchanged.
+        expect(updated.data()?['goalId'], 'goal-1');
+        expect(updated.data()?['title'], 'Clean Bedroom');
+      },
+    );
+
+    test(
+      'prevents editing a challenge task to assign an ineligible child',
+      () async {
+        final householdRef = firestore
+            .collection('households')
+            .doc(householdId);
+
+        await householdRef.set({
+          'ownerId': 'parent-1',
+          'memberIds': ['parent-1', 'child-1', 'child-2'],
+        });
+
+        final goal = Goal(
+          id: 'goal-1',
+          title: 'Bedroom Cleanup Challenge',
+          type: GoalType.individual,
+          metric: GoalMetric.tasksCompleted,
+          period: GoalPeriod.weekly,
+          targetValue: 1,
+          participantIds: ['child-1'],
+          startsAt: DateTime(2026, 10, 12),
+          endsAt: DateTime(2026, 10, 19),
+        );
+
+        await householdRef
+            .collection('goals')
+            .doc('goal-1')
+            .set(goal.toFirestore());
+
+        final taskRef = householdRef.collection('tasks').doc('task-1');
+
+        await taskRef.set(
+          const TaskModel(
+            id: 'task-1',
+            title: 'Organize Bedroom',
+            assignedToUserId: 'child-1',
+            goalId: 'goal-1',
+          ).toFirestore(),
+        );
+
+        final saved = TaskModel.fromFirestore(await taskRef.get());
+
+        // Attempt to change both the title and assignee.
+        await expectLater(
+          databaseService.updateTask(
+            'task-1',
+            saved.copyWith(
+              title: 'Organize Bedroom and Closet',
+              assignedToUserId: 'child-2',
+            ),
+          ),
+          throwsStateError,
+        );
+
+        final updated = await taskRef.get();
+
+        // Reject the entire edit, not just the assignment change.
+        expect(updated.data()?['assignedToUserId'], 'child-1');
+        expect(updated.data()?['title'], 'Organize Bedroom');
+        expect(updated.data()?['goalId'], 'goal-1');
+      },
+    );
+
+    test('prevents editing a family challenge task to assign a non-household child', () async {
+      final householdRef = firestore.collection('households').doc(householdId);
+
+      await householdRef.set({
+        'ownerId': 'parent-1',
+        'memberIds': ['parent-1', 'child-1'],
+      });
+
+      final goal = Goal(
+        id: 'goal-1',
+        title: 'Family Cleanup',
+        type: GoalType.family,
+        metric: GoalMetric.tasksCompleted,
+        period: GoalPeriod.weekly,
+        targetValue: 3,
+        startsAt: DateTime(2026, 10, 12),
+        endsAt: DateTime(2026, 10, 19),
       );
 
-      await databaseService.addTask(task);
+      await householdRef
+          .collection('goals')
+          .doc('goal-1')
+          .set(goal.toFirestore());
 
-      final snapshot = await firestore
-          .collection('households')
-          .doc(householdId)
-          .collection('tasks')
-          .get();
+      final taskRef = householdRef.collection('tasks').doc('task-1');
 
-      final taskId = snapshot.docs.first.id;
-      final saved = TaskModel.fromFirestore(snapshot.docs.first);
-
-      final updated = saved.copyWith(
-        title: 'New Title',
-        description: 'Updated description',
-        rewardXp: 40,
-        coinReward: 20,
+      await taskRef.set(
+        const TaskModel(
+          id: 'task-1',
+          title: 'Sweep Kitchen',
+          assignedToUserId: 'child-1',
+          goalId: 'goal-1',
+        ).toFirestore(),
       );
 
-      await databaseService.updateTask(taskId, updated);
+      final saved = TaskModel.fromFirestore(await taskRef.get());
 
-      final refreshed = await firestore
-          .collection('households')
-          .doc(householdId)
-          .collection('tasks')
-          .doc(taskId)
-          .get();
+      await expectLater(
+        databaseService.updateTask(
+          'task-1',
+          saved.copyWith(
+            title: 'Sweep Kitchen and Hallway',
+            assignedToUserId: 'child-2',
+          ),
+        ),
+        throwsStateError,
+      );
 
-      expect(refreshed.data()?['title'], 'New Title');
-      expect(refreshed.data()?['description'], 'Updated description');
-      expect(refreshed.data()?['rewardXp'], 40);
-      expect(refreshed.data()?['coinReward'], 20);
+      final updated = await taskRef.get();
+
+      // Neither the assignment nor the title should change.
+      expect(updated.data()?['assignedToUserId'], 'child-1');
+      expect(updated.data()?['title'], 'Sweep Kitchen');
+      expect(updated.data()?['goalId'], 'goal-1');
     });
 
     test('setTaskArchived toggles the archived flag', () async {
@@ -621,7 +917,10 @@ void main() {
       // Allow the Firestore listener in DatabaseService to receive the updates.
       await Future<void>.delayed(Duration.zero);
 
-      expect(databaseService.archivedTasks.map((t) => t.title), containsAll(['Archived Assigned', 'Archived Available']));
+      expect(
+        databaseService.archivedTasks.map((t) => t.title),
+        containsAll(['Archived Assigned', 'Archived Available']),
+      );
 
       final myTasks = databaseService.tasksForUser('child-1');
       expect(myTasks, hasLength(1));
@@ -632,21 +931,24 @@ void main() {
       expect(available.first.title, 'Active Available');
     });
 
-    test('addTask returns the id Firestore assigned the new document', () async {
-      const task = TaskModel(id: 'placeholder', title: 'Water Plants');
+    test(
+      'addTask returns the id Firestore assigned the new document',
+      () async {
+        const task = TaskModel(id: 'placeholder', title: 'Water Plants');
 
-      final newId = await databaseService.addTask(task);
+        final newId = await databaseService.addTask(task);
 
-      final doc = await firestore
-          .collection('households')
-          .doc(householdId)
-          .collection('tasks')
-          .doc(newId)
-          .get();
+        final doc = await firestore
+            .collection('households')
+            .doc(householdId)
+            .collection('tasks')
+            .doc(newId)
+            .get();
 
-      expect(doc.exists, isTrue);
-      expect(doc.data()?['title'], 'Water Plants');
-    });
+        expect(doc.exists, isTrue);
+        expect(doc.data()?['title'], 'Water Plants');
+      },
+    );
 
     test('reassignTask changes who a task is assigned to', () async {
       const task = TaskModel(
@@ -702,6 +1004,112 @@ void main() {
     });
 
     test(
+      'prevents reassignment to a nonparticipant in an individual challenge',
+      () async {
+        final householdRef = firestore
+            .collection('households')
+            .doc(householdId);
+
+        await householdRef.set({
+          'ownerId': 'parent-1',
+          'memberIds': ['parent-1', 'child-1', 'child-2'],
+        });
+
+        final goal = Goal(
+          id: 'goal-1',
+          title: 'Bedroom Cleanup Challenge',
+          type: GoalType.individual,
+          metric: GoalMetric.tasksCompleted,
+          period: GoalPeriod.weekly,
+          targetValue: 1,
+          participantIds: ['child-1'],
+          startsAt: DateTime(2026, 10, 12),
+          endsAt: DateTime(2026, 10, 19),
+        );
+
+        await householdRef
+            .collection('goals')
+            .doc('goal-1')
+            .set(goal.toFirestore());
+
+        await householdRef
+            .collection('tasks')
+            .doc('task-1')
+            .set(
+              const TaskModel(
+                id: 'task-1',
+                title: 'Organize Bedroom',
+                assignedToUserId: 'child-1',
+                goalId: 'goal-1',
+              ).toFirestore(),
+            );
+
+        // Child 2 belongs to the household but not the challenge.
+        await expectLater(
+          databaseService.reassignTask('task-1', 'child-2'),
+          throwsStateError,
+        );
+
+        final taskSnapshot = await householdRef
+            .collection('tasks')
+            .doc('task-1')
+            .get();
+
+        // The original assignment must remain unchanged.
+        expect(taskSnapshot.data()?['assignedToUserId'], 'child-1');
+        expect(taskSnapshot.data()?['goalId'], 'goal-1');
+        expect(taskSnapshot.data()?['status'], TaskStatus.pending.name);
+      },
+    );
+
+    test('prevents reassignment of a family challenge task to a non-household child', () async {
+      final householdRef = firestore.collection('households').doc(householdId);
+
+      await householdRef.set({
+        'ownerId': 'parent-1',
+        'memberIds': ['parent-1', 'child-1'],
+      });
+
+      final goal = Goal(
+        id: 'goal-1',
+        title: 'Family Cleanup',
+        type: GoalType.family,
+        metric: GoalMetric.tasksCompleted,
+        period: GoalPeriod.weekly,
+        targetValue: 3,
+        startsAt: DateTime(2026, 10, 12),
+        endsAt: DateTime(2026, 10, 19),
+      );
+
+      await householdRef
+          .collection('goals')
+          .doc('goal-1')
+          .set(goal.toFirestore());
+
+      final taskRef = householdRef.collection('tasks').doc('task-1');
+
+      await taskRef.set(
+        const TaskModel(
+          id: 'task-1',
+          title: 'Sweep Kitchen',
+          assignedToUserId: 'child-1',
+          goalId: 'goal-1',
+        ).toFirestore(),
+      );
+
+      await expectLater(
+        databaseService.reassignTask('task-1', 'child-2'),
+        throwsStateError,
+      );
+
+      final updated = await taskRef.get();
+
+      expect(updated.data()?['assignedToUserId'], 'child-1');
+      expect(updated.data()?['goalId'], 'goal-1');
+      expect(updated.data()?['status'], TaskStatus.pending.name);
+    });
+
+    test(
       'does not allow a second child to claim an already assigned task',
       () async {
         const task = TaskModel(
@@ -724,7 +1132,10 @@ void main() {
         await databaseService.claimTask(taskId, 'child-1');
 
         // Second child attempts to claim the same task.
-        await databaseService.claimTask(taskId, 'child-2');
+        await expectLater(
+          databaseService.claimTask(taskId, 'child-2'),
+          throwsStateError,
+        );
 
         final claimedTask = await firestore
             .collection('households')
@@ -736,5 +1147,26 @@ void main() {
         expect(claimedTask.data()?['assignedToUserId'], 'child-1');
       },
     );
+
+    test('rejects claiming a task that no longer exists', () async {
+      await expectLater(
+        databaseService.claimTask('nonexistent-task', 'child-1'),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            'This task no longer exists.',
+          ),
+        ),
+      );
+
+      final snapshot = await firestore
+          .collection('households')
+          .doc(householdId)
+          .collection('tasks')
+          .get();
+
+      expect(snapshot.docs, isEmpty);
+    });
   });
 }

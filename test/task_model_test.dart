@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:famotive/core/models/task.dart';
 import 'package:famotive/core/models/task_schedule.dart';
 
@@ -111,5 +111,114 @@ void main() {
       expect(occ(today).isUpcoming, isFalse);
       expect(TaskModel(id: 'y', title: 'One-off', dueDate: tomorrow).isUpcoming, isFalse);
     });
+
+      group('TaskModel challenge association', () {
+    test('regular tasks have no associated goal by default', () {
+      const task = TaskModel(
+        id: 't1',
+        title: 'Take out the trash',
+      );
+
+      expect(task.goalId, isNull);
+    });
+
+    test('task can be associated with a goal', () {
+      const task = TaskModel(
+        id: 't1',
+        title: 'Clean your room',
+        goalId: 'goal-123',
+      );
+
+      expect(task.goalId, 'goal-123');
+    });
+
+    test('copyWith preserves the goal association', () {
+      const original = TaskModel(
+        id: 't1',
+        title: 'Clean your room',
+        goalId: 'goal-123',
+      );
+
+      final updated = original.copyWith(title: 'Clean bedroom');
+
+      expect(updated.goalId, 'goal-123');
+    });
+
+    test('copyWith can change the goal association', () {
+      const original = TaskModel(
+        id: 't1',
+        title: 'Clean your room',
+        goalId: 'goal-123',
+      );
+
+      final updated = original.copyWith(goalId: 'goal-456');
+
+      expect(updated.goalId, 'goal-456');
+    });
+
+    test('copyWith can clear the goal association', () {
+      const original = TaskModel(
+        id: 't1',
+        title: 'Clean your room',
+        goalId: 'goal-123',
+      );
+
+      final updated = original.copyWith(clearGoalId: true);
+
+      expect(updated.goalId, isNull);
+    });
+
+    test('toFirestore includes the associated goal', () {
+      const task = TaskModel(
+        id: 't1',
+        title: 'Clean your room',
+        goalId: 'goal-123',
+      );
+
+      final data = task.toFirestore();
+
+      expect(data['goalId'], 'goal-123');
+    });
+
+    test('toFirestore stores null for regular tasks', () {
+      const task = TaskModel(
+        id: 't1',
+        title: 'Take out the trash',
+      );
+
+      expect(task.toFirestore()['goalId'], isNull);
+    });
+  });
+
+  group('TaskModel challenge Firestore compatibility', () {
+  test('fromFirestore restores an associated goal', () async {
+    final firestore = FakeFirebaseFirestore();
+
+    await firestore.collection('tasks').doc('t1').set({
+      'title': 'Clean your room',
+      'goalId': 'goal-123',
+    });
+
+    final snapshot = await firestore.collection('tasks').doc('t1').get();
+    final task = TaskModel.fromFirestore(snapshot);
+
+    expect(task.id, 't1');
+    expect(task.goalId, 'goal-123');
+  });
+
+  test('older task documents without goalId remain compatible', () async {
+    final firestore = FakeFirebaseFirestore();
+
+    await firestore.collection('tasks').doc('t2').set({
+      'title': 'Take out the trash',
+    });
+
+    final snapshot = await firestore.collection('tasks').doc('t2').get();
+    final task = TaskModel.fromFirestore(snapshot);
+
+    expect(task.id, 't2');
+    expect(task.goalId, isNull);
+  });
+});
   });
 }

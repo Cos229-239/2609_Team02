@@ -79,7 +79,9 @@ class TaskViewCard extends StatelessWidget {
     }
     final task = found;
     final theme = Theme.of(context);
-    final assignee = task.assignedToUserId == null ? null : db.userById(task.assignedToUserId!);
+    final assignee = task.assignedToUserId == null
+        ? null
+        : db.userById(task.assignedToUserId!);
 
     return ListView(
       controller: scrollController,
@@ -93,7 +95,9 @@ class TaskViewCard extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 24,
-                    backgroundColor: theme.colorScheme.secondary.withValues(alpha: 0.15),
+                    backgroundColor: theme.colorScheme.secondary.withValues(
+                      alpha: 0.15,
+                    ),
                     child: Icon(
                       TaskIconCatalog.resolve(task.icon).icon,
                       color: theme.colorScheme.secondary,
@@ -108,7 +112,9 @@ class TaskViewCard extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           '${assignee?.name ?? 'Household task'} • ${_statusLabel(task)}',
-                          style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: Colors.grey.shade600,
+                          ),
                         ),
                       ],
                     ),
@@ -130,22 +136,38 @@ class TaskViewCard extends StatelessWidget {
                   ),
                   if (task.coinReward > 0)
                     _Fact(
-                      icon: Icon(Icons.monetization_on, color: Colors.amber.shade700, size: 20),
+                      icon: Icon(
+                        Icons.monetization_on,
+                        color: Colors.amber.shade700,
+                        size: 20,
+                      ),
                       label: '+${task.coinReward} coins',
                     ),
                   if (task.dueDate != null)
                     _Fact(
-                      icon: Icon(Icons.event_outlined, color: Colors.grey.shade600, size: 18),
+                      icon: Icon(
+                        Icons.event_outlined,
+                        color: Colors.grey.shade600,
+                        size: 18,
+                      ),
                       label: _dueLabel(task.dueDate!),
                     ),
                   if (task.repeat != null)
                     _Fact(
-                      icon: Icon(Icons.repeat, color: Colors.grey.shade600, size: 18),
+                      icon: Icon(
+                        Icons.repeat,
+                        color: Colors.grey.shade600,
+                        size: 18,
+                      ),
                       label: task.repeatLabel,
                     ),
                   if (db.needsPhoto(task))
                     _Fact(
-                      icon: Icon(Icons.photo_camera_outlined, color: Colors.grey.shade600, size: 18),
+                      icon: Icon(
+                        Icons.photo_camera_outlined,
+                        color: Colors.grey.shade600,
+                        size: 18,
+                      ),
                       label: 'Photo proof required',
                     ),
                 ],
@@ -153,12 +175,16 @@ class TaskViewCard extends StatelessWidget {
             ],
           ),
         ),
-        if (isParent && task.proof != null && task.status != TaskStatus.pending) ...[
+        if (isParent &&
+            task.proof != null &&
+            task.status != TaskStatus.pending) ...[
           const SizedBox(height: 16),
           TaskProofCard(proof: task.proof!),
         ],
         const SizedBox(height: 20),
-        ...(isParent ? _parentActions(context, task) : _childActions(context, task, viewer?.id)),
+        ...(isParent
+            ? _parentActions(context, task)
+            : _childActions(context, task, viewer?.id)),
       ],
     );
   }
@@ -191,7 +217,9 @@ class TaskViewCard extends StatelessWidget {
       label: 'Edit Task',
       icon: Icons.edit_outlined,
       variant: AppButtonVariant.secondary,
-      onPressed: () => Navigator.of(context).pushReplacementNamed(AppRoutes.taskEdit, arguments: task.id),
+      onPressed: () =>
+          Navigator.of(context)
+              .pushReplacementNamed(AppRoutes.taskEdit, arguments: task.id),
     );
 
     switch (task.status) {
@@ -233,7 +261,11 @@ class TaskViewCard extends StatelessWidget {
     }
   }
 
-  List<Widget> _childActions(BuildContext context, TaskModel task, String? childId) {
+  List<Widget> _childActions(
+    BuildContext context,
+    TaskModel task,
+    String? childId,
+  ) {
     switch (task.status) {
       case TaskStatus.pending when task.isAvailable:
         return [
@@ -243,9 +275,28 @@ class TaskViewCard extends StatelessWidget {
             onPressed: childId == null
                 ? null
                 : () async {
-                    await context.read<DatabaseService>().claimTask(task.id, childId);
-                    if (!context.mounted) return;
-                    showAppNotice(context, '"${task.title}" is yours now!');
+                    try {
+                      await context.read<DatabaseService>().claimTask(
+                        task.id,
+                        childId,
+                      );
+
+                      if (!context.mounted) return;
+
+                      showAppNotice(
+                        context,
+                        '"${task.title}" is yours now!',
+                        tone: NoticeTone.success,
+                      );
+                    } catch (error) {
+                      if (!context.mounted) return;
+
+                      showAppNotice(
+                        context,
+                        error.toString().replaceFirst('Bad state: ', ''),
+                        tone: NoticeTone.error,
+                      );
+                    }
                   },
           ),
         ];
@@ -258,10 +309,16 @@ class TaskViewCard extends StatelessWidget {
             variant: AppButtonVariant.success,
             onPressed: () async {
               final navigator = Navigator.of(context);
-              final done = await startTaskCompletion(context, task, celebrate: true);
+              final done = await startTaskCompletion(
+                context,
+                task,
+                celebrate: true,
+              );
               // The no-photo path replaces this route with the celebration;
               // after a photo is sent we're still here, so close the card.
-              if (done && context.mounted && navigator.canPop()) navigator.pop();
+              if (done && context.mounted && navigator.canPop()) {
+                navigator.pop();
+              }
             },
           ),
         ];
@@ -319,11 +376,28 @@ class TaskViewCard extends StatelessWidget {
 
     if (selection == null || !context.mounted) return;
     final newChildId = selection == _householdPool ? null : selection;
-    await db.reassignTask(task.id, newChildId);
-    if (!context.mounted) return;
-    showAppNotice(context, newChildId == null
-              ? '"${task.title}" moved back to the household pool.'
-              : '"${task.title}" re-assigned to ${db.userById(newChildId)?.name ?? 'a child'}.',);
+
+    try {
+      await db.reassignTask(task.id, newChildId);
+
+      if (!context.mounted) return;
+
+      showAppNotice(
+        context,
+        newChildId == null
+            ? '"${task.title}" moved back to the household pool.'
+            : '"${task.title}" re-assigned to ${db.userById(newChildId)?.name ?? 'a child'}.',
+        tone: NoticeTone.success,
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+
+      showAppNotice(
+        context,
+        error.toString().replaceFirst('Bad state: ', ''),
+        tone: NoticeTone.error,
+      );
+    }
   }
 
   Future<void> _duplicate(BuildContext context, TaskModel task) async {
@@ -339,9 +413,13 @@ class TaskViewCard extends StatelessWidget {
     );
     final newTaskId = await context.read<DatabaseService>().addTask(duplicate);
     if (!context.mounted) return;
-    showAppNotice(context, 'Duplicated as a new pending task - fine-tune it now.');
+    showAppNotice(
+      context,
+      'Duplicated as a new pending task - fine-tune it now.',
+    );
     // Swap this card for the copy's editor.
-    Navigator.of(context).pushReplacementNamed(AppRoutes.taskEdit, arguments: newTaskId);
+    Navigator.of(context)
+        .pushReplacementNamed(AppRoutes.taskEdit, arguments: newTaskId);
   }
 
   /// A parent finishing a task themselves needs no separate approval: it's
@@ -350,7 +428,10 @@ class TaskViewCard extends StatelessWidget {
     final notices = AppNotice.of(context);
     final navigator = Navigator.of(context);
     await context.read<DatabaseService>().parentCompleteTask(task.id);
-    notices.show('"${task.title}" completed - rewards granted!', tone: NoticeTone.success);
+    notices.show(
+      '"${task.title}" completed - rewards granted!',
+      tone: NoticeTone.success,
+    );
     if (navigator.mounted) navigator.pop();
   }
 
@@ -364,15 +445,25 @@ class TaskViewCard extends StatelessWidget {
           '${task.proof != null ? ' and the photo is deleted' : ''}. No rewards are given.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('Send Back')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Send Back'),
+          ),
         ],
       ),
     );
     if (confirmed != true || !context.mounted) return;
     await context.read<DatabaseService>().uncompleteTask(task.id);
     if (!context.mounted) return;
-    showAppNotice(context, '"${task.title}" sent back to redo.', tone: NoticeTone.success);
+    showAppNotice(
+      context,
+      '"${task.title}" sent back to redo.',
+      tone: NoticeTone.success,
+    );
     Navigator.of(context).pop();
   }
 
@@ -387,10 +478,14 @@ class TaskViewCard extends StatelessWidget {
 
   static String _dueLabel(DateTime due) {
     final now = DateTime.now();
-    final days = DateTime(due.year, due.month, due.day)
-        .difference(DateTime(now.year, now.month, now.day))
-        .inDays;
-    if (days < 0) return days == -1 ? 'Past due by 1 day' : 'Past due by ${-days} days';
+    final days = DateTime(
+      due.year,
+      due.month,
+      due.day,
+    ).difference(DateTime(now.year, now.month, now.day)).inDays;
+    if (days < 0) {
+      return days == -1 ? 'Past due by 1 day' : 'Past due by ${-days} days';
+    }
     if (days == 0) return 'Due today';
     if (days == 1) return 'Due tomorrow';
     return 'Due in $days days';

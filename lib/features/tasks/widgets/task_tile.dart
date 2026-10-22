@@ -21,7 +21,7 @@ class TaskTile extends StatelessWidget {
   final TaskModel task;
   final VoidCallback? onTap;
 
-  /// When set, shows "Completed by <name>" under the title (parent approval
+  /// When set, shows "Completed by [name]" under the title (parent approval
   /// views).
   final String? completedByName;
 

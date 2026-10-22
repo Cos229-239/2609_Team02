@@ -6,6 +6,9 @@ enum GoalType { individual, family, team }
 /// Famotive activity measured by a goal.
 enum GoalMetric { tasksCompleted, xpEarned, coinsEarned }
 
+/// Determines which approved tasks contribute to a task-completion goal.
+enum GoalTaskScope { allEligibleTasks, linkedTasksOnly }
+
 /// Supported duration for a goal.
 enum GoalPeriod { daily, weekly }
 
@@ -24,6 +27,7 @@ class Goal {
     required this.startsAt,
     required this.endsAt,
     this.currentProgress = 0,
+    this.taskScope = GoalTaskScope.allEligibleTasks,
     this.participantIds = const [],
     this.completedAt,
   });
@@ -45,6 +49,11 @@ class Goal {
 
   /// Aggregate progress from qualifying contributions.
   final int currentProgress;
+
+  /// Determines which approved tasks count toward a tasksCompleted goal.
+  ///
+  /// Defaults to all eligible tasks for backward compatibility.
+  final GoalTaskScope taskScope;
 
   /// Explicit participants for individual and team goals.
   ///
@@ -93,8 +102,13 @@ class Goal {
       ),
       targetValue: data['targetValue'] as int? ?? 0,
       currentProgress: data['currentProgress'] as int? ?? 0,
-      participantIds:
-          List<String>.from(data['participantIds'] as List? ?? const []),
+      taskScope: GoalTaskScope.values.firstWhere(
+        (scope) => scope.name == data['taskScope'],
+        orElse: () => GoalTaskScope.allEligibleTasks,
+      ),
+      participantIds: List<String>.from(
+        data['participantIds'] as List? ?? const [],
+      ),
       startsAt:
           (data['startsAt'] as Timestamp?)?.toDate() ??
           DateTime.fromMillisecondsSinceEpoch(0),
@@ -113,11 +127,13 @@ class Goal {
       'period': period.name,
       'targetValue': targetValue,
       'currentProgress': currentProgress,
+      'taskScope': taskScope.name,
       'participantIds': participantIds,
       'startsAt': Timestamp.fromDate(startsAt),
       'endsAt': Timestamp.fromDate(endsAt),
-      'completedAt':
-          completedAt == null ? null : Timestamp.fromDate(completedAt!),
+      'completedAt': completedAt == null
+          ? null
+          : Timestamp.fromDate(completedAt!),
     };
   }
 }

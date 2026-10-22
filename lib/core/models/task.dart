@@ -20,6 +20,7 @@ class TaskModel {
     this.status = TaskStatus.pending,
     this.repeat,
     this.scheduleId,
+    this.goalId,
     this.dueDate,
     this.createdAt,
     this.archived = false,
@@ -53,6 +54,10 @@ class TaskModel {
   /// The [TaskSchedule] that generated this occurrence; null = one-time task.
   final String? scheduleId;
 
+  /// The challenge this task belongs to; null = regular household task.
+  /// A task can belong to at most one challenge.
+  final String? goalId;
+
   /// Local midnight of the due day.
   final DateTime? dueDate;
 
@@ -75,7 +80,9 @@ class TaskModel {
   final TaskProof? proof;
 
   bool get proofNeedsReview =>
-      status == TaskStatus.completed && proof != null && proof!.verdict.needsReview;
+      status == TaskStatus.completed &&
+      proof != null &&
+      proof!.verdict.needsReview;
 
   /// One occurrence of a repeating task (see [TaskSchedule]).
   bool get isRecurring => scheduleId != null;
@@ -86,11 +93,16 @@ class TaskModel {
     final due = dueDate;
     if (!isRecurring || due == null) return false;
     final now = DateTime.now();
-    return DateTime(due.year, due.month, due.day).isAfter(DateTime(now.year, now.month, now.day));
+    return DateTime(
+      due.year,
+      due.month,
+      due.day,
+    ).isAfter(DateTime(now.year, now.month, now.day));
   }
 
   /// "Daily Task", "Weekly Task", … or "One-time Task".
-  String get repeatLabel => repeat?.taskLabel ?? (isRecurring ? 'Repeating Task' : 'One-time Task');
+  String get repeatLabel =>
+      repeat?.taskLabel ?? (isRecurring ? 'Repeating Task' : 'One-time Task');
 
   bool get isCompleted =>
       status == TaskStatus.completed || status == TaskStatus.approved;
@@ -131,6 +143,8 @@ class TaskModel {
     String? icon,
     String? assignedToUserId,
     bool clearAssignedToUserId = false,
+    String? goalId,
+    bool clearGoalId = false,
     int? rewardXp,
     int? coinReward,
     TaskStatus? status,
@@ -157,6 +171,7 @@ class TaskModel {
       status: status ?? this.status,
       repeat: repeat,
       scheduleId: scheduleId,
+      goalId: clearGoalId ? null : (goalId ?? this.goalId),
       dueDate: clearDueDate ? null : (dueDate ?? this.dueDate),
       createdAt: createdAt ?? this.createdAt,
       archived: archived ?? this.archived,
@@ -183,6 +198,7 @@ class TaskModel {
       ),
       repeat: TaskRepeat.fromName(data['repeat']),
       scheduleId: data['scheduleId'] as String?,
+      goalId: data['goalId'] as String?,
       dueDate: (data['dueDate'] as Timestamp?)?.toDate(),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
       archived: data['archived'] as bool? ?? false,
@@ -204,10 +220,13 @@ class TaskModel {
       'status': status.name,
       'repeat': repeat?.name,
       'scheduleId': scheduleId,
+      'goalId': goalId,
       'dueDate': dueDate == null ? null : Timestamp.fromDate(dueDate!),
       'createdAt': createdAt == null ? null : Timestamp.fromDate(createdAt!),
       'archived': archived,
-      'completedAt': completedAt == null ? null : Timestamp.fromDate(completedAt!),
+      'completedAt': completedAt == null
+          ? null
+          : Timestamp.fromDate(completedAt!),
       'approvedAt': approvedAt == null ? null : Timestamp.fromDate(approvedAt!),
       'requiresPhoto': requiresPhoto,
     };
