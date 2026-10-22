@@ -166,6 +166,7 @@ void main() {
           title: 'Complete 5 Tasks',
           type: GoalType.family,
           metric: GoalMetric.tasksCompleted,
+          taskScope: GoalTaskScope.linkedTasksOnly,
           period: GoalPeriod.weekly,
           targetValue: 5,
           startsAt: now.subtract(const Duration(days: 1)),
@@ -506,6 +507,7 @@ void main() {
         title: 'Complete 5 Tasks',
         type: GoalType.family,
         metric: GoalMetric.tasksCompleted,
+        taskScope: GoalTaskScope.linkedTasksOnly,
         period: GoalPeriod.weekly,
         targetValue: 5,
         startsAt: now.subtract(const Duration(days: 1)),
@@ -548,6 +550,54 @@ void main() {
       expect(updatedChild.data()?['coins'], 10);
     });
 
+    test('approving an unlinked task advances a legacy goal', () async {
+  final now = DateTime.now();
+
+  final goalRef = firestore
+      .collection('households')
+      .doc(householdId)
+      .collection('goals')
+      .doc('legacy-goal');
+
+  final goal = Goal(
+    id: 'legacy-goal',
+    title: 'Complete 5 Household Tasks',
+    type: GoalType.family,
+    metric: GoalMetric.tasksCompleted,
+    period: GoalPeriod.weekly,
+    targetValue: 5,
+    startsAt: now.subtract(const Duration(days: 1)),
+    endsAt: now.add(const Duration(days: 6)),
+  );
+
+  // Simulate a goal created before taskScope existed.
+  final legacyData = goal.toFirestore()..remove('taskScope');
+  await goalRef.set(legacyData);
+
+  const task = TaskModel(
+    id: 'legacy-task',
+    title: 'Take Out the Trash',
+    assignedToUserId: childId,
+    status: TaskStatus.completed,
+    // No goalId: this is an ordinary household chore.
+  );
+
+  final taskId = await databaseService.addTask(task);
+
+  await databaseService.approveTask(taskId);
+
+  final updatedGoal = await goalRef.get();
+  final contribution = await goalRef
+      .collection('contributions')
+      .doc(taskId)
+      .get();
+
+  expect(updatedGoal.data()?['currentProgress'], 1);
+  expect(contribution.exists, isTrue);
+  expect(contribution.data()?['amount'], 1);
+  expect(contribution.data()?['userId'], childId);
+});
+
     test('a task linked to Challenge A does not advance Challenge B', () async {
       final now = DateTime.now();
 
@@ -561,6 +611,7 @@ void main() {
         title: id,
         type: GoalType.family,
         metric: GoalMetric.tasksCompleted,
+        taskScope: GoalTaskScope.linkedTasksOnly,
         period: GoalPeriod.weekly,
         targetValue: 5,
         startsAt: now.subtract(const Duration(days: 1)),
@@ -621,6 +672,7 @@ void main() {
       title: 'Complete 5 Tasks',
       type: GoalType.family,
       metric: GoalMetric.tasksCompleted,
+      taskScope: GoalTaskScope.linkedTasksOnly,
       period: GoalPeriod.weekly,
       targetValue: 5,
       startsAt: now.subtract(const Duration(days: 1)),

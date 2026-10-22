@@ -117,7 +117,10 @@ void main() {
             );
 
         // Child 2 is in the household but not this challenge.
-        await databaseService.claimTask('task-1', 'child-2');
+        await expectLater(
+          databaseService.claimTask('task-1', 'child-2'),
+          throwsStateError,
+        );
 
         final taskSnapshot = await householdRef
             .collection('tasks')
@@ -171,7 +174,10 @@ void main() {
             );
 
         // Child 2 does not belong to this household.
-        await databaseService.claimTask('task-1', 'child-2');
+        await expectLater(
+          databaseService.claimTask('task-1', 'child-2'),
+          throwsStateError,
+        );
 
         final taskSnapshot = await householdRef
             .collection('tasks')
@@ -754,12 +760,15 @@ void main() {
         final saved = TaskModel.fromFirestore(await taskRef.get());
 
         // Attempt to change both the title and assignee.
-        await databaseService.updateTask(
-          'task-1',
-          saved.copyWith(
-            title: 'Organize Bedroom and Closet',
-            assignedToUserId: 'child-2',
+        await expectLater(
+          databaseService.updateTask(
+            'task-1',
+            saved.copyWith(
+              title: 'Organize Bedroom and Closet',
+              assignedToUserId: 'child-2',
+            ),
           ),
+          throwsStateError,
         );
 
         final updated = await taskRef.get();
@@ -808,12 +817,15 @@ void main() {
 
       final saved = TaskModel.fromFirestore(await taskRef.get());
 
-      await databaseService.updateTask(
-        'task-1',
-        saved.copyWith(
-          title: 'Sweep Kitchen and Hallway',
-          assignedToUserId: 'child-2',
+      await expectLater(
+        databaseService.updateTask(
+          'task-1',
+          saved.copyWith(
+            title: 'Sweep Kitchen and Hallway',
+            assignedToUserId: 'child-2',
+          ),
         ),
+        throwsStateError,
       );
 
       final updated = await taskRef.get();
@@ -1033,7 +1045,10 @@ void main() {
             );
 
         // Child 2 belongs to the household but not the challenge.
-        await databaseService.reassignTask('task-1', 'child-2');
+        await expectLater(
+          databaseService.reassignTask('task-1', 'child-2'),
+          throwsStateError,
+        );
 
         final taskSnapshot = await householdRef
             .collection('tasks')
@@ -1082,7 +1097,10 @@ void main() {
         ).toFirestore(),
       );
 
-      await databaseService.reassignTask('task-1', 'child-2');
+      await expectLater(
+        databaseService.reassignTask('task-1', 'child-2'),
+        throwsStateError,
+      );
 
       final updated = await taskRef.get();
 
@@ -1114,7 +1132,10 @@ void main() {
         await databaseService.claimTask(taskId, 'child-1');
 
         // Second child attempts to claim the same task.
-        await databaseService.claimTask(taskId, 'child-2');
+        await expectLater(
+          databaseService.claimTask(taskId, 'child-2'),
+          throwsStateError,
+        );
 
         final claimedTask = await firestore
             .collection('households')
@@ -1126,5 +1147,26 @@ void main() {
         expect(claimedTask.data()?['assignedToUserId'], 'child-1');
       },
     );
+
+    test('rejects claiming a task that no longer exists', () async {
+      await expectLater(
+        databaseService.claimTask('nonexistent-task', 'child-1'),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            'This task no longer exists.',
+          ),
+        ),
+      );
+
+      final snapshot = await firestore
+          .collection('households')
+          .doc(householdId)
+          .collection('tasks')
+          .get();
+
+      expect(snapshot.docs, isEmpty);
+    });
   });
 }

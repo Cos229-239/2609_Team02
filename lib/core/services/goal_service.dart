@@ -61,6 +61,23 @@ class GoalService {
     return snapshot.docs.map(Goal.fromFirestore).toList();
   }
 
+  /// Finds task-completion goals for a household.
+  ///
+  /// The caller determines whether each approved task is eligible
+  /// according to the goal's task scope.
+  Future<List<Goal>> findTaskCompletionGoals({
+    required String householdId,
+  }) async {
+    final snapshot = await _firestore
+        .collection('households')
+        .doc(householdId)
+        .collection('goals')
+        .where('metric', isEqualTo: GoalMetric.tasksCompleted.name)
+        .get();
+
+    return snapshot.docs.map(Goal.fromFirestore).toList();
+  }
+
   /// Validates and prepares a contribution without writing anything.
   ///
   /// This allows other services to include goal progress in their
@@ -301,7 +318,10 @@ class GoalService {
         }
       }
       // Queue the goal creation and all task associations together.
-      transaction.set(goalRef, goal.toFirestore());
+      transaction.set(goalRef, {
+        ...goal.toFirestore(),
+        'taskScope': GoalTaskScope.linkedTasksOnly.name,
+      });
 
       // Associate selected existing tasks.
       for (final snapshot in taskSnapshots) {

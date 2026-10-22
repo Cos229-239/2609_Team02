@@ -225,7 +225,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     });
   }
 
-  void _submit(DatabaseService db) {
+  Future<void> _submit(DatabaseService db) async {
     final title = _titleController.text.trim();
     if (title.isEmpty) return;
 
@@ -323,8 +323,22 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         clearDueDate: _dueDate == null,
         requiresPhoto: _photoOn,
       );
-      db.updateTask(original.id, updated);
-      showAppNotice(context, '"$title" updated!', tone: NoticeTone.success);
+      try {
+        await db.updateTask(original.id, updated);
+
+        if (!mounted) return;
+
+        showAppNotice(context, '"$title" updated!', tone: NoticeTone.success);
+      } catch (error) {
+        if (!mounted) return;
+
+        showAppNotice(
+          context,
+          error.toString().replaceFirst('Bad state: ', ''),
+          tone: NoticeTone.error,
+        );
+        return;
+      }
     } else {
       db.addTask(
         TaskModel(
@@ -390,7 +404,11 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     await context.read<DatabaseService>().setTaskArchived(task.id, newValue);
     if (!mounted) return;
     setState(() => _originalTask = task.copyWith(archived: newValue));
-    showAppNotice(context, newValue ? 'Task archived.' : 'Task unarchived.', tone: NoticeTone.success);
+    showAppNotice(
+      context,
+      newValue ? 'Task archived.' : 'Task unarchived.',
+      tone: NoticeTone.success,
+    );
   }
 
   Future<void> _confirmDelete() async {
