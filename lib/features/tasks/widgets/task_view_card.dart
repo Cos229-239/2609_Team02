@@ -11,6 +11,7 @@ import '../../../shared/widgets/app_card.dart';
 import '../task_completion_flow.dart';
 import 'task_proof_card.dart';
 import '../../../shared/widgets/app_notice.dart';
+import 'dart:async';
 
 /// Opens the task view card for [taskId] as a bottom sheet over the current
 /// screen. Used when tapping a task tile anywhere in the app.
@@ -46,7 +47,7 @@ Future<void> showTaskViewSheet(BuildContext context, String taskId) {
 /// Shown in a bottom sheet ([showTaskViewSheet]) or as the body of
 /// [TaskDetailScreen]. Actions that finish the task close whichever route
 /// the card lives in.
-class TaskViewCard extends StatelessWidget {
+class TaskViewCard extends StatefulWidget {
   const TaskViewCard({
     super.key,
     required this.taskId,
@@ -58,6 +59,30 @@ class TaskViewCard extends StatelessWidget {
   final ScrollController? scrollController;
   final EdgeInsetsGeometry padding;
 
+@override
+  State<TaskViewCard> createState() => _TaskViewCardState();
+}
+class _TaskViewCardState extends State<TaskViewCard> {
+  Timer? _timer;
+  @override
+  void initState() {
+    super.initState();
+
+    _timer = Timer.periodic(
+      const Duration(seconds: 1),
+      (timer) {
+        if (mounted) {
+          setState(() {});
+        }
+      },
+    );
+  }
+@override
+void dispose() {
+  _timer?.cancel();
+  super.dispose();
+}
+
   @override
   Widget build(BuildContext context) {
     final db = context.watch<DatabaseService>();
@@ -66,7 +91,7 @@ class TaskViewCard extends StatelessWidget {
 
     TaskModel? found;
     for (final t in db.tasks) {
-      if (t.id == taskId) {
+      if (t.id == widget.taskId) {
         found = t;
         break;
       }
@@ -78,12 +103,19 @@ class TaskViewCard extends StatelessWidget {
       );
     }
     final task = found;
+
+    final int? remainingSeconds = task.timeLimitSeconds != null && task.timerStartedAt != null
+    ? (task.timeLimitSeconds! -
+    DateTime.now().difference(task.timerStartedAt!).inSeconds)
+    .clamp(0, task.timeLimitSeconds!)
+    : null;
+
     final theme = Theme.of(context);
     final assignee = task.assignedToUserId == null ? null : db.userById(task.assignedToUserId!);
 
     return ListView(
-      controller: scrollController,
-      padding: padding,
+      controller: widget.scrollController,
+      padding: widget.padding,
       children: [
         AppCard(
           child: Column(
@@ -120,6 +152,65 @@ class TaskViewCard extends StatelessWidget {
                 Text(task.description, style: theme.textTheme.bodyMedium),
               ],
               const SizedBox(height: 14),
+
+            if (!isParent &&
+    task.status == TaskStatus.pending &&
+    task.timeLimitSeconds != null) ...[
+  const Text(
+    'Timed Challenge',
+    style: TextStyle(
+      fontSize: 18,
+      fontWeight: FontWeight.bold,
+    ),
+  ),
+  const SizedBox(height: 8),
+  Text(
+    'Time Limit: '
+    '${task.timeLimitSeconds! ~/ 60} min '
+    '${task.timeLimitSeconds! % 60} sec',
+  ),
+
+if (remainingSeconds != null) ...[
+  const SizedBox(height: 8),
+  Text(
+    remainingSeconds == 0
+    ? 'Time is up!'
+    : 'Time Remaining: '
+    '${remainingSeconds ~/ 60} min '
+    '${remainingSeconds % 60} sec',
+    style: TextStyle(
+      fontSize: 16,
+      fontWeight: FontWeight.bold,
+      color : remainingSeconds == 0 ? Colors.red : Colors.green,
+    ),
+    ),
+],
+
+  const SizedBox(height: 6),
+  if (task.timerStartedAt == null)
+  ElevatedButton.icon(
+    style: ElevatedButton.styleFrom(
+      minimumSize: const Size(double.infinity, 34),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 4,
+      ),
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    ),
+    onPressed: () {
+      context.read<DatabaseService>().updateTask(
+        task.id,
+        task.copyWith(
+          timerStartedAt: DateTime.now(),
+        ),
+      );
+    },
+    icon: const Icon(Icons.play_arrow),
+    label: const Text('Start Challenge')
+  ),
+  const SizedBox(height: 10),
+],
+
               Wrap(
                 spacing: 14,
                 runSpacing: 6,

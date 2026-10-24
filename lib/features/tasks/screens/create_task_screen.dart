@@ -54,6 +54,10 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   late int _xp;
   late int _coins;
 
+  bool _isTimedChallenge = false;
+  int _timeLimitSeconds = 300;
+  static const int _maxTimeLimitSeconds = 3600;
+
   bool _requiresPhoto = false;
   // Set in initState: widget isn't accessible from field initializers.
   late _AssignTarget _assignTarget;
@@ -100,11 +104,120 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     _xp = schedule?.rewardXp ?? existing?.rewardXp ?? AppConstants.defaultTaskXp;
     _coins = schedule?.coinReward ?? existing?.coinReward ?? AppConstants.defaultTaskCoins;
     _requiresPhoto = schedule?.requiresPhoto ?? existing?.requiresPhoto ?? false;
+    _isTimedChallenge = existing?.timeLimitSeconds !=null;
+    _timeLimitSeconds = existing?.timeLimitSeconds ?? 300;
     _selectedChildId = schedule != null
         ? schedule.assignedToUserId
         : (existing?.assignedToUserId ?? widget.initialChildId);
     _assignTarget = _selectedChildId != null ? _AssignTarget.child : _AssignTarget.household;
   }
+
+    Future<void> _showTimeLimitPicker() async {
+  final minutesController = TextEditingController(
+    text: (_timeLimitSeconds ~/ 60).toString(),
+  );
+  final secondsController = TextEditingController(
+    text: (_timeLimitSeconds % 60).toString(),
+  );
+
+  String? errorMessage;
+
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      return StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text('Set Time Limit'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Choose a time up to 1 hour.'),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: minutesController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Minutes',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: secondsController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Seconds',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (errorMessage != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(
+                      errorMessage!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final minutes =
+                      int.tryParse(minutesController.text.trim());
+                  final seconds =
+                      int.tryParse(secondsController.text.trim());
+
+                  final total = (minutes ?? 0) * 60 +
+                      (seconds ?? 0);
+
+                  if (minutes == null ||
+                      seconds == null ||
+                      minutes < 0 ||
+                      seconds < 0 ||
+                      seconds > 59 ||
+                      total < 1 ||
+                      total > _maxTimeLimitSeconds) {
+                    setDialogState(() {
+                      errorMessage =
+                          'Enter a valid time between 1 second and 1 hour.';
+                    });
+                    return;
+                  }
+
+                  setState(() {
+                    _timeLimitSeconds = total;
+                  });
+
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+
+  // Release the controllers after the dialog transition finishes.
+  await Future<void>.delayed(const Duration(milliseconds: 300));
+  minutesController.dispose();
+  secondsController.dispose();
+}
 
   @override
   void dispose() {
@@ -242,6 +355,8 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         dueDate: _dueDate,
         clearDueDate: _dueDate == null,
         requiresPhoto: _photoOn,
+        timeLimitSeconds: _isTimedChallenge ? _timeLimitSeconds : null,
+        clearTimeLimitSeconds: !_isTimedChallenge,
       );
       db.updateTask(original.id, updated);
       showAppNotice(context, '"$title" updated!', tone: NoticeTone.success);
@@ -258,6 +373,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
           coinReward: _coins,
           createdAt: DateTime.now(),
           requiresPhoto: _photoOn,
+          timeLimitSeconds: _isTimedChallenge ? _timeLimitSeconds : null,
         ),
       );
       showAppNotice(context, '"$title" created!', tone: NoticeTone.success);
@@ -455,6 +571,48 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               decoration: const InputDecoration(hintText: 'e.g. Take Out the Trash'),
               onChanged: (_) => setState(() {}),
             ),
+            const SizedBox(height: 16),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Timed Challenge',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: const Text(
+                'Set a countdown timer for this task',
+              ),
+              value: _isTimedChallenge,
+              activeColor: Colors.green,
+              onChanged: (value) {
+                setState(() {
+                  _isTimedChallenge = value;
+                });
+              },
+            ),
+            if (_isTimedChallenge)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  const Text('Time Limit:'),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      '${_timeLimitSeconds ~/ 60} min '
+                      '${_timeLimitSeconds % 60} sec',
+                      ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined),
+                        onPressed: _showTimeLimitPicker,
+                      ),
+                ],
+              ),
+            ),
+
             const SizedBox(height: 16),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,

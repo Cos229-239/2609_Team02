@@ -27,6 +27,8 @@ class TaskModel {
     this.approvedAt,
     this.requiresPhoto = false,
     this.proof,
+    this.timeLimitSeconds,
+    this.timerStartedAt,
   });
 
   final String id;
@@ -71,6 +73,9 @@ class TaskModel {
   final bool archived;
 
   final bool requiresPhoto;
+
+  final int? timeLimitSeconds;
+  final DateTime? timerStartedAt;
 
   final TaskProof? proof;
 
@@ -143,6 +148,9 @@ class TaskModel {
     DateTime? approvedAt,
     bool clearApprovedAt = false,
     bool? requiresPhoto,
+    int? timeLimitSeconds,
+    bool clearTimeLimitSeconds = false,
+    DateTime? timerStartedAt,
   }) {
     return TaskModel(
       id: id,
@@ -163,6 +171,12 @@ class TaskModel {
       completedAt: clearCompletedAt ? null : (completedAt ?? this.completedAt),
       approvedAt: clearApprovedAt ? null : (approvedAt ?? this.approvedAt),
       requiresPhoto: requiresPhoto ?? this.requiresPhoto,
+      timeLimitSeconds: clearTimeLimitSeconds
+      ? null
+      : (timeLimitSeconds ?? this.timeLimitSeconds),
+      timerStartedAt: clearTimeLimitSeconds
+      ? null
+      : (timerStartedAt ?? this.timerStartedAt),
       proof: proof,
     );
   }
@@ -189,6 +203,9 @@ class TaskModel {
       completedAt: (data['completedAt'] as Timestamp?)?.toDate(),
       approvedAt: (data['approvedAt'] as Timestamp?)?.toDate(),
       requiresPhoto: data['requiresPhoto'] as bool? ?? false,
+      timeLimitSeconds: data['timeLimitSeconds'] as int?,
+      timerStartedAt:
+      (data['timerStartedAt'] as Timestamp?)?.toDate(),
       proof: TaskProof.fromMap(data['proof']),
     );
   }
@@ -210,6 +227,10 @@ class TaskModel {
       'completedAt': completedAt == null ? null : Timestamp.fromDate(completedAt!),
       'approvedAt': approvedAt == null ? null : Timestamp.fromDate(approvedAt!),
       'requiresPhoto': requiresPhoto,
+      'timeLimitSeconds': timeLimitSeconds,
+      'timerStartedAt': timerStartedAt == null
+      ? null
+      : Timestamp.fromDate(timerStartedAt!),
     };
   }
 

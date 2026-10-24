@@ -420,13 +420,19 @@ class _TaskRow extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.fromLTRB(12.5, 25, 25, 25),
+      padding: EdgeInsets.fromLTRB(
+        12.5,
+        task.timeLimitSeconds != null ? 16 : 25,
+        25,
+        task.timeLimitSeconds != null ? 16 : 25,
+      ),
       decoration: BoxDecoration(
         color: context.raisedSurface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: context.subtleBorder),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
             radius: 16,
@@ -460,6 +466,30 @@ class _TaskRow extends StatelessWidget {
                     color: Colors.grey.shade500,
                   ),
                 ),
+                if (task.timeLimitSeconds != null)
+  Padding(
+    padding: const EdgeInsets.only(top: 4),
+    child: Wrap(
+      spacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        const Icon(
+          Icons.timer_outlined,
+          size: 14,
+          color: Colors.green,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '${task.timeLimitSeconds! ~/ 60} min '
+          '${task.timeLimitSeconds! % 60} sec',
+          style: const TextStyle(
+            fontSize: 12,
+            color: Colors.green,
+          ),
+        ),
+      ],
+    ),
+  ),
               ],
             ),
           ),
