@@ -12,78 +12,77 @@ import 'package:famotive/features/rewards/screens/progress_screen.dart';
 
 void main() {
   group('ProgressScreen navigation tests', () {
-    testWidgets(
-      'tapping a child progress card opens that child task list',
-      (tester) async {
-        final databaseService = DatabaseService(
-          firestore: FakeFirebaseFirestore(),
-        );
+    testWidgets('tapping a child progress card opens that child task list', (
+      tester,
+    ) async {
+      final databaseService = DatabaseService(
+        firestore: FakeFirebaseFirestore(),
+      );
 
-        databaseService.familyMembers = [
-          const AppUser(
-            id: 'child-1',
-            name: 'Sally Simmons',
-            email: 'sally@test.com',
-            role: UserRole.child,
-            xp: 100,
-            householdId: 'household-1',
+      databaseService.familyMembers = [
+        const AppUser(
+          id: 'child-1',
+          name: 'Sally Simmons',
+          email: 'sally@test.com',
+          role: UserRole.child,
+          xp: 100,
+          householdId: 'household-1',
+        ),
+        const AppUser(
+          id: 'child-2',
+          name: 'Billy Simmons',
+          email: 'billy@test.com',
+          role: UserRole.child,
+          xp: 50,
+          householdId: 'household-1',
+        ),
+      ];
+
+      databaseService.tasks = [
+        TaskModel(
+          id: 'sally-task',
+          title: 'Sally Task',
+          description: '',
+          rewardXp: 25,
+          status: TaskStatus.pending,
+          assignedToUserId: 'child-1',
+        ),
+        TaskModel(
+          id: 'billy-task',
+          title: 'Billy Task',
+          description: '',
+          rewardXp: 25,
+          status: TaskStatus.pending,
+          assignedToUserId: 'child-2',
+        ),
+      ];
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<DatabaseService>.value(
+          value: databaseService,
+          child: MaterialApp(
+            home: const ProgressScreen(),
+            onGenerateRoute: AppRoutes.onGenerateRoute,
           ),
-          const AppUser(
-            id: 'child-2',
-            name: 'Billy Simmons',
-            email: 'billy@test.com',
-            role: UserRole.child,
-            xp: 50,
-            householdId: 'household-1',
-          ),
-        ];
+        ),
+      );
 
-        databaseService.tasks = [
-          TaskModel(
-            id: 'sally-task',
-            title: 'Sally Task',
-            description: '',
-            rewardXp: 25,
-            status: TaskStatus.pending,
-            assignedToUserId: 'child-1',
-          ),
-          TaskModel(
-            id: 'billy-task',
-            title: 'Billy Task',
-            description: '',
-            rewardXp: 25,
-            status: TaskStatus.pending,
-            assignedToUserId: 'child-2',
-          ),
-        ];
+      await tester.pump();
 
-        await tester.pumpWidget(
-          ChangeNotifierProvider<DatabaseService>.value(
-            value: databaseService,
-            child: MaterialApp(
-              home: const ProgressScreen(),
-              onGenerateRoute: AppRoutes.onGenerateRoute,
-            ),
-          ),
-        );
+      expect(find.text('Sally Simmons'), findsOneWidget);
+      expect(find.text('Billy Simmons'), findsOneWidget);
 
-        await tester.pump();
+      await tester.tap(find.text('Sally Simmons'));
+      await tester.pumpAndSettle();
 
-        expect(find.text('Sally Simmons'), findsOneWidget);
-        expect(find.text('Billy Simmons'), findsOneWidget);
+      expect(find.byType(TaskListScreen), findsOneWidget);
 
-        await tester.tap(find.text('Sally Simmons'));
-        await tester.pumpAndSettle();
+      final taskListScreen = tester.widget<TaskListScreen>(
+        find.byType(TaskListScreen),
+      );
 
-        expect(find.byType(TaskListScreen), findsOneWidget);
-
-        final taskListScreen = tester.widget<TaskListScreen>(
-          find.byType(TaskListScreen),
-        );
-
-        expect(taskListScreen.childId, 'child-1');
-      },
-    );
+      expect(taskListScreen.childId, 'child-1');
+    });
 
     testWidgets('task categories are drawers that open and close', (
       tester,
@@ -128,6 +127,12 @@ void main() {
       // Awaiting Approval needs action, so it starts open; Pending starts closed.
       expect(find.text('Make the Bed'), findsOneWidget);
       expect(find.text('Feed the Dog'), findsNothing);
+
+      await tester.scrollUntilVisible(
+        find.text('Pending'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
 
       await tester.tap(find.text('Pending'));
       await tester.pumpAndSettle();

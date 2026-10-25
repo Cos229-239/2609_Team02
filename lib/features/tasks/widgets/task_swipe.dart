@@ -57,7 +57,9 @@ class TaskSwipe extends StatelessWidget {
 
     final direction = right != null && left != null
         ? DismissDirection.horizontal
-        : (right != null ? DismissDirection.startToEnd : DismissDirection.endToStart);
+        : (right != null
+              ? DismissDirection.startToEnd
+              : DismissDirection.endToStart);
 
     return Dismissible(
       key: ValueKey('swipe-${task.id}'),
@@ -66,8 +68,12 @@ class TaskSwipe extends StatelessWidget {
         DismissDirection.startToEnd: 0.35,
         DismissDirection.endToStart: 0.35,
       },
-      background: right == null ? const SizedBox.shrink() : _SwipeBackground(action: right, alignStart: true),
-      secondaryBackground: left == null ? null : _SwipeBackground(action: left, alignStart: false),
+      background: right == null
+          ? const SizedBox.shrink()
+          : _SwipeBackground(action: right, alignStart: true),
+      secondaryBackground: left == null
+          ? null
+          : _SwipeBackground(action: left, alignStart: false),
       confirmDismiss: (dir) async {
         final action = dir == DismissDirection.startToEnd ? right : left;
         if (action == null) return false;
@@ -75,7 +81,11 @@ class TaskSwipe extends StatelessWidget {
           await action.onTriggered();
         } catch (e) {
           if (context.mounted) {
-            showAppNotice(context, e.toString().replaceFirst('Exception: ', ''), tone: NoticeTone.error);
+            showAppNotice(
+              context,
+              e.toString().replaceFirst('Exception: ', ''),
+              tone: NoticeTone.error,
+            );
           }
         }
         return false;
@@ -96,12 +106,21 @@ class _SwipeBackground extends StatelessWidget {
     final content = [
       Icon(action.icon, color: Colors.white),
       const SizedBox(width: 8),
-      Text(action.label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+      Text(
+        action.label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     ];
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 2),
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      decoration: BoxDecoration(color: action.color, borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(
+        color: action.color,
+        borderRadius: BorderRadius.circular(16),
+      ),
       alignment: alignStart ? Alignment.centerLeft : Alignment.centerRight,
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -113,10 +132,8 @@ class _SwipeBackground extends StatelessWidget {
 
 /// Swipe actions for a parent: right approves a task awaiting approval
 /// (otherwise archives / unarchives it), left deletes it after confirming.
-({TaskSwipeAction? startToEnd, TaskSwipeAction? endToStart}) parentTaskSwipeActions(
-  BuildContext context,
-  TaskModel task,
-) {
+({TaskSwipeAction? startToEnd, TaskSwipeAction? endToStart})
+parentTaskSwipeActions(BuildContext context, TaskModel task) {
   // Looked up when a swipe fires, not while building (provider's read()
   // isn't allowed during build).
   DatabaseService db() => context.read<DatabaseService>();
@@ -143,7 +160,11 @@ class _SwipeBackground extends StatelessWidget {
       color: Colors.blueGrey,
       onTriggered: () async {
         await db().setTaskArchived(task.id, !unarchive);
-        say(unarchive ? '"${task.title}" unarchived.' : '"${task.title}" archived.');
+        say(
+          unarchive
+              ? '"${task.title}" unarchived.'
+              : '"${task.title}" archived.',
+        );
         return true;
       },
     );
@@ -167,11 +188,8 @@ class _SwipeBackground extends StatelessWidget {
 
 /// Swipe actions for a child: right claims a pool task or completes their
 /// own; left takes back a "done" that's still awaiting approval.
-({TaskSwipeAction? startToEnd, TaskSwipeAction? endToStart}) childTaskSwipeActions(
-  BuildContext context,
-  TaskModel task,
-  String childId,
-) {
+({TaskSwipeAction? startToEnd, TaskSwipeAction? endToStart})
+childTaskSwipeActions(BuildContext context, TaskModel task, String childId) {
   DatabaseService db() => context.read<DatabaseService>();
   if (task.isAvailable) {
     return (
@@ -180,8 +198,19 @@ class _SwipeBackground extends StatelessWidget {
         icon: Icons.pan_tool_alt_outlined,
         color: AppColors.primaryBlue,
         onTriggered: () async {
-          await db().claimTask(task.id, childId);
-          return true;
+          try {
+            await db().claimTask(task.id, childId);
+            return true;
+          } catch (error) {
+            if (context.mounted) {
+              showAppNotice(
+                context,
+                error.toString().replaceFirst('Bad state: ', ''),
+                tone: NoticeTone.error,
+              );
+            }
+            return false;
+          }
         },
       ),
       endToStart: null,
@@ -189,7 +218,10 @@ class _SwipeBackground extends StatelessWidget {
   }
   switch (task.status) {
     case TaskStatus.pending:
-      final needsPhoto = Provider.of<DatabaseService>(context, listen: false).needsPhoto(task);
+      final needsPhoto = Provider.of<DatabaseService>(
+        context,
+        listen: false,
+      ).needsPhoto(task);
       return (
         startToEnd: TaskSwipeAction(
           label: needsPhoto ? 'Add Photo' : 'Complete',
@@ -223,7 +255,9 @@ Future<bool> confirmDeleteTask(BuildContext context, TaskModel task) async {
     context: context,
     builder: (dialogContext) => AlertDialog(
       title: const Text('Delete Task?'),
-      content: Text('This permanently removes "${task.title}". This can\'t be undone.'),
+      content: Text(
+        'This permanently removes "${task.title}". This can\'t be undone.',
+      ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -249,13 +283,23 @@ class ParentTaskSwipe extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final actions = parentTaskSwipeActions(context, task);
-    return TaskSwipe(task: task, startToEnd: actions.startToEnd, endToStart: actions.endToStart, child: child);
+    return TaskSwipe(
+      task: task,
+      startToEnd: actions.startToEnd,
+      endToStart: actions.endToStart,
+      child: child,
+    );
   }
 }
 
 /// Convenience: a [TaskSwipe] with [childTaskSwipeActions].
 class ChildTaskSwipe extends StatelessWidget {
-  const ChildTaskSwipe({super.key, required this.task, required this.childId, required this.child});
+  const ChildTaskSwipe({
+    super.key,
+    required this.task,
+    required this.childId,
+    required this.child,
+  });
 
   final TaskModel task;
   final String childId;
@@ -264,6 +308,11 @@ class ChildTaskSwipe extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final actions = childTaskSwipeActions(context, task, childId);
-    return TaskSwipe(task: task, startToEnd: actions.startToEnd, endToStart: actions.endToStart, child: child);
+    return TaskSwipe(
+      task: task,
+      startToEnd: actions.startToEnd,
+      endToStart: actions.endToStart,
+      child: child,
+    );
   }
 }

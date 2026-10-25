@@ -36,16 +36,16 @@ class ProgressScreen extends StatelessWidget {
     final awaitingApproval = <TaskModel>[];
     final completed = <TaskModel>[];
     for (final task in db.activeTasks) {
-  if (task.status == TaskStatus.approved) {
-    completed.add(task);
-  } else if (task.status == TaskStatus.completed) {
-    awaitingApproval.add(task);
-  } else if (_isOverdue(task.dueDate)) {
-    overdue.add(task);
-  } else {
-    pending.add(task);
-  }
-}
+      if (task.status == TaskStatus.approved) {
+        completed.add(task);
+      } else if (task.status == TaskStatus.completed) {
+        awaitingApproval.add(task);
+      } else if (_isOverdue(task.dueDate)) {
+        overdue.add(task);
+      } else {
+        pending.add(task);
+      }
+    }
     final archived = db.archivedTasks;
 
     // Soonest-due first within each group; tasks with no due date sort last.
@@ -64,50 +64,56 @@ class ProgressScreen extends StatelessWidget {
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-children: [
-  HeadingWithHelp(
-    heading: Text(
-      'Family Progress',
-      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-        fontSize: 28,
-        fontWeight: FontWeight.w700,
-      ),
-    ),
-    helpTitle: 'Family Progress',
-    help: "Each child's lifetime XP and current coin balance. XP only goes up; "
-        'coins go down when a reward is redeemed.',
-  ),
-  const SizedBox(height: 6),
-  Text(
-    'See how everyone is doing this week.',
-    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-      color: Colors.grey.shade600,
-      fontSize: 14,
-    ),
-  ),
-  const SizedBox(height: 20),
+      children: [
+        HeadingWithHelp(
+          heading: Text(
+            'Family Progress',
+            style: Theme.of(context).textTheme.headlineSmall
+                ?.copyWith(fontSize: 28, fontWeight: FontWeight.w700),
+          ),
+          helpTitle: 'Family Progress',
+          help:
+              "Each child's lifetime XP and current coin balance. XP only goes up; "
+              'coins go down when a reward is redeemed.',
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'See how everyone is doing this week.',
+          style: Theme.of(context).textTheme.bodyMedium
+              ?.copyWith(color: Colors.grey.shade600, fontSize: 14),
+        ),
+        const SizedBox(height: 20),
         for (final child in children) ...[
           AppCard(
-            onTap: () => Navigator.of(context).pushNamed(
-              AppRoutes.taskList,
-              arguments: child.id,
-            ),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 4,
-            ),
+            onTap: () =>
+                Navigator.of(context)
+                    .pushNamed(AppRoutes.taskList, arguments: child.id),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Text(child.avatarEmoji, style: const TextStyle(fontSize: AppConstants.emojiIconMd)),
+                    Text(
+                      child.avatarEmoji,
+                      style: const TextStyle(
+                        fontSize: AppConstants.emojiIconMd,
+                      ),
+                    ),
                     const SizedBox(width: 8),
-                    Text(child.name, style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      child.name,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                     const Spacer(),
                     Text('+${child.xp} XP'),
                     const SizedBox(width: 10),
-                    Icon(Icons.monetization_on, size: 16, color: Colors.amber.shade700),
+                    Icon(
+                      Icons.monetization_on,
+                      size: 16,
+                      color: Colors.amber.shade700,
+                    ),
                     const SizedBox(width: 2),
                     Text('${child.coins}'),
                   ],
@@ -116,7 +122,9 @@ children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(AppConstants.radiusSm),
                   child: LinearProgressIndicator(
-                    value: (child.xp / AppConstants.levelUpXpThreshold).clamp(0.0, 1.0).toDouble(),
+                    value: (child.xp / AppConstants.levelUpXpThreshold)
+                        .clamp(0.0, 1.0)
+                        .toDouble(),
                     minHeight: 6,
                     color: AppColors.growthGreen,
                     backgroundColor: const Color.fromARGB(255, 223, 244, 199),
@@ -125,7 +133,8 @@ children: [
                 const SizedBox(height: 8),
                 Text(
                   '${AppConstants.levelUpXpThreshold - child.xp > 0 ? AppConstants.levelUpXpThreshold - child.xp : 0} XP to next level',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+                  style: Theme.of(context).textTheme.bodyMedium
+                      ?.copyWith(color: Colors.grey.shade600),
                 ),
               ],
             ),
@@ -133,11 +142,37 @@ children: [
           const SizedBox(height: 12),
         ],
         const SizedBox(height: 12),
+        const SizedBox(height: 24),
         HeadingWithHelp(
-          heading: Text('All Tasks:', style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          )),
+          heading: Text(
+            'Family Challenges & Goals',
+            style: Theme.of(context).textTheme.titleMedium
+                ?.copyWith(fontSize: 20, fontWeight: FontWeight.w600),
+          ),
+          helpTitle: 'Family Challenges & Goals',
+          help: 'Track household challenges and progress toward shared goals.',
+        ),
+        const SizedBox(height: 12),
+        AppCard(
+          onTap: () {
+            Navigator.of(context).pushNamed(AppRoutes.goals);
+          },
+          child: const Row(
+            children: [
+              Icon(Icons.emoji_events_outlined),
+              SizedBox(width: 12),
+              Expanded(child: Text('View Family Challenges & Goals')),
+              Icon(Icons.chevron_right),
+            ],
+          ),
+        ),
+        const SizedBox(height: 28),
+        HeadingWithHelp(
+          heading: Text(
+            'All Tasks:',
+            style: Theme.of(context).textTheme.titleMedium
+                ?.copyWith(fontSize: 20, fontWeight: FontWeight.w600),
+          ),
           helpTitle: 'All Tasks',
           help: 'Every task in the household, grouped by status. Tap a task to approve, '
               'edit, re-assign or duplicate it.',
@@ -148,7 +183,8 @@ children: [
           'Completed tasks show for '
           '${AppConstants.doneTaskVisibleDays} days; all tasks are deleted '
           'after ${AppConstants.taskDeleteAfterDays} days.',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+          style: Theme.of(context).textTheme.bodyMedium
+              ?.copyWith(color: Colors.grey.shade600),
         ),
         const SizedBox(height: 12),
         _TaskSection(
@@ -179,7 +215,7 @@ children: [
           db: db,
           emptyLabel: 'No pending tasks right now.',
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 28),
         _TaskSection(
           icon: Icons.check_circle_outline,
           title: 'Completed',
@@ -348,29 +384,40 @@ class _TaskProgressRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(
         horizontal: 16,
         vertical: 8,
-      ), 
+      ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 20,
-            backgroundColor: theme.colorScheme.secondary.withValues(alpha: 0.15),
-            child: Icon(TaskIconCatalog.resolve(task.icon).icon, color: theme.colorScheme.secondary, size: 20),
+            backgroundColor: theme.colorScheme.secondary.withValues(
+              alpha: 0.15,
+            ),
+            child: Icon(
+              TaskIconCatalog.resolve(task.icon).icon,
+              color: theme.colorScheme.secondary,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(task.title, style: theme.textTheme.titleMedium?.copyWith(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                )),
+                Text(
+                  task.title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 Text(
                   archivedDisplay
                       ? '${assignee?.name ?? 'Household'} • Archived'
                       : '${assignee?.name ?? 'Household'} • ${_dueLabel(task.dueDate)}',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600,
-                  fontSize: 13),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey.shade600,
+                    fontSize: 13,
+                  ),
                   maxLines: 2,
                 ),
               ],
@@ -387,14 +434,29 @@ class _TaskProgressRow extends StatelessWidget {
   }
 
   String _dueLabel(DateTime? dueDate) {
-    if (dueDate == null) return 'No due date';
+    if (dueDate == null) {
+      return 'No due date';
+    }
+
     final today = DateTime.now();
     final dueDay = DateTime(dueDate.year, dueDate.month, dueDate.day);
     final todayDay = DateTime(today.year, today.month, today.day);
     final difference = dueDay.difference(todayDay).inDays;
-    if (difference < 0) return difference == -1 ? 'Past Due by 1 day' : 'Past Due by ${-difference} days';
-    if (difference == 0) return 'Due Today';
-    if (difference == 1) return 'Due Tomorrow';
+
+    if (difference < 0) {
+      return difference == -1
+          ? 'Past Due by 1 day'
+          : 'Past Due by ${-difference} days';
+    }
+
+    if (difference == 0) {
+      return 'Due Today';
+    }
+
+    if (difference == 1) {
+      return 'Due Tomorrow';
+    }
+
     return 'Due in $difference Days';
   }
 }
@@ -407,20 +469,42 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color, icon) = switch (task.status) {
-      TaskStatus.pending => ('To Do', Colors.grey, Icons.radio_button_unchecked),
-      TaskStatus.completed => ('Awaiting Approval', Colors.orange, Icons.hourglass_bottom),
-      TaskStatus.approved => ('Approved', AppColors.growthGreen, Icons.check_circle),
+      TaskStatus.pending => (
+        'To Do',
+        Colors.grey,
+        Icons.radio_button_unchecked,
+      ),
+      TaskStatus.completed => (
+        'Awaiting Approval',
+        Colors.orange,
+        Icons.hourglass_bottom,
+      ),
+      TaskStatus.approved => (
+        'Approved',
+        AppColors.growthGreen,
+        Icons.check_circle,
+      ),
     };
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 14, color: color),
           const SizedBox(width: 4),
-          Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: AppConstants.captionFontSize)),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w600,
+              fontSize: AppConstants.captionFontSize,
+            ),
+          ),
         ],
       ),
     );
@@ -435,13 +519,23 @@ class _ArchivedPill extends StatelessWidget {
     final color = Colors.grey.shade600;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.archive_outlined, size: 14, color: color),
           const SizedBox(width: 4),
-          Text('Archived', style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: AppConstants.captionFontSize)),
+          Text(
+            'Archived',
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w600,
+              fontSize: AppConstants.captionFontSize,
+            ),
+          ),
         ],
       ),
     );

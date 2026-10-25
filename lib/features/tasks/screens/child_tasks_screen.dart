@@ -67,11 +67,12 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
         Text(
           _view == _ChildTasksView.tasks
               ? (AccessibilitySettings.swipesEnabled(context)
-                  ? 'Tap a task to see it, or swipe right to claim or complete it.'
-                  : 'Tap a task to see it and claim or complete it.')
+                    ? 'Tap a task to see it, or swipe right to claim or complete it.'
+                    : 'Tap a task to see it and claim or complete it.')
               : 'Tasks approved in the last ${AppConstants.doneTaskVisibleDays} days.',
           textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+          style: Theme.of(context).textTheme.bodySmall
+              ?.copyWith(color: Colors.grey.shade600),
         ),
         const SizedBox(height: 8),
         if (_view == _ChildTasksView.tasks) ...[
@@ -85,7 +86,8 @@ class _ChildTasksScreenState extends State<ChildTasksScreen> {
             emptyLabel: 'Nothing claimed yet - grab a task below!',
             initiallyExpanded: true,
             children: [
-              for (final task in activeTasks) _TaskRow(task: task, childId: child.id),
+              for (final task in activeTasks)
+                _TaskRow(task: task, childId: child.id),
             ],
           ),
           const SizedBox(height: 10),
@@ -216,13 +218,21 @@ class _ToggleButton extends StatelessWidget {
               Icon(
                 icon,
                 size: 18,
-                color: selected ? Colors.white : (context.isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600),
+                color: selected
+                    ? Colors.white
+                    : (context.isDarkMode
+                          ? Colors.grey.shade400
+                          : Colors.grey.shade600),
               ),
               const SizedBox(width: 8),
               Text(
                 label,
                 style: TextStyle(
-                  color: selected ? Colors.white : (context.isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700),
+                  color: selected
+                      ? Colors.white
+                      : (context.isDarkMode
+                            ? Colors.grey.shade300
+                            : Colors.grey.shade700),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -275,7 +285,10 @@ class _SectionHeader extends StatelessWidget {
             child: help == null
                 ? Text(title, style: Theme.of(context).textTheme.titleMedium)
                 : HeadingWithHelp(
-                    heading: Text(title, style: Theme.of(context).textTheme.titleMedium),
+                    heading: Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                     helpTitle: title,
                     help: help!,
                   ),
@@ -371,7 +384,10 @@ class _TaskDrawerState extends State<_TaskDrawer> {
                     padding: const EdgeInsets.only(top: 8),
                     child: widget.children.isEmpty
                         ? Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 4,
+                              horizontal: 4,
+                            ),
                             child: Text(widget.emptyLabel),
                           )
                         : Column(
@@ -395,6 +411,7 @@ class _TaskRow extends StatelessWidget {
   });
 
   final TaskModel task;
+
   /// Optional status shown in place of the rewards (e.g. "Awaiting Approval").
   /// Actions like claim/complete live in the task view card instead.
   final Widget? trailing;
@@ -424,7 +441,10 @@ class _TaskRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.raisedSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.subtleBorder),
+        border: Border.all(
+          color: task.goalId != null ? Colors.amber : context.subtleBorder,
+          width: task.goalId != null ? 2 : 1,
+        ),
       ),
       child: Row(
         children: [
@@ -460,6 +480,39 @@ class _TaskRow extends StatelessWidget {
                     color: Colors.grey.shade500,
                   ),
                 ),
+                if (task.goalId != null) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.amber, width: 1),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.emoji_events_outlined,
+                          color: Colors.amber,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Challenge',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: Colors.amber,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -471,34 +524,38 @@ class _TaskRow extends StatelessWidget {
               if (trailing != null)
                 trailing!
               else
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.star, size: 12, color: Colors.amber),
-                  const SizedBox(width: 1),
-                  Text(
-                    '+${task.rewardXp} XP',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.amber,
-                    ),
-                  ),
-                  if (task.coinReward > 0) ...[
-                    const SizedBox(width: 8),
-                    Icon(Icons.monetization_on, size: 12, color: Colors.amber.shade800),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.star, size: 12, color: Colors.amber),
                     const SizedBox(width: 1),
                     Text(
-                      '+${task.coinReward}',
+                      '+${task.rewardXp} XP',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Colors.amber.shade800,
+                        color: Colors.amber,
                       ),
                     ),
+                    if (task.coinReward > 0) ...[
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.monetization_on,
+                        size: 12,
+                        color: Colors.amber.shade800,
+                      ),
+                      const SizedBox(width: 1),
+                      Text(
+                        '+${task.coinReward}',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.amber.shade800,
+                        ),
+                      ),
+                    ],
                   ],
-                ],
-              ),
+                ),
             ],
           ),
         ],
@@ -573,98 +630,138 @@ class _HistoryRow extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: () => showTaskViewSheet(context, task.id),
       child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: context.raisedSurface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: context.isDarkMode ? Colors.black26 : Colors.grey.shade200,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: AppColors.growthGreen.withValues(alpha: 0.15),
-            child: Icon(
-              TaskIconCatalog.resolve(task.icon).icon,
-              color: AppColors.growthGreen,
-              size: 20,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: context.raisedSurface,
+          borderRadius: BorderRadius.circular(16),
+          border: task.goalId != null
+              ? Border.all(color: Colors.amber, width: 2)
+              : null,
+          boxShadow: [
+            BoxShadow(
+              color: context.isDarkMode ? Colors.black26 : Colors.grey.shade200,
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
-          ),
+          ],
+        ),
 
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  task.title,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  task.repeatLabel,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontSize: 12,
-                    color: Colors.grey.shade500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _StatusPill(
-                label: approved ? 'Approved' : 'Awaiting Approval',
-                color: approved ? AppColors.growthGreen : Colors.orange,
-                icon: approved ? Icons.check_circle : Icons.hourglass_bottom,
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: AppColors.growthGreen.withValues(alpha: 0.15),
+              child: Icon(
+                TaskIconCatalog.resolve(task.icon).icon,
+                color: AppColors.growthGreen,
+                size: 20,
               ),
-              const SizedBox(height: 2),
-              Row(
+            ),
+
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.star, size: 12, color: Colors.amber),
-                  const SizedBox(width: 1),
                   Text(
-                    '+${task.rewardXp} XP',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontSize: 12,
+                    task.title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Colors.amber,
                     ),
                   ),
+                  Text(
+                    task.repeatLabel,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontSize: 12,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+                  if (task.goalId != null) ...[
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.amber, width: 1),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.emoji_events_outlined,
+                            color: Colors.amber,
+                            size: 14,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Challenge',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: Colors.amber,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
-              if (task.coinReward > 0) ...[
-                const SizedBox(height: 1),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _StatusPill(
+                  label: approved ? 'Approved' : 'Awaiting Approval',
+                  color: approved ? AppColors.growthGreen : Colors.orange,
+                  icon: approved ? Icons.check_circle : Icons.hourglass_bottom,
+                ),
+                const SizedBox(height: 2),
                 Row(
                   children: [
-                    Icon(Icons.monetization_on, size: 12, color: Colors.amber.shade800),
+                    const Icon(Icons.star, size: 12, color: Colors.amber),
                     const SizedBox(width: 1),
                     Text(
-                      '+${task.coinReward}',
+                      '+${task.rewardXp} XP',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Colors.amber.shade800,
+                        color: Colors.amber,
                       ),
                     ),
                   ],
                 ),
+                if (task.coinReward > 0) ...[
+                  const SizedBox(height: 1),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.monetization_on,
+                        size: 12,
+                        color: Colors.amber.shade800,
+                      ),
+                      const SizedBox(width: 1),
+                      Text(
+                        '+${task.coinReward}',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.amber.shade800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
-    ),
     );
   }
 }
