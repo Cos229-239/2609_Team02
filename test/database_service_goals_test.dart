@@ -191,4 +191,78 @@ void main() {
     expect(db.goals.single.id, goalId);
     expect(db.goals.single.title, 'Kitchen Cleanup Week');
   });
+
+  test('createChallenge saves existing and new tasks together', () async {
+    const householdId = 'household-1';
+
+    final householdRef = firestore.collection('households').doc(householdId);
+    final tasksRef = householdRef.collection('tasks');
+
+    await householdRef.set({
+      'name': 'Test Household',
+      'ownerId': 'parent-1',
+      'memberIds': ['parent-1', 'child-1'],
+    });
+
+    await tasksRef
+        .doc('existing-task')
+        .set(
+          TaskModel(id: 'existing-task', title: 'Wash dishes').toFirestore(),
+        );
+
+    await tasksRef
+        .doc('unselected-task')
+        .set(
+          TaskModel(
+            id: 'unselected-task',
+            title: 'Clean bedroom',
+          ).toFirestore(),
+        );
+
+    db.bindHousehold(householdId);
+    await pumpEventQueue();
+
+    final goal = Goal(
+      id: '',
+      title: 'Weekend Cleanup',
+      type: GoalType.family,
+      metric: GoalMetric.tasksCompleted,
+      period: GoalPeriod.weekly,
+      targetValue: 2,
+      startsAt: DateTime(2026, 10, 24),
+      endsAt: DateTime(2026, 10, 31),
+    );
+
+    final goalId = await db.createChallenge(
+      goal: goal,
+      taskIds: ['existing-task'],
+      newTasks: [TaskModel(id: '', title: 'Take out trash')],
+    );
+
+    final savedGoal = await householdRef.collection('goals').doc(goalId).get();
+
+    expect(savedGoal.exists, isTrue);
+    expect(savedGoal.data()?['taskScope'], 'linkedTasksOnly');
+
+    final existingTask = await tasksRef.doc('existing-task').get();
+    expect(existingTask.data()?['goalId'], goalId);
+
+    final unselectedTask = await tasksRef.doc('unselected-task').get();
+    expect(unselectedTask.data()?['goalId'], isNull);
+
+    final allTasks = await tasksRef.get();
+
+    final newTasks = allTasks.docs.where(
+      (doc) => doc.data()['title'] == 'Take out trash',
+    );
+
+    expect(newTasks.length, 1);
+    expect(newTasks.single.data()['goalId'], goalId);
+
+    final linkedTasks = allTasks.docs.where(
+      (doc) => doc.data()['goalId'] == goalId,
+    );
+
+    expect(linkedTasks.length, 2);
+  });
 }
